@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TeamAssist</title>
+<style>
+  /* Sober en leesbaar: dit is een werkscherm, geen etalage. Eén tekstfamilie,
+     één accentkleur, en verder wit met haarlijnen. */
+  :root {
+    --inkt: #17191c;
+    --gedempt: #6b7076;
+    --lijn: #e3e5e8;
+    --accent: #a4232b;
+    --vlak: #f6f7f8;
+    --radius: 6px;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    padding: 2rem 1.25rem 4rem;
+    font: 16px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    color: var(--inkt);
+    background: #fff;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  main { max-width: 44rem; margin: 0 auto; }
+
+  header { border-bottom: 2px solid var(--inkt); padding-bottom: .75rem; margin-bottom: 2rem; }
+  h1 { margin: 0; font-size: 1.5rem; letter-spacing: -.01em; }
+  header p { margin: .15rem 0 0; color: var(--gedempt); font-size: .9rem; }
+
+  h2 { font-size: 1rem; margin: 2rem 0 .6rem; }
+
+  .naam { font-size: 1.75rem; font-weight: 600; margin: 0 0 .1rem; letter-spacing: -.02em; }
+  .adres { color: var(--gedempt); margin: 0 0 1.25rem; }
+
+  .rollen { display: flex; flex-wrap: wrap; gap: .4rem; margin: 0 0 .5rem; padding: 0; list-style: none; }
+  .rollen li {
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    border-radius: var(--radius);
+    padding: .1rem .5rem;
+    font-size: .85rem;
+    font-weight: 600;
+  }
+
+  table { width: 100%; border-collapse: collapse; font-size: .92rem; }
+  th, td { text-align: left; padding: .45rem .5rem; border-bottom: 1px solid var(--lijn); }
+  th { font-weight: 600; color: var(--gedempt); font-size: .82rem; }
+  td.ploegen { color: var(--gedempt); }
+
+  form { display: flex; gap: .5rem; flex-wrap: wrap; margin: 1rem 0 0; }
+  input[type=email] {
+    flex: 1 1 16rem;
+    padding: .55rem .7rem;
+    border: 1px solid var(--lijn);
+    border-radius: var(--radius);
+    font: inherit;
+  }
+  input[type=email]:focus-visible, button:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  button {
+    padding: .55rem 1rem;
+    border: 1px solid var(--inkt);
+    background: var(--inkt);
+    color: #fff;
+    border-radius: var(--radius);
+    font: inherit;
+    cursor: pointer;
+  }
+  button.stil { background: #fff; color: var(--inkt); }
+
+  .melding { padding: .7rem .85rem; border-radius: var(--radius); background: var(--vlak); margin-top: 1rem; }
+  .melding.fout { background: #fdf2f2; border-left: 3px solid var(--accent); }
+
+  footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--lijn); color: var(--gedempt); font-size: .82rem; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>TeamAssist</h1>
+    <p id="clubregel">AB InBev Leuven Bears</p>
+  </header>
+
+  <!-- Aanmelden -->
+  <section id="aanmelden" hidden>
+    <h2>Aanmelden</h2>
+    <p>Vul je e-mailadres in. Je krijgt een link waarmee je binnen raakt; een wachtwoord is er niet.</p>
+    <form id="aanmeldform">
+      <input type="email" id="email" placeholder="jouw@adres.be" required autocomplete="email">
+      <button type="submit">Stuur me een link</button>
+    </form>
+    <div id="aanmeldmelding" class="melding" hidden></div>
+  </section>
+
+  <!-- Wie ben ik -->
+  <section id="profiel" hidden>
+    <p class="naam" id="volledigenaam"></p>
+    <p class="adres" id="emailadres"></p>
+
+    <h2>Rollen</h2>
+    <ul class="rollen" id="rollenlijst"></ul>
+    <p id="geenrollen" class="melding" hidden>
+      Je bent aangemeld, maar er is je nog geen rol toegekend. Een beheerder moet dat doen
+      voor je iets te zien krijgt.
+    </p>
+
+    <h2>Ploegen</h2>
+    <table id="ploegentabel">
+      <thead><tr><th>Categorie</th><th>Ploeg</th></tr></thead>
+      <tbody id="ploegenlijf"></tbody>
+    </table>
+    <p id="geenploegen" class="melding" hidden>Je hangt aan geen enkele ploeg in dit seizoen.</p>
+
+    <h2>Rechten</h2>
+    <table>
+      <thead><tr><th>Recht</th><th>Waar</th></tr></thead>
+      <tbody id="rechtenlijf"></tbody>
+    </table>
+
+    <form>
+      <button type="button" class="stil" id="afmelden">Afmelden</button>
+    </form>
+  </section>
+
+  <div id="algemenemelding" class="melding fout" hidden></div>
+
+  <footer>
+    <span id="versieregel"></span>
+  </footer>
+</main>
+
+<script type="module">
+// Aanmelden gebeurt rechtstreeks tegen de REST-API van Supabase Auth. Geen
+// bibliotheek van een CDN: dat zou een derde partij toevoegen aan het pad waar
+// iemand zijn adres invult, en er is geen buildstap om ze mee te leveren.
+
+const OPSLAG = 'teamassist.sessie';
+let config = null;
+
+const el = (id) => document.getElementById(id);
+
+function toon(id, tekst, foutief = false) {
+  const vak = el(id);
+  vak.textContent = tekst;
+  vak.classList.toggle('fout', foutief);
+  vak.hidden = false;
+}
+
+function sessie() {
+  try { return JSON.parse(localStorage.getItem(OPSLAG) || 'null'); }
+  catch { return null; }
+}
+
+function bewaarSessie(s) {
+  if (s) localStorage.setItem(OPSLAG, JSON.stringify(s));
+  else localStorage.removeItem(OPSLAG);
+}
+
+async function haalConfig() {
+  const antwoord = await fetch('/api/config');
+  config = await antwoord.json();
+  el('versieregel').textContent = `TeamAssist ${config.versie}`;
+  return config;
+}
+
+// --- Aanmelden --------------------------------------------------------------
+
+async function vraagLink(email) {
+  const antwoord = await fetch(`${config.supabase_url}/auth/v1/otp`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', apikey: config.supabase_anon_sleutel },
+    body: JSON.stringify({ email, create_user: true, options: { email_redirect_to: location.origin } }),
+  });
+  if (!antwoord.ok) {
+    const body = await antwoord.text();
+    throw new Error(body || `status ${antwoord.status}`);
+  }
+}
+
+// Na het klikken op de link staan de tokens in het fragment van de URL. Ze daar
+// meteen weghalen, zodat ze niet in de geschiedenis of in een gedeelde link
+// blijven staan.
+function leesTokensUitUrl() {
+  if (!location.hash.includes('access_token')) return null;
+  const p = new URLSearchParams(location.hash.slice(1));
+  const sessie = {
+    access_token: p.get('access_token'),
+    refresh_token: p.get('refresh_token'),
+  };
+  history.replaceState(null, '', location.pathname + location.search);
+  return sessie.access_token ? sessie : null;
+}
+
+async function vernieuwToken(huidige) {
+  const antwoord = await fetch(`${config.supabase_url}/auth/v1/token?grant_type=refresh_token`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', apikey: config.supabase_anon_sleutel },
+    body: JSON.stringify({ refresh_token: huidige.refresh_token }),
+  });
+  if (!antwoord.ok) return null;
+  const body = await antwoord.json();
+  return { access_token: body.access_token, refresh_token: body.refresh_token };
+}
+
+// --- De eigen API -----------------------------------------------------------
+
+async function api(pad) {
+  let s = sessie();
+  if (!s) return { status: 401 };
+
+  let antwoord = await fetch(pad, { headers: { authorization: `Bearer ${s.access_token}` } });
+  if (antwoord.status === 401 && s.refresh_token) {
+    const nieuw = await vernieuwToken(s);
+    if (nieuw) {
+      bewaarSessie(nieuw);
+      antwoord = await fetch(pad, { headers: { authorization: `Bearer ${nieuw.access_token}` } });
+    }
+  }
+  return { status: antwoord.status, body: await antwoord.json().catch(() => null) };
+}
+
+// --- Tonen ------------------------------------------------------------------
+
+function toonProfiel(gegevens) {
+  el('aanmelden').hidden = true;
+  el('profiel').hidden = false;
+
+  el('volledigenaam').textContent =
+    `${gegevens.persoon.voornaam} ${gegevens.persoon.achternaam}`.trim() || gegevens.persoon.email;
+  el('emailadres').textContent = gegevens.persoon.email || '';
+  el('clubregel').textContent = `AB InBev Leuven Bears — seizoen ${gegevens.seizoen.naam}`;
+
+  const rollen = gegevens.rollen ?? [];
+  el('rollenlijst').innerHTML = rollen.map((r) => `<li>${r}</li>`).join('');
+  el('geenrollen').hidden = rollen.length > 0;
+
+  const ploegen = gegevens.ploegen ?? [];
+  el('ploegenlijf').innerHTML = ploegen
+    .map((p) => `<tr><td>${p.categorie ?? ''}</td><td>${p.naam}</td></tr>`)
+    .join('');
+  el('ploegentabel').hidden = ploegen.length === 0;
+  el('geenploegen').hidden = ploegen.length > 0;
+
+  const rechten = gegevens.rechten ?? {};
+  el('rechtenlijf').innerHTML = Object.entries(rechten)
+    .map(([recht, waar]) => {
+      const bereik = waar === '*' ? 'de hele club' : `${waar.length} ploeg${waar.length === 1 ? '' : 'en'}`;
+      return `<tr><td>${recht}</td><td class="ploegen">${bereik}</td></tr>`;
+    })
+    .join('');
+}
+
+function toonAanmelden() {
+  el('profiel').hidden = true;
+  el('aanmelden').hidden = false;
+}
+
+// --- Start ------------------------------------------------------------------
+
+async function start() {
+  await haalConfig();
+
+  if (!config.supabase_url) {
+    toon('algemenemelding', 'Het aanmeldsysteem is nog niet ingesteld op deze installatie.', true);
+    return;
+  }
+
+  const uitUrl = leesTokensUitUrl();
+  if (uitUrl) bewaarSessie(uitUrl);
+
+  if (!sessie()) return toonAanmelden();
+
+  const uitkomst = await api('/api/mij');
+  if (uitkomst.status === 200) return toonProfiel(uitkomst.body);
+
+  if (uitkomst.status === 403) {
+    toonAanmelden();
+    toon(
+      'aanmeldmelding',
+      'Je bent aangemeld, maar dit adres is nog niet gekoppeld aan iemand in TeamAssist. ' +
+        'Een beheerder moet je toevoegen.',
+      true
+    );
+    return;
+  }
+
+  bewaarSessie(null);
+  toonAanmelden();
+}
+
+el('aanmeldform').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const email = el('email').value.trim();
+  try {
+    await vraagLink(email);
+    toon('aanmeldmelding', `Er is een link onderweg naar ${email}. Ze blijft een uur geldig.`);
+  } catch (fout) {
+    toon('aanmeldmelding', `Versturen lukte niet: ${fout.message}`, true);
+  }
+});
+
+el('afmelden').addEventListener('click', () => {
+  bewaarSessie(null);
+  location.reload();
+});
+
+start();
+</script>
+</body>
+</html>

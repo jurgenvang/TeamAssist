@@ -1,0 +1,23 @@
+name = "teamassist"
+main = "src/index.js"
+compatibility_date = "2026-08-01"
+
+# Eén cron per uur; de planner in src/index.js beslist wat er op dat Brusselse
+# uur moet gebeuren. Zeven taken over zeven cron-expressies verdelen zou twee
+# keer per jaar verschuiven met de zomertijd.
+[triggers]
+crons = ["0 * * * *"]
+
+[assets]
+directory = "./public"
+binding = "ASSETS"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "teamassist"
+database_id = "VUL-IN-NA-HET-AANMAKEN"
+
+# SUPABASE_URL en SUPABASE_ANON_SLEUTEL staan hier bewust niet: ze horen als
+# secret bij de Worker, samen met SUPABASE_JWT_SECRET indien het project met een
+# gedeeld geheim ondertekent. Wat in wrangler.toml staat, wordt bij elke deploy
+# overschreven.
