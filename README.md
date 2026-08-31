@@ -1,4 +1,4 @@
-# TeamAssist 0.2.0 — het fundament
+# TeamAssist 0.2.2 — het fundament
 
 Eerste pakket. Het bevat geen functionaliteit voor de club: geen
 synchronisatie, geen import, geen aanwezigheden. Wat het wel bevat, is het
@@ -36,19 +36,75 @@ indexen en kolommen die ontbreken. Doe dit bij elke release waar de databank
 mee verandert — de fout die dit vangt, is de ALTER die je vergat, en die meldt
 zich anders pas weken later met `no such column`.
 
-Daarna één rij handmatig, want zonder actief seizoen weigert elke route:
+### De eerste twee dingen die er handmatig in moeten
+
+Het schema levert een lege databank op. Twee dingen ontbreken dan nog, en zonder
+allebei raakt niemand binnen: een actief seizoen — elke route weigert met een 409
+zonder — en één persoon met de rol ADMIN.
+
+Dat handmatig invoeren is meteen het bootstrapmechanisme. Er staan geen adressen
+in de code: een hardcoded beheerder zou een achterdeur zijn die elke
+databankwijziging overleeft, en ze wijzigen zou een deploy vragen. De D1-console
+is ook de weg terug als er ooit niemand meer binnen raakt.
 
 ```sql
-INSERT INTO seizoenen (code, naam, actief) VALUES ('2026-27', '2026-2027', 1);
+INSERT INTO seizoenen (code, naam, actief)
+VALUES ('2026-27', '2026-2027', 1);
+
+INSERT INTO personen (id, voornaam, achternaam, email)
+VALUES ('p-jurgen', 'Jurgen', 'van Geijstelen', 'jurgenvang@gmail.com');
+
+INSERT INTO rollen (persoon_id, rol)
+VALUES ('p-jurgen', 'ADMIN');
 ```
 
-En jezelf als eerste beheerder, met het adres waarmee je je gaat aanmelden:
+Waar het bij de rol op aankomt: `team_guid` en `seizoen` blijven leeg. ADMIN
+geldt clubbreed en over seizoenen heen, en het schema weigert de rij als er toch
+een ploeg bij staat. `p-jurgen` is enkel een interne sleutel; die mag alles zijn
+zolang hij uniek is.
+
+Waar het bij het adres op aankomt: het moet **letterlijk** overeenkomen met wat
+je bij Supabase gebruikt, in kleine letters. Daarop wordt gematcht bij je eerste
+aanmelding, en daarop kijkt `/api/aanmeldlink` of er iets mag vertrekken. Bij
+Gmail is dat een valkuil: punten vóór het apenstaartje negeert Gmail, maar wij
+niet. Meld je je aan als `jurgen.vang@gmail.com`, dan komt de mail wel aan maar
+vindt TeamAssist geen persoon en beland je in de wachtrij.
+
+### Controleren of het klopt
+
+```sql
+SELECT p.email, p.actief, r.rol, s.code AS seizoen
+  FROM personen p
+  JOIN rollen r ON r.persoon_id = p.id
+  LEFT JOIN seizoenen s ON s.actief = 1
+ WHERE r.rol = 'ADMIN';
+```
+
+Eén rij, met `actief = 1` en een seizoen ingevuld. Staat er `NULL` bij seizoen,
+dan ontbreekt die eerste insert nog.
+
+### Een tweede beheerder
+
+Doen vóór je verdergaat. Nu hangt alle toegang aan één rij; raakt dat adres
+onbruikbaar, dan is de D1-console de enige weg terug.
 
 ```sql
 INSERT INTO personen (id, voornaam, achternaam, email)
-     VALUES ('p-jurgen', 'Jurgen', 'van Geijstelen', 'jouw@adres.be');
-INSERT INTO rollen (persoon_id, rol) VALUES ('p-jurgen', 'ADMIN');
+VALUES ('p-tweede', 'Voornaam', 'Achternaam', 'adres@example.org');
+
+INSERT INTO rollen (persoon_id, rol) VALUES ('p-tweede', 'ADMIN');
 ```
+
+### Waar de toegang in de databank staat
+
+Drie tabellen, elk met een eigen taak. `personen` zegt wie je bent, met het
+e-mailadres als sleutel. `rollen` zegt wat je mag. `accounts` zegt hoe je
+binnenkomt: die rij ontstaat pas bij je eerste geslaagde aanmelding en legt de
+Supabase-identiteit (`sub`) vast bij je persoon.
+
+Raak je niet binnen, kijk dan in `aanmeldingen_wachtrij`. Daar staat het adres
+waarmee je binnenkwam; het verschil met `personen.email` is meestal een
+hoofdletter of een plusadres.
 
 ## Supabase opzetten
 
@@ -74,14 +130,30 @@ create policy "ping is leesbaar" on ping for select using (true);
 De ping stuurt de sleutel enkel in de `apikey`-kop en niet in een
 `Authorization`-kop: een publishable-sleutel daarin levert een 401 op.
 
-**3. De aanmeldmethode.** Authentication, dan URL Configuration:
+**3. De aanmeldmethode.** Authentication, dan URL Configuration. Twee velden, en
+allebei zijn ze nodig:
 
-- **Site URL** op het adres van de app zetten. Ze staat standaard op
-  `http://localhost:3000`, en zolang dat zo blijft komt elke bevestigingslink
-  daar uit — bij niemand dus.
-- Datzelfde adres toevoegen bij **Redirect URLs**. Supabase honoreert enkel
-  adressen die op die lijst staan; een adres dat er niet op staat wordt
-  vervangen door de Site URL, zonder foutmelding vooraf.
+- **Site URL** — het adres waarop de app draait, bijvoorbeeld
+  `https://teamassist.jurgenvang.workers.dev`. Standaard staat hier
+  `http://localhost:3000`.
+- **Redirect URLs** — hetzelfde adres, plus een regel met `/**` eronder
+  (`https://teamassist.jurgenvang.workers.dev/**`) zodat ook paden werken.
+
+**Dit is de meest verwarrende stap van de hele opzet, dus expliciet:** Supabase
+honoreert enkel redirect-adressen die op die tweede lijst staan. Staat een adres
+er niet op, dan wordt het **stil vervangen** door de Site URL — geen foutmelding
+bij het versturen, geen spoor in het logboek. De link komt dan uit op localhost
+en het lijkt alsof de applicatie het adres niet meegeeft, terwijl Supabase het
+weigert.
+
+Draait de app op meerdere adressen — het workers.dev-adres én een eigen domein —
+dan moeten ze allebei in de lijst. De applicatie stuurt namelijk het adres mee
+van de pagina waar de link gevraagd werd, en dat kan van keer tot keer
+verschillen.
+
+**Nakijken zonder in te loggen.** Vraag een link aan en bekijk in de mail de
+parameter `redirect_to` in de URL. Staat daar jouw adres, dan is het rond. Staat
+er `localhost`, dan ontbreekt het adres in Redirect URLs.
 
 Zet daarna bij Providers e-mail aan en wachtwoorden uit.
 
@@ -162,6 +234,33 @@ node tools/genereer-controle.mjs
 Er staat een test op die faalt zodra de twee uit elkaar lopen. In YOAssist bleef
 de backuplijst jarenlang achter op het schema, telkens wanneer er een tabel
 bijkwam, precies omdat zo'n test er niet was.
+
+## Als er iets misgaat bij het aanmelden
+
+**De link komt uit op `localhost:3000`.** Het adres van de app staat niet bij
+Redirect URLs in Supabase. Zie stap 3 hierboven. Let op de misleiding: Supabase
+vervangt een niet-toegelaten adres zonder iets te melden, dus het lijkt op een
+fout in de applicatie.
+
+**"Nog geen toegang" na een geslaagde aanmelding.** Het adres uit het token staat
+niet bij een actieve persoon. Kijk in `aanmeldingen_wachtrij`: daar staat het
+adres waarmee je binnenkwam. Het verschil met `personen.email` is meestal een
+hoofdletter, een plusadres, of bij Gmail een punt.
+
+**Er komt geen mail.** `/api/aanmeldlink` verstuurt enkel naar een adres dat bij
+een actieve persoon hoort, en het antwoord op het scherm is altijd hetzelfde —
+ook wanneer er niets vertrok. Dat is opzettelijk: een verschillend antwoord zou
+de route bruikbaar maken om af te tasten wie er lid is van de club. Kijk in het
+logboek: `aanvraag voor een onbekend adres` betekent dat het adres niet in
+`personen` staat.
+
+Er geldt ook een wachttijd van een minuut per persoon. Twee keer op de knop
+tikken levert dus één mail op — bewust, want een tweede link maakt de eerste
+ongeldig.
+
+**Een link die niet meer werkt.** Elke link is eenmalig en vervalt na een uur.
+Een fout daarover verschijnt nu op het aanmeldscherm in plaats van stilzwijgend
+het formulier opnieuw te tonen.
 
 ## Wat er nog niet is
 
