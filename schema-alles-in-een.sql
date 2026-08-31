@@ -73,6 +73,9 @@ CREATE TABLE personen (
   gemeente           TEXT,
   actief             INTEGER NOT NULL DEFAULT 1 CHECK (actief IN (0, 1)),
   inactief_sinds     TEXT,                          -- gezet bij 'te verwijderen'
+  -- Wanneer er voor het laatst een aanmeldlink gevraagd werd. Houdt tegen dat
+  -- iemand herhaaldelijk mails naar een bekend adres laat sturen.
+  laatste_aanmeldlink TEXT,
   aangemaakt         TEXT NOT NULL DEFAULT (datetime('now')),
   gewijzigd          TEXT NOT NULL DEFAULT (datetime('now'))
 );

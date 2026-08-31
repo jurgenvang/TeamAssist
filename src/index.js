@@ -14,6 +14,7 @@ import { brusselUur } from './lib/klok.js';
 import { voerPingUit } from './lib/ping.js';
 import { logSchrijf } from './lib/logboek.js';
 import { mij } from './routes/mij.js';
+import { aanmeldlink } from './routes/aanmeldlink.js';
 import { VERSIE } from './versie.js';
 
 export const ROUTES = [
@@ -30,10 +31,16 @@ export const ROUTES = [
     doe: ({ env }) =>
       json({
         supabase_url: env.SUPABASE_URL ?? '',
-        supabase_publieke_sleutel: env.SUPABASE_PUBLISHABLE_KEY ?? '',
+        supabase_publishable_key: env.SUPABASE_PUBLISHABLE_KEY ?? '',
         versie: VERSIE,
       }),
   },
+
+  // Publiek, want wie een link vraagt is per definitie nog niet aangemeld. De
+  // route verstuurt enkel iets naar een adres dat bij een actieve persoon hoort,
+  // en antwoordt altijd hetzelfde zodat ze niet te gebruiken is om uit te zoeken
+  // wie er lid is.
+  { methode: 'POST', pad: '/api/aanmeldlink', publiek: true, doe: aanmeldlink },
 
   { methode: 'GET', pad: '/api/mij', doe: mij },
 ];

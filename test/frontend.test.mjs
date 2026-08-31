@@ -39,3 +39,15 @@ test('de knoppen zeggen wat er gebeurt', () => {
   assert.ok(html.includes('Stuur me een link'));
   assert.ok(!/>\s*(Submit|Verzenden)\s*</.test(html));
 });
+
+test('de aanmeldlink wordt via de eigen route gevraagd', () => {
+  // Rechtstreeks bij Supabase aankloppen zou iedereen laten mailen naar
+  // willekeurige adressen, op ons quota. De controle op het adres zit in de
+  // Worker; die is hier getest in aanmeldlink.test.mjs.
+  assert.ok(html.includes("'/api/aanmeldlink'"), 'de eigen route hoort gebruikt te worden');
+  assert.ok(!html.includes('/auth/v1/otp'), 'de frontend praat niet meer rechtstreeks met Auth');
+});
+
+test('een mislukte aanmeldlink wordt getoond in plaats van genegeerd', () => {
+  assert.ok(html.includes('error_description'), 'de fout uit het fragment hoort gelezen te worden');
+});

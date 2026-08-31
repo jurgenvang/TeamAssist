@@ -1,4 +1,4 @@
-# TeamAssist 0.1.3 — het fundament
+# TeamAssist 0.2.0 — het fundament
 
 Eerste pakket. Het bevat geen functionaliteit voor de club: geen
 synchronisatie, geen import, geen aanwezigheden. Wat het wel bevat, is het
@@ -9,7 +9,10 @@ applicatie.
 
 - Het volledige schema voor personen, accounts, rollen, teams, spelers,
   ouder-kindkoppelingen, logboek, instellingen en taken.
-- Aanmelden via Supabase Auth met een magic link, geverifieerd in de Worker.
+- Aanmelden via Supabase Auth met een magic link, geverifieerd in de Worker. De
+  link wordt aangevraagd via `/api/aanmeldlink`, die eerst nakijkt of het adres
+  bij een actieve persoon hoort — anders kan iedereen via de app mails laten
+  sturen naar willekeurige adressen, op ons quota.
 - De rechtenlaag: één functie die zegt wat iemand mag, met 21 tests die voor
   elke rol en elk recht zowel bewijzen dat het mag als dat het niet mag.
 - De uurplanner, met daarin de dagelijkse `supabase-ping`.
@@ -71,8 +74,16 @@ create policy "ping is leesbaar" on ping for select using (true);
 De ping stuurt de sleutel enkel in de `apikey`-kop en niet in een
 `Authorization`-kop: een publishable-sleutel daarin levert een 401 op.
 
-**3. De aanmeldmethode.** Zet e-mail aan en wachtwoorden uit, en voeg het adres
-van de Worker toe bij de toegelaten redirect-URL's.
+**3. De aanmeldmethode.** Authentication, dan URL Configuration:
+
+- **Site URL** op het adres van de app zetten. Ze staat standaard op
+  `http://localhost:3000`, en zolang dat zo blijft komt elke bevestigingslink
+  daar uit — bij niemand dus.
+- Datzelfde adres toevoegen bij **Redirect URLs**. Supabase honoreert enkel
+  adressen die op die lijst staan; een adres dat er niet op staat wordt
+  vervangen door de Site URL, zonder foutmelding vooraf.
+
+Zet daarna bij Providers e-mail aan en wachtwoorden uit.
 
 ## Waar je de sleutels vindt
 

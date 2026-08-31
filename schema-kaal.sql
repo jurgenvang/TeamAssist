@@ -41,6 +41,8 @@ CREATE TABLE personen (
   gemeente           TEXT,
   actief             INTEGER NOT NULL DEFAULT 1 CHECK (actief IN (0, 1)),
   inactief_sinds     TEXT,
+
+  laatste_aanmeldlink TEXT,
   aangemaakt         TEXT NOT NULL DEFAULT (datetime('now')),
   gewijzigd          TEXT NOT NULL DEFAULT (datetime('now'))
 );

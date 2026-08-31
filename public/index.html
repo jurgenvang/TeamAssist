@@ -175,35 +175,49 @@ async function haalConfig() {
 // --- Aanmelden --------------------------------------------------------------
 
 async function vraagLink(email) {
-  const antwoord = await fetch(`${config.supabase_url}/auth/v1/otp`, {
+  // Niet rechtstreeks bij Supabase: de eigen route kijkt eerst of het adres bij
+  // iemand van de club hoort. Anders kan iedereen via deze pagina mails laten
+  // sturen naar willekeurige adressen.
+  const antwoord = await fetch('/api/aanmeldlink', {
     method: 'POST',
-    headers: { 'content-type': 'application/json', apikey: config.supabase_publieke_sleutel },
-    body: JSON.stringify({ email, create_user: true, options: { email_redirect_to: location.origin } }),
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ email }),
   });
-  if (!antwoord.ok) {
-    const body = await antwoord.text();
-    throw new Error(body || `status ${antwoord.status}`);
-  }
+  const body = await antwoord.json().catch(() => null);
+  if (!antwoord.ok) throw new Error(`status ${antwoord.status}`);
+  return body?.boodschap ?? '';
 }
 
 // Na het klikken op de link staan de tokens in het fragment van de URL. Ze daar
 // meteen weghalen, zodat ze niet in de geschiedenis of in een gedeelde link
 // blijven staan.
 function leesTokensUitUrl() {
-  if (!location.hash.includes('access_token')) return null;
+  if (!location.hash) return null;
   const p = new URLSearchParams(location.hash.slice(1));
+
+  // Loopt er iets mis met de link — vervallen, al gebruikt, of een adres dat
+  // niet op de lijst staat — dan komt dat ook in het fragment terecht. Dat
+  // negeren zou het aanmeldscherm tonen alsof er niets gebeurd is, en dan
+  // probeert iemand het eindeloos opnieuw.
+  const fout = p.get('error_description') || p.get('error');
+  if (fout) {
+    history.replaceState(null, '', location.pathname + location.search);
+    return { fout: decodeURIComponent(fout.replace(/\+/g, ' ')) };
+  }
+
+  if (!p.get('access_token')) return null;
   const sessie = {
     access_token: p.get('access_token'),
     refresh_token: p.get('refresh_token'),
   };
   history.replaceState(null, '', location.pathname + location.search);
-  return sessie.access_token ? sessie : null;
+  return sessie;
 }
 
 async function vernieuwToken(huidige) {
   const antwoord = await fetch(`${config.supabase_url}/auth/v1/token?grant_type=refresh_token`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json', apikey: config.supabase_publieke_sleutel },
+    headers: { 'content-type': 'application/json', apikey: config.supabase_publishable_key },
     body: JSON.stringify({ refresh_token: huidige.refresh_token }),
   });
   if (!antwoord.ok) return null;
@@ -275,6 +289,11 @@ async function start() {
   }
 
   const uitUrl = leesTokensUitUrl();
+  if (uitUrl && uitUrl.fout) {
+    toonAanmelden();
+    toon('aanmeldmelding', `Aanmelden lukte niet: ${uitUrl.fout}`, true);
+    return;
+  }
   if (uitUrl) bewaarSessie(uitUrl);
 
   if (!sessie()) return toonAanmelden();
@@ -301,8 +320,8 @@ el('aanmeldform').addEventListener('submit', async (e) => {
   e.preventDefault();
   const email = el('email').value.trim();
   try {
-    await vraagLink(email);
-    toon('aanmeldmelding', `Er is een link onderweg naar ${email}. Ze blijft een uur geldig.`);
+    const boodschap = await vraagLink(email);
+    toon('aanmeldmelding', boodschap);
   } catch (fout) {
     toon('aanmeldmelding', `Versturen lukte niet: ${fout.message}`, true);
   }

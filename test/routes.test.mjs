@@ -34,11 +34,11 @@ test('een route vraagt enkel rechten die bestaan', () => {
 });
 
 test('publieke routes geven geen persoonsgegevens terug', () => {
-  // Alles wat publiek staat, is van buitenaf op te vragen zonder aanmelden. In
-  // versie 0.1 zijn dat er twee, en beide horen alleen over de installatie te
-  // gaan.
+  // Alles wat publiek staat, is van buitenaf op te vragen zonder aanmelden.
+  // /api/aanmeldlink hoort daarbij omdat wie een link vraagt nog niet aangemeld
+  // is; ze geeft wel altijd hetzelfde antwoord terug.
   const publiek = ROUTES.filter((r) => r.publiek).map((r) => r.pad);
-  assert.deepEqual(publiek.sort(), ['/api/config', '/api/versie']);
+  assert.deepEqual(publiek.sort(), ['/api/aanmeldlink', '/api/config', '/api/versie']);
 });
 
 test('een route die geen recht vraagt, doet dat bewust', () => {
