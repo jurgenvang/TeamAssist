@@ -18,16 +18,16 @@ export const PING_TAAK = 'supabase-ping';
 
 export async function pingSupabase(env, fetcher = fetch) {
   const basis = String(env.SUPABASE_URL || '').replace(/\/+$/, '');
-  if (!basis || !env.SUPABASE_ANON_SLEUTEL) {
-    return { ok: false, melding: 'SUPABASE_URL of SUPABASE_ANON_SLEUTEL ontbreekt' };
+  if (!basis || !env.SUPABASE_PUBLISHABLE_KEY) {
+    return { ok: false, melding: 'SUPABASE_URL of SUPABASE_PUBLISHABLE_KEY ontbreekt' };
   }
 
   try {
+    // Enkel de apikey-header, geen Authorization. Een publishable-sleutel
+    // (sb_publishable_...) hoort daar niet in en levert dan een 401 op; de
+    // oudere anon-sleutel werkt met de apikey-header alleen ook.
     const antwoord = await fetcher(`${basis}/rest/v1/ping?select=id&limit=1`, {
-      headers: {
-        apikey: env.SUPABASE_ANON_SLEUTEL,
-        authorization: `Bearer ${env.SUPABASE_ANON_SLEUTEL}`,
-      },
+      headers: { apikey: env.SUPABASE_PUBLISHABLE_KEY },
     });
     if (!antwoord.ok) {
       return { ok: false, melding: `status ${antwoord.status}` };

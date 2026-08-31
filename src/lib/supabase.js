@@ -9,7 +9,10 @@
 // controleren. De `alg` uit de header van het token bepaalt daarom niet welke
 // weg gekozen wordt — de configuratie doet dat.
 
-const JWKS_PAD = '/auth/v1/.well-known/jwks.json';
+// Supabase publiceert de publieke sleutels op twee plaatsen, afhankelijk van de
+// leeftijd van het project. Beide proberen kost bij de eerste oproep hoogstens
+// een mislukte fetch, en spaart een storing waarvan de oorzaak niet te raden is.
+const JWKS_PADEN = ['/auth/v1/.well-known/jwks.json', '/auth/v1/jwks'];
 
 // De sleutels veranderen zelden en het ophalen kost een netwerkoproep per
 // verzoek als het niet bewaard wordt. Deze cache leeft zolang de Worker-instantie
@@ -43,16 +46,38 @@ export function ontleedToken(token) {
   };
 }
 
-async function haalJwks(projectUrl, fetcher = fetch) {
-  const url = `${projectUrl.replace(/\/+$/, '')}${JWKS_PAD}`;
-  const vers = Date.now() - jwksCache.opgehaald < JWKS_GELDIG_MS;
-  if (jwksCache.url === url && jwksCache.sleutels && vers) return jwksCache.sleutels;
+async function haalJwks(projectUrl, fetcher = fetch, jwksUrl = null) {
+  // Staat de URL expliciet ingesteld, dan is er niets te raden. Dat is de
+  // voorkeur: het dashboard toont ze, en het scheelt een mislukte oproep bij
+  // elke koude start van de Worker.
+  if (jwksUrl) return haalVanUrl(jwksUrl, jwksUrl, fetcher);
 
+  const basis = String(projectUrl || '').replace(/\/+$/, '');
+  const vers = Date.now() - jwksCache.opgehaald < JWKS_GELDIG_MS;
+  if (jwksCache.url === basis && jwksCache.sleutels && vers) return jwksCache.sleutels;
+
+  let laatsteFout = null;
+  for (const pad of JWKS_PADEN) {
+    try {
+      return await haalVanUrl(`${basis}${pad}`, basis, fetcher);
+    } catch (e) {
+      laatsteFout = e;
+    }
+  }
+  throw laatsteFout ?? new Error('jwks niet op te halen');
+}
+
+async function haalVanUrl(url, cachesleutel, fetcher) {
   const antwoord = await fetcher(url);
   if (!antwoord.ok) throw new Error(`jwks niet op te halen (${antwoord.status})`);
   const body = await antwoord.json();
-  jwksCache = { url, sleutels: body.keys ?? [], opgehaald: Date.now() };
-  return jwksCache.sleutels;
+  const sleutels = body.keys ?? [];
+  // Een leeg antwoord komt voor bij een project dat nog met een gedeeld geheim
+  // ondertekent. Dat is geen bruikbare sleutelverzameling, en stil doorgaan zou
+  // elk token laten stranden op 'geen passende sleutel'.
+  if (!sleutels.length) throw new Error('jwks bevat geen sleutels');
+  jwksCache = { url: cachesleutel, sleutels, opgehaald: Date.now() };
+  return sleutels;
 }
 
 function algoritmeVan(jwk) {
@@ -65,8 +90,8 @@ function algoritmeVan(jwk) {
   throw new Error(`onbekend sleuteltype ${jwk.kty}`);
 }
 
-async function controleerMetJwks(ontleed, projectUrl, fetcher) {
-  const sleutels = await haalJwks(projectUrl, fetcher);
+async function controleerMetJwks(ontleed, projectUrl, fetcher, jwksUrl) {
+  const sleutels = await haalJwks(projectUrl, fetcher, jwksUrl);
   const jwk = sleutels.find((k) => k.kid === ontleed.header.kid) ?? sleutels[0];
   if (!jwk) throw new Error('geen passende sleutel in de jwks');
 
@@ -95,11 +120,19 @@ async function controleerMetGeheim(ontleed, geheim) {
  * @param {object} env  met SUPABASE_URL en optioneel SUPABASE_JWT_SECRET
  */
 export async function verifieerToken(token, env, fetcher = fetch) {
+  // Eerst de configuratie, dan pas het token. Een sb_secret_-sleutel is géén
+  // JWT-geheim: ze vervangt service_role en omzeilt alle beveiliging. Belandt ze
+  // hier, dan is er iets in de verkeerde secret geplakt, en dat hoort luid te
+  // falen in plaats van stil iets anders te doen.
+  if (String(env.SUPABASE_JWT_SECRET || '').startsWith('sb_secret_')) {
+    throw new Error('SUPABASE_JWT_SECRET bevat een secret key, geen JWT-geheim');
+  }
+
   const ontleed = ontleedToken(token);
 
   const geldig = env.SUPABASE_JWT_SECRET
     ? await controleerMetGeheim(ontleed, env.SUPABASE_JWT_SECRET)
-    : await controleerMetJwks(ontleed, env.SUPABASE_URL, fetcher);
+    : await controleerMetJwks(ontleed, env.SUPABASE_URL, fetcher, env.SUPABASE_JWKS_URL);
 
   if (!geldig) throw new Error('handtekening klopt niet');
 

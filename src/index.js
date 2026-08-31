@@ -30,7 +30,7 @@ export const ROUTES = [
     doe: ({ env }) =>
       json({
         supabase_url: env.SUPABASE_URL ?? '',
-        supabase_anon_sleutel: env.SUPABASE_ANON_SLEUTEL ?? '',
+        supabase_publieke_sleutel: env.SUPABASE_PUBLISHABLE_KEY ?? '',
         versie: VERSIE,
       }),
   },

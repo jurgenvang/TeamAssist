@@ -10,7 +10,7 @@ import { pingSupabase, voerPingUit, PING_TAAK } from '../src/lib/ping.js';
 
 const ENV = {
   SUPABASE_URL: 'https://project.supabase.co',
-  SUPABASE_ANON_SLEUTEL: 'anon-sleutel',
+  SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_test',
 };
 
 const lukt = async () => new Response('[]', { status: 200 });
@@ -30,15 +30,18 @@ test('een geslaagde ping meldt dat het project wakker is', async () => {
   assert.equal(uit.ok, true);
 });
 
-test('de ping gebruikt de anon-sleutel in beide koppen', async () => {
+test('de ping stuurt de sleutel enkel in de apikey-kop', async () => {
+  // Een publishable-sleutel in een Authorization-header levert een 401 op. Dat
+  // is precies het soort fout dat pas een week later zichtbaar wordt, wanneer
+  // het project gepauzeerd blijkt.
   let gezien = null;
   await pingSupabase(ENV, async (url, opties) => {
     gezien = { url, opties };
     return new Response('[]', { status: 200 });
   });
   assert.match(gezien.url, /\/rest\/v1\/ping/);
-  assert.equal(gezien.opties.headers.apikey, 'anon-sleutel');
-  assert.equal(gezien.opties.headers.authorization, 'Bearer anon-sleutel');
+  assert.equal(gezien.opties.headers.apikey, 'sb_publishable_test');
+  assert.equal(gezien.opties.headers.authorization, undefined);
 });
 
 test('ontbrekende instellingen geven een fout in plaats van een stille ping', async () => {

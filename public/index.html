@@ -177,7 +177,7 @@ async function haalConfig() {
 async function vraagLink(email) {
   const antwoord = await fetch(`${config.supabase_url}/auth/v1/otp`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json', apikey: config.supabase_anon_sleutel },
+    headers: { 'content-type': 'application/json', apikey: config.supabase_publieke_sleutel },
     body: JSON.stringify({ email, create_user: true, options: { email_redirect_to: location.origin } }),
   });
   if (!antwoord.ok) {
@@ -203,7 +203,7 @@ function leesTokensUitUrl() {
 async function vernieuwToken(huidige) {
   const antwoord = await fetch(`${config.supabase_url}/auth/v1/token?grant_type=refresh_token`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json', apikey: config.supabase_anon_sleutel },
+    headers: { 'content-type': 'application/json', apikey: config.supabase_publieke_sleutel },
     body: JSON.stringify({ refresh_token: huidige.refresh_token }),
   });
   if (!antwoord.ok) return null;
