@@ -15,7 +15,7 @@ binding = "ASSETS"
 [[d1_databases]]
 binding = "DB"
 database_name = "teamassist"
-database_id = "VUL-IN-NA-HET-AANMAKEN"
+database_id = "0180e02c-f331-4f75-9e29-3f8f004ca1b5"
 
 # SUPABASE_URL en SUPABASE_ANON_SLEUTEL staan hier bewust niet: ze horen als
 # secret bij de Worker, samen met SUPABASE_JWT_SECRET indien het project met een

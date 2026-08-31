@@ -1,4 +1,4 @@
-# TeamAssist 0.1.2 — het fundament
+# TeamAssist 0.1.3 — het fundament
 
 Eerste pakket. Het bevat geen functionaliteit voor de club: geen
 synchronisatie, geen import, geen aanwezigheden. Wat het wel bevat, is het
@@ -132,7 +132,12 @@ De publieke sleutel is geen geheim — ze staat in de pagina, zoals bedoeld. Ze
 gaat hier toch als secret mee, omdat wat in `wrangler.toml` staat bij elke deploy
 overschreven wordt.
 
-Vul ook `database_id` in `wrangler.toml` in na het aanmaken van de D1-databank.
+De D1-databank heet `teamassist` en heeft id
+`0180e02c-f331-4f75-9e29-3f8f004ca1b5`; dat staat al ingevuld in
+`wrangler.toml`. Het is geen geheim maar een verwijzing — zonder toegang tot het
+Cloudflare-account valt er niets mee te doen. Als secret of variabele kan het
+overigens niet: een binding wordt bij het deployen opgelost, vóór er iets van
+`env` bestaat.
 
 ## Bij een volgende versie
 
