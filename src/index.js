@@ -18,6 +18,7 @@ import { aanmeldlink } from './routes/aanmeldlink.js';
 import { vblDiagnose } from './routes/admin/vbl-diagnose.js';
 import { teamsLijst, teamsSync, teamGevolgd } from './routes/admin/teams.js';
 import { ledenSync } from './routes/admin/leden.js';
+import { teamLeden, personenZoeken } from './routes/admin/bekijken.js';
 import { VERSIE } from './versie.js';
 
 export const ROUTES = [
@@ -63,6 +64,18 @@ export const ROUTES = [
 
   // Spelers en staf van de gevolgde ploegen. Ook hier: standaard een droogloop.
   { methode: 'POST', pad: '/api/admin/leden/sync', recht: 'personen.beheren', doe: ledenSync },
+
+  // Bekijken. De spelerslijst mag wie de ploeg begeleidt zien; of adres en
+  // geboortedatum meekomen, beslist de route zelf — dat bepaalt niet óf je
+  // binnen mag maar hoeveel je te zien krijgt.
+  {
+    methode: 'GET',
+    pad: '/api/admin/team-leden',
+    recht: 'team.spelers.bekijken',
+    team: (request) => new URL(request.url).searchParams.get('team'),
+    doe: teamLeden,
+  },
+  { methode: 'GET', pad: '/api/admin/personen', recht: 'personen.beheren', doe: personenZoeken },
 ];
 
 function zoekRoute(methode, pad) {

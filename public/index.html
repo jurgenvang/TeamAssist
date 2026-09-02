@@ -96,6 +96,16 @@
     font: inherit;
   }
   .klein { font-size: .82rem; color: var(--gedempt); margin: .4rem 0 0; }
+  button.alslink {
+    background: none;
+    border: none;
+    color: var(--inkt);
+    padding: 0;
+    font: inherit;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    cursor: pointer;
+  }
 
   footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--lijn); color: var(--gedempt); font-size: .82rem; }
   [hidden] { display: none !important; }
@@ -163,6 +173,27 @@
         <thead><tr><th>Volgen</th><th>Categorie</th><th>Ploeg</th><th></th></tr></thead>
         <tbody id="ploegenlijf"></tbody>
       </table>
+
+      <div id="ledenlijst" hidden>
+        <h2 id="ledenkop"></h2>
+        <table>
+          <thead><tr><th>Naam</th><th>Volgens de bond</th><th>Geboren</th><th></th></tr></thead>
+          <tbody id="ledenlijf"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="personen" hidden>
+      <h2>Personen zoeken</h2>
+      <form>
+        <input type="text" id="zoekterm" placeholder="naam, e-mailadres of lidnummer">
+        <button type="button" id="zoekknop">Zoeken</button>
+      </form>
+      <table>
+        <thead><tr><th>Naam</th><th>Geboren</th><th>Lidnr</th><th>Ploegen</th></tr></thead>
+        <tbody id="zoeklijf"></tbody>
+      </table>
+      <p id="zoekmelding" class="klein"></p>
     </section>
 
     <section id="diagnose" hidden>
@@ -335,6 +366,7 @@ function toonProfiel(gegevens) {
   const beheerder = Boolean((gegevens.rechten ?? {})['systeem.beheren']);
   el('diagnose').hidden = !beheerder;
   el('ploegen').hidden = !beheerder;
+  el('personen').hidden = !beheerder;
   if (beheerder) laadPloegen();
 
   const rechten = gegevens.rechten ?? {};
@@ -434,11 +466,15 @@ async function laadPloegen() {
       (p) => `<tr>
         <td><input type="checkbox" data-guid="${p.guid}" ${p.gevolgd ? 'checked' : ''}></td>
         <td>${p.categorie ?? '?'}</td>
-        <td>${p.naam}</td>
+        <td><button type="button" class="alslink" data-toon="${p.guid}">${p.naam}</button></td>
         <td class="ploegen">${p.bij_bond ? '' : 'niet meer bij de bond'}</td>
       </tr>`
     )
     .join('');
+
+  for (const knop of el('ploegenlijf').querySelectorAll('button[data-toon]')) {
+    knop.addEventListener('click', () => toonLeden(knop.dataset.toon));
+  }
 
   for (const vinkje of el('ploegenlijf').querySelectorAll('input[type=checkbox]')) {
     vinkje.addEventListener('change', async () => {
@@ -469,6 +505,68 @@ async function laadPloegen() {
     });
   }
 }
+
+async function toonLeden(guid) {
+  const uitkomst = await api(`/api/admin/team-leden?team=${encodeURIComponent(guid)}`);
+  const vak = el('ledenlijst');
+  vak.hidden = false;
+
+  if (uitkomst.status !== 200) {
+    el('ledenkop').textContent = `Dat lukte niet (${uitkomst.status})`;
+    el('ledenlijf').innerHTML = '';
+    return;
+  }
+
+  const b = uitkomst.body;
+  el('ledenkop').textContent = `${b.ploeg.naam} — ${b.spelers.length} spelers`;
+
+  // De naam van de bond ernaast, zodat een foute splitsing meteen opvalt: die
+  // wordt daar rechtgezet en niet in de synchronisatie.
+  const regel = (r, extra = '') => `<tr>
+      <td>${r.voornaam} ${r.achternaam}</td>
+      <td class="ploegen">${r.naam_vbl ?? ''}</td>
+      <td>${r.geboortedatum ?? ''}</td>
+      <td class="ploegen">${extra}${r.bij_bond === 0 ? ' niet meer bij de bond' : ''}</td>
+    </tr>`;
+
+  el('ledenlijf').innerHTML =
+    b.spelers.map((r) => regel(r)).join('') +
+    b.staf.map((r) => regel(r, r.rol.toLowerCase())).join('');
+}
+
+async function zoekPersonen() {
+  const term = el('zoekterm').value.trim();
+  const uitkomst = await api(`/api/admin/personen?zoek=${encodeURIComponent(term)}`);
+
+  if (uitkomst.status !== 200) {
+    el('zoeklijf').innerHTML = '';
+    el('zoekmelding').textContent = uitkomst.body?.fout ?? `Fout ${uitkomst.status}`;
+    return;
+  }
+
+  const b = uitkomst.body;
+  el('zoeklijf').innerHTML = b.personen
+    .map(
+      (p) => `<tr>
+        <td>${p.voornaam} ${p.achternaam}${p.actief ? '' : ' (inactief)'}</td>
+        <td>${p.geboortedatum ?? ''}</td>
+        <td>${p.lid_nr ?? ''}</td>
+        <td class="ploegen">${p.ploegen.join(', ')}</td>
+      </tr>`
+    )
+    .join('');
+  el('zoekmelding').textContent = b.meer
+    ? `Meer dan ${b.aantal} treffers — verfijn de zoekterm.`
+    : `${b.aantal} gevonden.`;
+}
+
+el('zoekknop').addEventListener('click', zoekPersonen);
+el('zoekterm').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    zoekPersonen();
+  }
+});
 
 // Twee stappen: eerst tonen wat er zou gebeuren, pas na bevestiging uitvoeren.
 // De synchronisatie raakt de ploegindeling van een heel seizoen aan.
