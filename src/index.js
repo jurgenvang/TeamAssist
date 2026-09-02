@@ -9,6 +9,7 @@ import { fout, json } from './lib/http.js';
 import { tokenUitVerzoek, verifieerToken } from './lib/supabase.js';
 import { identiteitVoor } from './lib/identiteit.js';
 import { rechtenVoor } from './lib/rechten-db.js';
+import { beperkTot } from './lib/rechten.js';
 import { seizoenUitVerzoek } from './lib/seizoen.js';
 import { brusselUur } from './lib/klok.js';
 import { voerPingUit } from './lib/ping.js';
@@ -19,6 +20,8 @@ import { vblDiagnose } from './routes/admin/vbl-diagnose.js';
 import { teamsLijst, teamsSync, teamGevolgd } from './routes/admin/teams.js';
 import { ledenSync } from './routes/admin/leden.js';
 import { teamLeden, personenZoeken } from './routes/admin/bekijken.js';
+import { persoonTonen, persoonBewaren, persoonActief } from './routes/admin/persoon.js';
+import { instellingenTonen, instellingBewaren, instellingLezen } from './routes/admin/instellingen.js';
 import { VERSIE } from './versie.js';
 
 export const ROUTES = [
@@ -76,6 +79,15 @@ export const ROUTES = [
     doe: teamLeden,
   },
   { methode: 'GET', pad: '/api/admin/personen', recht: 'personen.beheren', doe: personenZoeken },
+
+  // Eén persoon bekijken en aanpassen. Wat de bond levert, is zichtbaar maar
+  // niet aanpasbaar; wat de club wijzigt, krijgt bron 'club'.
+  { methode: 'GET', pad: '/api/admin/persoon', recht: 'personen.beheren', doe: persoonTonen },
+  { methode: 'POST', pad: '/api/admin/persoon', recht: 'personen.beheren', doe: persoonBewaren },
+  { methode: 'POST', pad: '/api/admin/persoon/actief', recht: 'personen.beheren', doe: persoonActief },
+
+  { methode: 'GET', pad: '/api/admin/instellingen', recht: 'systeem.beheren', doe: instellingenTonen },
+  { methode: 'POST', pad: '/api/admin/instellingen', recht: 'systeem.beheren', doe: instellingBewaren },
 ];
 
 function zoekRoute(methode, pad) {
@@ -109,7 +121,19 @@ async function bouwContext(request, env, route) {
   const seizoen = await seizoenUitVerzoek(env.DB, new URL(request.url));
   if (!seizoen) return { fout: fout(409, 'er is geen actief seizoen ingesteld') };
 
-  const rechten = await rechtenVoor(env.DB, gevonden.persoon.id, seizoen.code);
+  let rechten = await rechtenVoor(env.DB, gevonden.persoon.id, seizoen.code);
+
+  // De testrol. Drie voorwaarden, en alle drie moeten ze kloppen: de instelling
+  // staat aan, de persoon is werkelijk beheerder, en er is een rol gevraagd.
+  // De uitkomst is altijd de doorsnede met wat hij echt mag — de schakelaar kan
+  // daardoor enkel wegnemen.
+  const gevraagdeRol = request.headers.get('x-teamassist-rol');
+  if (gevraagdeRol && rechten.mag('systeem.beheren')) {
+    const toegelaten = await instellingLezen(env.DB, 'testrol_toegelaten', '0');
+    if (toegelaten === '1') {
+      rechten = beperkTot(rechten, gevraagdeRol, request.headers.get('x-teamassist-team'));
+    }
+  }
 
   // Een route die een recht vraagt, wordt hier gecontroleerd en nergens anders.
   // De frontend verbergt knoppen voor het gemak; dit weigert de actie.

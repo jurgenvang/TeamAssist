@@ -153,7 +153,9 @@ INSERT INTO instellingen (sleutel, waarde) VALUES
   ('bericht_modus', 'omleiden'),
   ('bericht_omleidadres', ''),
   ('clubnaam', 'AB InBev Leuven Bears'),
-  ('club_guid', 'BVBL1125');
+  ('club_guid', 'BVBL1125'),
+
+  ('testrol_toegelaten', '0');
 
 CREATE TABLE taak_runs (
   id        INTEGER PRIMARY KEY AUTOINCREMENT,

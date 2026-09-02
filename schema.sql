@@ -212,7 +212,11 @@ INSERT INTO instellingen (sleutel, waarde) VALUES
   ('bericht_modus', 'omleiden'),
   ('bericht_omleidadres', ''),
   ('clubnaam', 'AB InBev Leuven Bears'),
-  ('club_guid', 'BVBL1125');
+  ('club_guid', 'BVBL1125'),
+  -- Laat een beheerder kiezen met welke rol hij wil werken, om te zien wat een
+  -- coach of een ouder ziet. Staat uit, en hoort uit te staan zodra de club er
+  -- echt mee werkt.
+  ('testrol_toegelaten', '0');
 
 -- ---------------------------------------------------------------------------
 -- Taken

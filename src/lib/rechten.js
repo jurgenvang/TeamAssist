@@ -93,6 +93,62 @@ export const ROLRECHTEN = {
 };
 
 /**
+ * Versmalt een rechtenoverzicht tot wat één rol op één ploeg zou mogen.
+ *
+ * Voor de testrol: een beheerder kan zo kijken zoals een coach kijkt. De
+ * uitkomst is de **doorsnede** van wat hij werkelijk mag en wat de gekozen rol
+ * mag. Daardoor kan de schakelaar alleen wegnemen en nooit toevoegen — was het
+ * anders, dan zou er in de rechtenlaag een pad bestaan waarlangs iemand meer
+ * krijgt dan hem is toegekend, en dat is precies wat die laag moet uitsluiten.
+ *
+ * Gevolg dat hierbij hoort: rechten die de gekozen rol wél heeft en de echte
+ * persoon niet, blijven geweigerd. Een beheerder die als SPELER kijkt, ziet dus
+ * het scherm van een speler maar kan geen aanwezigheid opgeven.
+ */
+export function beperkTot(echteRechten, rol, teamGuid) {
+  const nagebootst = ROLRECHTEN[rol]
+    ? bouwRechten(
+        ROLRECHTEN[rol].bereik === 'globaal'
+          ? { rollen: [{ rol, team_guid: null }] }
+          : rol === 'SPELER'
+            ? { ploegenAlsSpeler: [teamGuid] }
+            : rol === 'OUVO'
+              ? { ploegenViaKind: [teamGuid] }
+              : { rollen: [{ rol, team_guid: teamGuid }] }
+      )
+    : bouwRechten();
+
+  return {
+    mag(recht, team = null) {
+      return nagebootst.mag(recht, team) && echteRechten.mag(recht, team);
+    },
+    ploegenMet(recht) {
+      const van = nagebootst.ploegenMet(recht);
+      if (van === '*') return echteRechten.ploegenMet(recht);
+      return van.filter((guid) => echteRechten.mag(recht, guid));
+    },
+    heeftRol(gevraagd) {
+      return nagebootst.heeftRol(gevraagd);
+    },
+    get rollen() {
+      return nagebootst.rollen;
+    },
+    get teams() {
+      return nagebootst.teams.filter((guid) => echteRechten.mag('team.bekijken', guid));
+    },
+    overzicht() {
+      const uit = {};
+      for (const recht of RECHTEN) {
+        const ploegen = this.ploegenMet(recht);
+        if (ploegen === '*' || ploegen.length) uit[recht] = ploegen;
+      }
+      return uit;
+    },
+    testrol: { rol, team: teamGuid ?? null },
+  };
+}
+
+/**
  * Bouwt het rechtenoverzicht van één persoon voor één seizoen.
  *
  * @param {object} bron

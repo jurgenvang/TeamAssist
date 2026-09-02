@@ -4,112 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>TeamAssist</title>
-<style>
-  /* Sober en leesbaar: dit is een werkscherm, geen etalage. Eén tekstfamilie,
-     één accentkleur, en verder wit met haarlijnen. */
-  :root {
-    --inkt: #17191c;
-    --gedempt: #6b7076;
-    --lijn: #e3e5e8;
-    --accent: #a4232b;
-    --vlak: #f6f7f8;
-    --radius: 6px;
-  }
-
-  * { box-sizing: border-box; }
-
-  body {
-    margin: 0;
-    padding: 2rem 1.25rem 4rem;
-    font: 16px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-    color: var(--inkt);
-    background: #fff;
-    -webkit-text-size-adjust: 100%;
-  }
-
-  main { max-width: 44rem; margin: 0 auto; }
-
-  header { border-bottom: 2px solid var(--inkt); padding-bottom: .75rem; margin-bottom: 2rem; }
-  h1 { margin: 0; font-size: 1.5rem; letter-spacing: -.01em; }
-  header p { margin: .15rem 0 0; color: var(--gedempt); font-size: .9rem; }
-
-  h2 { font-size: 1rem; margin: 2rem 0 .6rem; }
-
-  .naam { font-size: 1.75rem; font-weight: 600; margin: 0 0 .1rem; letter-spacing: -.02em; }
-  .adres { color: var(--gedempt); margin: 0 0 1.25rem; }
-
-  .rollen { display: flex; flex-wrap: wrap; gap: .4rem; margin: 0 0 .5rem; padding: 0; list-style: none; }
-  .rollen li {
-    border: 1px solid var(--accent);
-    color: var(--accent);
-    border-radius: var(--radius);
-    padding: .1rem .5rem;
-    font-size: .85rem;
-    font-weight: 600;
-  }
-
-  table { width: 100%; border-collapse: collapse; font-size: .92rem; }
-  th, td { text-align: left; padding: .45rem .5rem; border-bottom: 1px solid var(--lijn); }
-  th { font-weight: 600; color: var(--gedempt); font-size: .82rem; }
-  td.ploegen { color: var(--gedempt); }
-
-  form { display: flex; gap: .5rem; flex-wrap: wrap; margin: 1rem 0 0; }
-  input[type=email] {
-    flex: 1 1 16rem;
-    padding: .55rem .7rem;
-    border: 1px solid var(--lijn);
-    border-radius: var(--radius);
-    font: inherit;
-  }
-  input[type=email]:focus-visible, button:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 2px;
-  }
-  button {
-    padding: .55rem 1rem;
-    border: 1px solid var(--inkt);
-    background: var(--inkt);
-    color: #fff;
-    border-radius: var(--radius);
-    font: inherit;
-    cursor: pointer;
-  }
-  button.stil { background: #fff; color: var(--inkt); }
-
-  .melding { padding: .7rem .85rem; border-radius: var(--radius); background: var(--vlak); margin-top: 1rem; }
-  .melding.fout { background: #fdf2f2; border-left: 3px solid var(--accent); }
-
-  pre {
-    background: var(--vlak);
-    padding: .8rem;
-    border-radius: var(--radius);
-    overflow-x: auto;
-    font-size: .8rem;
-    line-height: 1.45;
-    max-height: 28rem;
-  }
-  input[type=text] {
-    flex: 1 1 16rem;
-    padding: .55rem .7rem;
-    border: 1px solid var(--lijn);
-    border-radius: var(--radius);
-    font: inherit;
-  }
-  .klein { font-size: .82rem; color: var(--gedempt); margin: .4rem 0 0; }
-  button.alslink {
-    background: none;
-    border: none;
-    color: var(--inkt);
-    padding: 0;
-    font: inherit;
-    text-decoration: underline;
-    text-underline-offset: 2px;
-    cursor: pointer;
-  }
-
-  footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--lijn); color: var(--gedempt); font-size: .82rem; }
-  [hidden] { display: none !important; }
-</style>
+<link rel="stylesheet" href="/stijl.css">
 </head>
 <body>
 <main>
@@ -129,46 +24,59 @@
     <div id="aanmeldmelding" class="melding" hidden></div>
   </section>
 
-  <!-- Wie ben ik -->
-  <section id="profiel" hidden>
-    <p class="naam" id="volledigenaam"></p>
-    <p class="adres" id="emailadres"></p>
+  <!-- De app -->
+  <div id="app" hidden>
+    <div id="testbalk" class="testbalk" hidden>
+      <span id="testbalktekst"></span>
+      <button type="button" id="testrolstop">Terug naar mijn eigen rollen</button>
+    </div>
 
-    <h2>Rollen</h2>
-    <ul class="rollen" id="rollenlijst"></ul>
-    <p id="geenrollen" class="melding" hidden>
-      Je bent aangemeld, maar er is je nog geen rol toegekend. Een beheerder moet dat doen
-      voor je iets te zien krijgt.
-    </p>
+    <nav id="navigatie" hidden></nav>
 
-    <h2>Ploegen</h2>
-    <table id="ploegentabel">
-      <thead><tr><th>Categorie</th><th>Ploeg</th></tr></thead>
-      <tbody id="ploegenlijf"></tbody>
-    </table>
-    <p id="geenploegen" class="melding" hidden>Je hangt aan geen enkele ploeg in dit seizoen.</p>
+    <!-- Overzicht -->
+    <section id="tab-mij" hidden>
+      <p class="naam" id="volledigenaam"></p>
+      <p class="adres" id="emailadres"></p>
 
-    <h2>Rechten</h2>
-    <table>
-      <thead><tr><th>Recht</th><th>Waar</th></tr></thead>
-      <tbody id="rechtenlijf"></tbody>
-    </table>
-
-    <section id="ploegen" hidden>
-      <h2>Ploegen</h2>
-      <p>
-        Vink aan welke ploegen TeamAssist beheert. Een nieuwe ploeg staat
-        standaard uit.
+      <h2>Rollen</h2>
+      <ul class="rollen" id="rollenlijst"></ul>
+      <p id="geenrollen" class="melding" hidden>
+        Je bent aangemeld, maar er is je nog geen rol toegekend. Een beheerder moet dat doen
+        voor je iets te zien krijgt.
       </p>
+
+      <h2>Mijn ploegen</h2>
+      <table>
+        <thead><tr><th>Categorie</th><th>Ploeg</th></tr></thead>
+        <tbody id="mijnploegenlijf"></tbody>
+      </table>
+      <p id="geenploegen" class="melding" hidden>Je hangt aan geen enkele ploeg in dit seizoen.</p>
+
+      <h2>Rechten</h2>
+      <table>
+        <thead><tr><th>Recht</th><th>Waar</th></tr></thead>
+        <tbody id="rechtenlijf"></tbody>
+      </table>
+
       <form>
-        <button type="button" id="ploegenladen">Lijst verversen</button>
-        <button type="button" class="stil" id="ploegensync">Ophalen bij de bond</button>
+        <button type="button" class="stil" id="afmelden">Afmelden</button>
       </form>
-      <div id="ploegenplan" class="melding" hidden></div>
-      <form>
-        <button type="button" class="stil" id="ledensync">Spelers en staf ophalen</button>
-      </form>
-      <div id="ledenplan" class="melding" hidden></div>
+    </section>
+
+    <!-- Ploegen -->
+    <section id="tab-ploegen" hidden>
+      <h2>Ploegen</h2>
+      <div id="ploegenbeheer" hidden>
+        <p>Vink aan welke ploegen TeamAssist beheert. Een nieuwe ploeg staat standaard uit.</p>
+        <form>
+          <button type="button" id="ploegenladen">Lijst verversen</button>
+          <button type="button" class="stil" id="ploegensync">Ploegen ophalen bij de bond</button>
+          <button type="button" class="stil" id="ledensync">Spelers en staf ophalen</button>
+        </form>
+        <div id="ploegenplan" class="melding" hidden></div>
+        <div id="ledenplan" class="melding" hidden></div>
+      </div>
+
       <table>
         <thead><tr><th>Volgen</th><th>Categorie</th><th>Ploeg</th><th></th></tr></thead>
         <tbody id="ploegenlijf"></tbody>
@@ -183,7 +91,8 @@
       </div>
     </section>
 
-    <section id="personen" hidden>
+    <!-- Personen -->
+    <section id="tab-personen" hidden>
       <h2>Personen zoeken</h2>
       <form>
         <input type="text" id="zoekterm" placeholder="naam, e-mailadres of lidnummer">
@@ -196,466 +105,58 @@
       <p id="zoekmelding" class="klein"></p>
     </section>
 
-    <section id="diagnose" hidden>
+    <!-- Beheer -->
+    <section id="tab-beheer" hidden>
+      <h2>Instellingen</h2>
+      <table>
+        <thead><tr><th>Instelling</th><th>Waarde</th></tr></thead>
+        <tbody id="instellingenlijf"></tbody>
+      </table>
+      <p id="instellingmelding" class="klein"></p>
+
+      <h2>Kijken met een andere rol</h2>
+      <p class="klein">
+        Werkt enkel wanneer de instelling <code>testrol_toegelaten</code> aanstaat. Je rechten
+        worden dan versmald tot die rol; meer dan wat je zelf mag, krijg je nooit.
+      </p>
+      <form>
+        <select id="testrolrol"></select>
+        <span id="testrolteamveld" hidden><select id="testrolteam"></select></span>
+        <button type="button" id="testrolstart">Zo kijken</button>
+      </form>
+      <p id="testrolmelding" class="klein"></p>
+
       <h2>Gegevens van de bond bekijken</h2>
-      <p>
-        Laat leeg voor de ploegenlijst van de club, of vul een ploeg-GUID in
-        zoals <code>BVBL1125J16&nbsp;&nbsp;2</code> — met twee spaties.
+      <p class="klein">
+        Laat leeg voor de ploegenlijst van de club, of vul een ploeg-GUID in zoals
+        <code>BVBL1125J16&nbsp;&nbsp;2</code> — met twee spaties. Het volledige antwoord bevat
+        namen en geboortedata; het wordt apart gelogd.
       </p>
       <form>
         <input type="text" id="diagnoseteam" placeholder="ploeg-GUID (optioneel)">
         <button type="button" id="diagnoseknop">Ophalen</button>
         <button type="button" class="stil" id="diagnoseruw">Volledig antwoord</button>
       </form>
-      <p class="klein">
-        Het volledige antwoord bevat namen en geboortedata van spelers. Vraag het
-        enkel op wanneer je het nodig hebt; het wordt apart gelogd.
-      </p>
       <pre id="diagnoseuitvoer" hidden></pre>
     </section>
 
-    <form>
-      <button type="button" class="stil" id="afmelden">Afmelden</button>
-    </form>
-  </section>
+    <!-- Detail van één persoon, over de tabbladen heen -->
+    <section id="persoon" hidden>
+      <h2 id="persoonkop"></h2>
+      <p class="klein" id="persoonherkomst"></p>
+      <div id="persoonvelden"></div>
+      <form>
+        <button type="button" id="persoonbewaren">Bewaren</button>
+        <button type="button" class="stil" id="persoonverwijderen">Op te verwijderen zetten</button>
+        <button type="button" class="stil" id="persoonsluiten">Sluiten</button>
+      </form>
+      <div id="persoonmelding" class="melding" hidden></div>
+    </section>
+  </div>
 
-  <div id="algemenemelding" class="melding fout" hidden></div>
-
-  <footer>
-    <span id="versieregel"></span>
-  </footer>
+  <footer><span id="versieregel"></span></footer>
 </main>
 
-<script type="module">
-// Aanmelden gebeurt rechtstreeks tegen de REST-API van Supabase Auth. Geen
-// bibliotheek van een CDN: dat zou een derde partij toevoegen aan het pad waar
-// iemand zijn adres invult, en er is geen buildstap om ze mee te leveren.
-
-const OPSLAG = 'teamassist.sessie';
-let config = null;
-
-const el = (id) => document.getElementById(id);
-
-function toon(id, tekst, foutief = false) {
-  const vak = el(id);
-  vak.textContent = tekst;
-  vak.classList.toggle('fout', foutief);
-  vak.hidden = false;
-}
-
-function sessie() {
-  try { return JSON.parse(localStorage.getItem(OPSLAG) || 'null'); }
-  catch { return null; }
-}
-
-function bewaarSessie(s) {
-  if (s) localStorage.setItem(OPSLAG, JSON.stringify(s));
-  else localStorage.removeItem(OPSLAG);
-}
-
-async function haalConfig() {
-  const antwoord = await fetch('/api/config');
-  config = await antwoord.json();
-  el('versieregel').textContent = `TeamAssist ${config.versie}`;
-  return config;
-}
-
-// --- Aanmelden --------------------------------------------------------------
-
-async function vraagLink(email) {
-  // Niet rechtstreeks bij Supabase: de eigen route kijkt eerst of het adres bij
-  // iemand van de club hoort. Anders kan iedereen via deze pagina mails laten
-  // sturen naar willekeurige adressen.
-  const antwoord = await fetch('/api/aanmeldlink', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ email }),
-  });
-  const body = await antwoord.json().catch(() => null);
-  if (!antwoord.ok) throw new Error(`status ${antwoord.status}`);
-  return body?.boodschap ?? '';
-}
-
-// Na het klikken op de link staan de tokens in het fragment van de URL. Ze daar
-// meteen weghalen, zodat ze niet in de geschiedenis of in een gedeelde link
-// blijven staan.
-function leesTokensUitUrl() {
-  if (!location.hash) return null;
-  const p = new URLSearchParams(location.hash.slice(1));
-
-  // Loopt er iets mis met de link — vervallen, al gebruikt, of een adres dat
-  // niet op de lijst staat — dan komt dat ook in het fragment terecht. Dat
-  // negeren zou het aanmeldscherm tonen alsof er niets gebeurd is, en dan
-  // probeert iemand het eindeloos opnieuw.
-  const fout = p.get('error_description') || p.get('error');
-  if (fout) {
-    history.replaceState(null, '', location.pathname + location.search);
-    return { fout: decodeURIComponent(fout.replace(/\+/g, ' ')) };
-  }
-
-  if (!p.get('access_token')) return null;
-  const sessie = {
-    access_token: p.get('access_token'),
-    refresh_token: p.get('refresh_token'),
-  };
-  history.replaceState(null, '', location.pathname + location.search);
-  return sessie;
-}
-
-async function vernieuwToken(huidige) {
-  const antwoord = await fetch(`${config.supabase_url}/auth/v1/token?grant_type=refresh_token`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', apikey: config.supabase_publishable_key },
-    body: JSON.stringify({ refresh_token: huidige.refresh_token }),
-  });
-  if (!antwoord.ok) return null;
-  const body = await antwoord.json();
-  return { access_token: body.access_token, refresh_token: body.refresh_token };
-}
-
-// --- De eigen API -----------------------------------------------------------
-
-async function api(pad, methode = 'GET', body = null) {
-  let s = sessie();
-  if (!s) return { status: 401 };
-
-  const opties = (token) => ({
-    method: methode,
-    headers: {
-      authorization: `Bearer ${token}`,
-      ...(body ? { 'content-type': 'application/json' } : {}),
-    },
-    ...(body ? { body: JSON.stringify(body) } : {}),
-  });
-
-  let antwoord = await fetch(pad, opties(s.access_token));
-  if (antwoord.status === 401 && s.refresh_token) {
-    const nieuw = await vernieuwToken(s);
-    if (nieuw) {
-      bewaarSessie(nieuw);
-      antwoord = await fetch(pad, opties(nieuw.access_token));
-    }
-  }
-  return { status: antwoord.status, body: await antwoord.json().catch(() => null) };
-}
-
-// --- Tonen ------------------------------------------------------------------
-
-function toonProfiel(gegevens) {
-  el('aanmelden').hidden = true;
-  el('profiel').hidden = false;
-
-  el('volledigenaam').textContent =
-    `${gegevens.persoon.voornaam} ${gegevens.persoon.achternaam}`.trim() || gegevens.persoon.email;
-  el('emailadres').textContent = gegevens.persoon.email || '';
-  el('clubregel').textContent = `AB InBev Leuven Bears — seizoen ${gegevens.seizoen.naam}`;
-
-  const rollen = gegevens.rollen ?? [];
-  el('rollenlijst').innerHTML = rollen.map((r) => `<li>${r}</li>`).join('');
-  el('geenrollen').hidden = rollen.length > 0;
-
-  const ploegen = gegevens.ploegen ?? [];
-  el('ploegenlijf').innerHTML = ploegen
-    .map((p) => `<tr><td>${p.categorie ?? ''}</td><td>${p.naam}</td></tr>`)
-    .join('');
-  el('ploegentabel').hidden = ploegen.length === 0;
-  el('geenploegen').hidden = ploegen.length > 0;
-
-  // Het diagnosescherm is er enkel voor wie het systeem beheert. Verbergen is
-  // een gemak, geen beveiliging: de backend weigert de route sowieso.
-  const beheerder = Boolean((gegevens.rechten ?? {})['systeem.beheren']);
-  el('diagnose').hidden = !beheerder;
-  el('ploegen').hidden = !beheerder;
-  el('personen').hidden = !beheerder;
-  if (beheerder) laadPloegen();
-
-  const rechten = gegevens.rechten ?? {};
-  el('rechtenlijf').innerHTML = Object.entries(rechten)
-    .map(([recht, waar]) => {
-      const bereik = waar === '*' ? 'de hele club' : `${waar.length} ploeg${waar.length === 1 ? '' : 'en'}`;
-      return `<tr><td>${recht}</td><td class="ploegen">${bereik}</td></tr>`;
-    })
-    .join('');
-}
-
-function toonAanmelden() {
-  el('profiel').hidden = true;
-  el('aanmelden').hidden = false;
-}
-
-// --- Start ------------------------------------------------------------------
-
-async function start() {
-  await haalConfig();
-
-  if (!config.supabase_url) {
-    toon('algemenemelding', 'Het aanmeldsysteem is nog niet ingesteld op deze installatie.', true);
-    return;
-  }
-
-  const uitUrl = leesTokensUitUrl();
-  if (uitUrl && uitUrl.fout) {
-    toonAanmelden();
-    toon('aanmeldmelding', `Aanmelden lukte niet: ${uitUrl.fout}`, true);
-    return;
-  }
-  if (uitUrl) bewaarSessie(uitUrl);
-
-  if (!sessie()) return toonAanmelden();
-
-  const uitkomst = await api('/api/mij');
-  if (uitkomst.status === 200) return toonProfiel(uitkomst.body);
-
-  // Elke andere uitkomst hoort uitgelegd te worden. Stilzwijgend terugvallen op
-  // het aanmeldscherm liet iemand denken dat de link niet werkte, terwijl hij
-  // wel degelijk binnen was en de installatie nog een instelling miste.
-  toonAanmelden();
-
-  if (uitkomst.status === 403) {
-    toon(
-      'aanmeldmelding',
-      'Je bent aangemeld, maar dit adres is nog niet gekoppeld aan iemand in TeamAssist. ' +
-        'Een beheerder moet je toevoegen.',
-      true
-    );
-    return;
-  }
-
-  if (uitkomst.status === 409) {
-    toon(
-      'aanmeldmelding',
-      'Je bent aangemeld, maar er is nog geen actief seizoen ingesteld. ' +
-        'Zolang dat ontbreekt, kan de app niets tonen.',
-      true
-    );
-    return;
-  }
-
-  if (uitkomst.status === 401) {
-    // Enkel hier de sessie weggooien: het token deugt niet meer. Bij een 409 of
-    // een 500 zou opnieuw aanmelden niets oplossen.
-    bewaarSessie(null);
-    toon('aanmeldmelding', 'Je aanmelding is verlopen. Vraag een nieuwe link aan.', true);
-    return;
-  }
-
-  toon(
-    'aanmeldmelding',
-    `Je bent aangemeld, maar de app antwoordde met ${uitkomst.status}: ` +
-      `${uitkomst.body?.fout ?? 'geen uitleg'}.`,
-    true
-  );
-}
-
-el('aanmeldform').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const email = el('email').value.trim();
-  try {
-    const boodschap = await vraagLink(email);
-    toon('aanmeldmelding', boodschap);
-  } catch (fout) {
-    toon('aanmeldmelding', `Versturen lukte niet: ${fout.message}`, true);
-  }
-});
-
-async function laadPloegen() {
-  const uitkomst = await api('/api/admin/teams');
-  const ploegen = uitkomst.body?.teams ?? [];
-  el('ploegenlijf').innerHTML = ploegen
-    .map(
-      (p) => `<tr>
-        <td><input type="checkbox" data-guid="${p.guid}" ${p.gevolgd ? 'checked' : ''}></td>
-        <td>${p.categorie ?? '?'}</td>
-        <td><button type="button" class="alslink" data-toon="${p.guid}">${p.naam}</button></td>
-        <td class="ploegen">${p.bij_bond ? '' : 'niet meer bij de bond'}</td>
-      </tr>`
-    )
-    .join('');
-
-  for (const knop of el('ploegenlijf').querySelectorAll('button[data-toon]')) {
-    knop.addEventListener('click', () => toonLeden(knop.dataset.toon));
-  }
-
-  for (const vinkje of el('ploegenlijf').querySelectorAll('input[type=checkbox]')) {
-    vinkje.addEventListener('change', async () => {
-      // Via api() en niet via een kale fetch: die laatste vernieuwt het token
-      // niet, en een Supabase-token is maar enkele minuten geldig. Het vinkje
-      // bewoog dan wel, maar er werd niets bewaard en niemand zag het.
-      const gewild = vinkje.checked;
-      vinkje.disabled = true;
-      const uitkomst = await api('/api/admin/teams/gevolgd', 'POST', {
-        guid: vinkje.dataset.guid,
-        gevolgd: gewild,
-      });
-      vinkje.disabled = false;
-
-      if (uitkomst.status === 200) {
-        toon('ploegenplan', `${vinkje.dataset.guid}: ${gewild ? 'gevolgd' : 'niet meer gevolgd'}.`);
-        return;
-      }
-
-      // Mislukt het, dan hoort het vinkje terug te springen. Anders toont het
-      // scherm iets anders dan wat er in de databank staat.
-      vinkje.checked = !gewild;
-      toon(
-        'ploegenplan',
-        `Dat lukte niet (${uitkomst.status}): ${uitkomst.body?.fout ?? 'geen uitleg'}.`,
-        true
-      );
-    });
-  }
-}
-
-async function toonLeden(guid) {
-  const uitkomst = await api(`/api/admin/team-leden?team=${encodeURIComponent(guid)}`);
-  const vak = el('ledenlijst');
-  vak.hidden = false;
-
-  if (uitkomst.status !== 200) {
-    el('ledenkop').textContent = `Dat lukte niet (${uitkomst.status})`;
-    el('ledenlijf').innerHTML = '';
-    return;
-  }
-
-  const b = uitkomst.body;
-  el('ledenkop').textContent = `${b.ploeg.naam} — ${b.spelers.length} spelers`;
-
-  // De naam van de bond ernaast, zodat een foute splitsing meteen opvalt: die
-  // wordt daar rechtgezet en niet in de synchronisatie.
-  const regel = (r, extra = '') => `<tr>
-      <td>${r.voornaam} ${r.achternaam}</td>
-      <td class="ploegen">${r.naam_vbl ?? ''}</td>
-      <td>${r.geboortedatum ?? ''}</td>
-      <td class="ploegen">${extra}${r.bij_bond === 0 ? ' niet meer bij de bond' : ''}</td>
-    </tr>`;
-
-  el('ledenlijf').innerHTML =
-    b.spelers.map((r) => regel(r)).join('') +
-    b.staf.map((r) => regel(r, r.rol.toLowerCase())).join('');
-}
-
-async function zoekPersonen() {
-  const term = el('zoekterm').value.trim();
-  const uitkomst = await api(`/api/admin/personen?zoek=${encodeURIComponent(term)}`);
-
-  if (uitkomst.status !== 200) {
-    el('zoeklijf').innerHTML = '';
-    el('zoekmelding').textContent = uitkomst.body?.fout ?? `Fout ${uitkomst.status}`;
-    return;
-  }
-
-  const b = uitkomst.body;
-  el('zoeklijf').innerHTML = b.personen
-    .map(
-      (p) => `<tr>
-        <td>${p.voornaam} ${p.achternaam}${p.actief ? '' : ' (inactief)'}</td>
-        <td>${p.geboortedatum ?? ''}</td>
-        <td>${p.lid_nr ?? ''}</td>
-        <td class="ploegen">${p.ploegen.join(', ')}</td>
-      </tr>`
-    )
-    .join('');
-  el('zoekmelding').textContent = b.meer
-    ? `Meer dan ${b.aantal} treffers — verfijn de zoekterm.`
-    : `${b.aantal} gevonden.`;
-}
-
-el('zoekknop').addEventListener('click', zoekPersonen);
-el('zoekterm').addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') {
-    e.preventDefault();
-    zoekPersonen();
-  }
-});
-
-// Twee stappen: eerst tonen wat er zou gebeuren, pas na bevestiging uitvoeren.
-// De synchronisatie raakt de ploegindeling van een heel seizoen aan.
-async function synchroniseerPloegen() {
-  const vak = el('ploegenplan');
-  vak.hidden = false;
-  vak.textContent = 'Ophalen bij de bond …';
-
-  const proef = await api('/api/admin/teams/sync', 'POST');
-  const plan = proef.body;
-  if (proef.status !== 200) {
-    vak.textContent = `Dat lukte niet: ${plan?.fout ?? proef.status}`;
-    return;
-  }
-
-  const samenvatting =
-    `${plan.nieuw.length} nieuw, ${plan.gewijzigd.length} gewijzigd, ` +
-    `${plan.ongewijzigd.length} ongewijzigd, ${plan.verdwenen.length} niet meer bij de bond` +
-    (plan.melding ? `\n\nLet op: ${plan.melding}` : '');
-
-  if (!confirm(`Dit zou er gebeuren:\n\n${samenvatting}\n\nUitvoeren?`)) {
-    vak.textContent = `Niets gewijzigd. ${samenvatting}`;
-    return;
-  }
-
-  const echt = await api('/api/admin/teams/sync?uitvoeren=1', 'POST');
-  vak.textContent = echt.status === 200 ? `Klaar. ${samenvatting}` : 'Uitvoeren lukte niet.';
-  await laadPloegen();
-}
-
-el('ploegenladen').addEventListener('click', laadPloegen);
-el('ploegensync').addEventListener('click', synchroniseerPloegen);
-
-// Spelers en staf van alle gevolgde ploegen. Ook hier eerst tonen wat er zou
-// gebeuren: dit maakt personen aan en koppelt ze aan ploegen.
-async function synchroniseerLeden() {
-  const vak = el('ledenplan');
-  vak.hidden = false;
-  vak.textContent = 'Ophalen bij de bond …';
-
-  const proef = await api('/api/admin/leden/sync', 'POST');
-  if (proef.status !== 200) {
-    vak.textContent = `Dat lukte niet: ${proef.body?.fout ?? proef.status}`;
-    return;
-  }
-
-  const t = proef.body.totalen;
-  const twijfels = proef.body.ploegen.flatMap((p) => p.twijfel ?? []);
-  const samenvatting =
-    `${proef.body.ploegen.length} ploegen: ${t.nieuw} nieuwe personen, ` +
-    `${t.koppelen} gekoppeld aan iemand die er al stond, ${t.bijwerken} bijgewerkt, ` +
-    `${t.uit_ploeg} niet meer bij de bond` +
-    (t.twijfel ? `\n\n${t.twijfel} twijfelgeval(len) — die worden overgeslagen:\n` +
-      twijfels.map((x) => `  ${x.lid.naam_vbl}: ${x.reden}`).join('\n') : '');
-
-  if (!confirm(`Dit zou er gebeuren:\n\n${samenvatting}\n\nUitvoeren?`)) {
-    vak.textContent = `Niets gewijzigd. ${samenvatting}`;
-    return;
-  }
-
-  const echt = await api('/api/admin/leden/sync?uitvoeren=1', 'POST');
-  vak.textContent = echt.status === 200 ? `Klaar. ${samenvatting}` : 'Uitvoeren lukte niet.';
-}
-
-el('ledensync').addEventListener('click', synchroniseerLeden);
-
-async function toonDiagnose(ruw) {
-  const team = el('diagnoseteam').value.trim();
-  const vraag = new URLSearchParams();
-  if (team) vraag.set('team', team);
-  if (ruw) vraag.set('ruw', '1');
-
-  const uitvoer = el('diagnoseuitvoer');
-  uitvoer.hidden = false;
-  uitvoer.textContent = 'Ophalen bij de bond …';
-
-  const uitkomst = await api(`/api/admin/vbl-diagnose?${vraag}`);
-  uitvoer.textContent = JSON.stringify(uitkomst.body, null, 2);
-}
-
-el('diagnoseknop').addEventListener('click', () => toonDiagnose(false));
-el('diagnoseruw').addEventListener('click', () => toonDiagnose(true));
-
-el('afmelden').addEventListener('click', () => {
-  bewaarSessie(null);
-  location.reload();
-});
-
-start();
-</script>
+<script type="module" src="/js/app.js"></script>
 </body>
 </html>
