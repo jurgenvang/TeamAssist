@@ -95,6 +95,17 @@ export async function vraagAanmeldlink(email) {
 }
 
 /**
+ * De huisstijl van de club: publiek, want het aanmeldscherm mag de clubkleur
+ * en het logo al tonen vóór iemand een token heeft. Staat hier en niet in
+ * huisstijl.js, om dezelfde reden als vraagAanmeldlink: elke publieke
+ * pre-aanmeld-oproep hoort op één plaats te staan.
+ */
+export async function haalBranding() {
+  const antwoord = await fetch('/api/branding');
+  return antwoord.json();
+}
+
+/**
  * Leest de tokens uit het fragment na het klikken op een aanmeldlink, en haalt
  * ze daar meteen weg zodat ze niet in de geschiedenis blijven staan.
  */

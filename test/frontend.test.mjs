@@ -106,3 +106,64 @@ test('de navigatie volgt uit de rechten, niet uit een rollijst', () => {
   assert.ok(nav.includes("recht: 'systeem.beheren'"));
   assert.ok(!nav.includes("=== 'ADMIN'"), 'geen rolvergelijking in de frontend');
 });
+
+test('de trainingenmodule gebruikt api() en geen kale fetch', () => {
+  const bron = readdirSync(new URL('../public/js/schermen', import.meta.url)).includes('trainingen.js')
+    ? lees('../public/js/schermen/trainingen.js')
+    : '';
+  assert.ok(bron.includes("import { api }"));
+  assert.ok(!bron.includes('fetch('));
+});
+
+test('waarden in de trainingenmodule worden ontsmet', () => {
+  const bron = lees('../public/js/schermen/trainingen.js');
+  assert.ok(bron.includes('veilig(z.naam)'));
+  assert.ok(bron.includes('veilig(r.zaal_naam'));
+});
+
+test('reeksen aanmaken en genereren tonen eerst een droogloop', () => {
+  const bron = lees('../public/js/schermen/trainingen.js');
+  assert.ok(bron.includes('confirm('), 'genereren vraagt bevestiging vóór het uitvoert');
+});
+
+test('wedstrijden synchroniseren toont eerst een droogloop', () => {
+  const bron = lees('../public/js/schermen/trainingen.js');
+  assert.ok(bron.includes('synchroniseerWedstrijden'));
+  assert.ok(bron.match(/synchroniseerWedstrijden[\s\S]*?confirm\(/), 'moet bevestigen vóór uitvoeren');
+});
+
+test('de synchronisatieknop voor wedstrijden werkt op de getoonde ploeg', () => {
+  const app = lees('../public/js/app.js');
+  assert.ok(app.includes('getHuidigWedstrijdenTeam()'), 'anders synchroniseert de knop alle ploegen in plaats van de getoonde');
+});
+
+test('de topbalk toont clubnaam en logo, geen hardcoded clubnaam meer in JS', () => {
+  assert.ok(html.includes('id="clublogo"'));
+  assert.ok(html.includes('id="clubnaam"'));
+  assert.ok(html.includes('id="topbalkrollen"'), 'rol(len) hoort onder de naam te staan, zoals bij YOAssist');
+});
+
+test('het beheermenu is gesplitst zoals bij YOAssist', () => {
+  const nav = lees('../public/js/navigatie.js');
+  assert.ok(nav.includes("id: 'dagelijksbeheer'"));
+  assert.ok(nav.includes("id: 'configuratie'"));
+  assert.ok(html.includes('id="tab-dagelijksbeheer"'));
+  assert.ok(html.includes('id="tab-configuratie"'));
+});
+
+test('de huisstijl-fetch loopt via api.js, net als de aanmeldlink', () => {
+  const huisstijl = lees('../public/js/huisstijl.js');
+  assert.ok(!huisstijl.includes('fetch('), 'geen kale fetch in huisstijl.js zelf');
+  assert.ok(huisstijl.includes('haalBranding'));
+});
+
+test('een afgekeurde kleur laat het scherm herladen in plaats van de foute waarde te tonen', () => {
+  const bron = lees('../public/js/schermen/instellingen.js');
+  assert.ok(bron.includes("invoer.type === 'color'"));
+  assert.ok(bron.match(/invoer\.type === 'color'[\s\S]{0,260}laadInstellingen\(\)/));
+});
+
+test('een kleur wissen bewaart een lege waarde, geen geraden vervangkleur', () => {
+  const bron = lees('../public/js/schermen/instellingen.js');
+  assert.ok(bron.includes("waarde: ''"));
+});

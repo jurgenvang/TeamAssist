@@ -6,8 +6,13 @@ import { bouwNavigatie } from './navigatie.js';
 import { laadPloegen, synchroniseerPloegen, synchroniseerLeden } from './schermen/ploegen.js';
 import { zoekPersonen } from './schermen/personen.js';
 import { koppelPersoonscherm } from './schermen/persoon.js';
-import { laadInstellingen } from './schermen/instellingen.js';
+import { laadInstellingen, haalBrandingvoorstel } from './schermen/instellingen.js';
 import { toonDiagnose } from './schermen/diagnose.js';
+import { pasHuisstijlToe } from './huisstijl.js';
+import {
+  laadZalen, maakZaal, maakBlok, laadPeriodes, synchroniseerVakanties, maakReeks,
+  synchroniseerWedstrijden, getHuidigWedstrijdenTeam,
+} from './schermen/trainingen.js';
 import { toonTestbalk, vulTestrolkeuze, koppelTestrol } from './schermen/testrol.js';
 
 function toonAanmelden() {
@@ -19,10 +24,17 @@ function toonApp(gegevens) {
   el('aanmelden').hidden = true;
   el('app').hidden = false;
 
-  el('volledigenaam').textContent =
-    `${gegevens.persoon.voornaam} ${gegevens.persoon.achternaam}`.trim() || gegevens.persoon.email;
+  const naam = `${gegevens.persoon.voornaam} ${gegevens.persoon.achternaam}`.trim() || gegevens.persoon.email;
+
+  // De topbalk: naam met de rol(len) eronder, zoals bij YOAssist. Compact, dus
+  // een korte opsomming — de volledige lijst met rechten staat verderop bij
+  // Overzicht voor wie meer wil zien.
+  el('topbalkik').hidden = false;
+  el('topbalknaam').textContent = naam;
+  el('topbalkrollen').textContent = (gegevens.rollen ?? []).join(', ') || 'geen rol';
+
   el('emailadres').textContent = gegevens.persoon.email || '';
-  el('clubregel').textContent = `AB InBev Leuven Bears — seizoen ${gegevens.seizoen.naam}`;
+  el('seizoenregel').textContent = `Seizoen ${gegevens.seizoen.naam}`;
 
   const rollen = gegevens.rollen ?? [];
   el('rollenlijst').innerHTML = rollen.map((r) => `<li>${veilig(r)}</li>`).join('');
@@ -47,15 +59,26 @@ function toonApp(gegevens) {
   // Elk tabblad laadt pas wanneer het geopend wordt: dat scheelt oproepen voor
   // schermen die iemand nooit bekijkt.
   bouwNavigatie(rechten, (tab) => {
-    if (tab === 'ploegen') laadPloegen();
-    if (tab === 'beheer') {
+    if (tab === 'ploegen') {
+      laadPloegen();
+      laadZalen(); // vult de zaalkeuze voor het reeksformulier
+    }
+    if (tab === 'configuratie') {
       laadInstellingen();
       vulTestrolkeuze();
+      laadZalen();
+    }
+    if (tab === 'dagelijksbeheer') {
+      laadPeriodes();
     }
   });
 }
 
 async function start() {
+  // Vóór het aanmelden al de clubkleur en het logo tonen: het is de eerste
+  // pagina die iemand ziet, en de huisstijl hoort daar al te kloppen.
+  pasHuisstijlToe();
+
   const config = await haalConfig();
   el('versieregel').textContent = `TeamAssist ${config.versie ?? ''}`;
 
@@ -138,8 +161,15 @@ el('zoekterm').addEventListener('keydown', (e) => {
     zoekPersonen();
   }
 });
+el('zaalmaken').addEventListener('click', maakZaal);
+el('blokmaken').addEventListener('click', maakBlok);
+el('vakantiesync').addEventListener('click', synchroniseerVakanties);
+el('reeksmaken').addEventListener('click', maakReeks);
+el('wedstrijdensync').addEventListener('click', () => synchroniseerWedstrijden(getHuidigWedstrijdenTeam()));
+
 el('diagnoseknop').addEventListener('click', () => toonDiagnose(false));
 el('diagnoseruw').addEventListener('click', () => toonDiagnose(true));
+el('brandingvoorstelknop').addEventListener('click', haalBrandingvoorstel);
 koppelPersoonscherm();
 koppelTestrol();
 

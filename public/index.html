@@ -8,9 +8,20 @@
 </head>
 <body>
 <main>
-  <header>
-    <h1>TeamAssist</h1>
-    <p id="clubregel">AB InBev Leuven Bears</p>
+  <header class="topbalk">
+    <div class="topbalk-merk">
+      <img id="clublogo" alt="" hidden>
+      <div>
+        <h1>TeamAssist</h1>
+        <p id="clubnaam">AB InBev Leuven Bears</p>
+      </div>
+    </div>
+    <div class="topbalk-ik" id="topbalkik" hidden>
+      <div class="topbalk-ik-tekst">
+        <span id="topbalknaam"></span>
+        <span id="topbalkrollen" class="topbalk-rollen"></span>
+      </div>
+    </div>
   </header>
 
   <!-- Aanmelden -->
@@ -35,8 +46,8 @@
 
     <!-- Overzicht -->
     <section id="tab-mij" hidden>
-      <p class="naam" id="volledigenaam"></p>
       <p class="adres" id="emailadres"></p>
+      <p class="klein" id="seizoenregel"></p>
 
       <h2>Rollen</h2>
       <ul class="rollen" id="rollenlijst"></ul>
@@ -82,6 +93,44 @@
         <tbody id="ploegenlijf"></tbody>
       </table>
 
+      <div id="reeksenscherm" hidden>
+        <h2>Trainingsreeksen</h2>
+        <table>
+          <thead><tr><th>Uur</th><th>Locatie</th><th>Periode</th><th></th><th></th></tr></thead>
+          <tbody id="reeksenlijf"></tbody>
+        </table>
+        <form>
+          <select id="reeksweekdag">
+            <option value="1">maandag</option><option value="2">dinsdag</option>
+            <option value="3">woensdag</option><option value="4">donderdag</option>
+            <option value="5">vrijdag</option><option value="6">zaterdag</option>
+            <option value="7">zondag</option>
+          </select>
+          <input type="time" id="reeksbegin">
+          <input type="time" id="reekseinde">
+          <select id="reekszaal"><option value="">— vrije locatie —</option></select>
+          <input type="text" id="reekslocatie" placeholder="of een vrije locatie">
+        </form>
+        <form>
+          <label>Van <input type="date" id="reeksvan"></label>
+          <label>Tot <input type="date" id="reekstot"></label>
+          <button type="button" id="reeksmaken">Reeks aanmaken</button>
+        </form>
+        <div id="reeksenmelding" class="melding" hidden></div>
+      </div>
+
+      <div id="wedstrijdenscherm" hidden>
+        <h2>Wedstrijden</h2>
+        <form>
+          <button type="button" id="wedstrijdensync">Ophalen bij de bond</button>
+        </form>
+        <div id="wedstrijdenplan" class="melding" hidden></div>
+        <table>
+          <thead><tr><th>Datum</th><th>Tegen</th><th>Locatie</th><th>Uitslag</th><th></th></tr></thead>
+          <tbody id="wedstrijdenlijf"></tbody>
+        </table>
+      </div>
+
       <div id="ledenlijst" hidden>
         <h2 id="ledenkop"></h2>
         <table>
@@ -106,7 +155,18 @@
     </section>
 
     <!-- Beheer -->
-    <section id="tab-beheer" hidden>
+    <section id="tab-configuratie" hidden>
+      <h2>Huisstijl</h2>
+      <p class="klein">
+        De accentkleur wordt gecontroleerd op leesbaarheid; een te lichte kleur wordt geweigerd,
+        nooit stilzwijgend aangepast. Het logo kan een voorstel zijn van Basketbal Vlaanderen —
+        dat patroon staat niet in de officiële documentatie en kan dus ooit wijzigen.
+      </p>
+      <form>
+        <button type="button" class="stil" id="brandingvoorstelknop">Voorstel ophalen bij de bond</button>
+      </form>
+      <div id="brandingvoorstel" class="melding" hidden></div>
+
       <h2>Instellingen</h2>
       <table>
         <thead><tr><th>Instelling</th><th>Waarde</th></tr></thead>
@@ -125,6 +185,41 @@
         <button type="button" id="testrolstart">Zo kijken</button>
       </form>
       <p id="testrolmelding" class="klein"></p>
+
+      <h2>Zalen</h2>
+      <table>
+        <thead><tr><th>Zaal</th><th>Blokken</th></tr></thead>
+        <tbody id="zalenlijf"></tbody>
+      </table>
+      <form>
+        <input type="text" id="nieuwezaalnaam" placeholder="naam van de zaal">
+        <button type="button" id="zaalmaken">Zaal aanmaken</button>
+      </form>
+      <form>
+        <select id="zaalkeuze"></select>
+        <select id="blokweekdag">
+          <option value="1">maandag</option><option value="2">dinsdag</option>
+          <option value="3">woensdag</option><option value="4">donderdag</option>
+          <option value="5">vrijdag</option><option value="6">zaterdag</option>
+          <option value="7">zondag</option>
+        </select>
+        <input type="time" id="blokbegin">
+        <input type="time" id="blokeinde">
+        <button type="button" id="blokmaken">Blok toevoegen</button>
+      </form>
+      <div id="zalenmelding" class="melding" hidden></div>
+    </section>
+
+    <section id="tab-dagelijksbeheer" hidden>
+      <h2>Schoolvakanties en examens</h2>
+      <table>
+        <thead><tr><th>Naam</th><th>Periode</th><th>Soort</th><th>Doelgroep</th><th>Bron</th></tr></thead>
+        <tbody id="periodeslijf"></tbody>
+      </table>
+      <form>
+        <button type="button" id="vakantiesync">Vakanties ophalen bij OpenHolidays</button>
+      </form>
+      <div id="periodesplan" class="melding" hidden></div>
 
       <h2>Gegevens van de bond bekijken</h2>
       <p class="klein">
