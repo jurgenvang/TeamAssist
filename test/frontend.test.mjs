@@ -51,3 +51,36 @@ test('de aanmeldlink wordt via de eigen route gevraagd', () => {
 test('een mislukte aanmeldlink wordt getoond in plaats van genegeerd', () => {
   assert.ok(html.includes('error_description'), 'de fout uit het fragment hoort gelezen te worden');
 });
+
+test('elke uitkomst van /api/mij wordt uitgelegd', () => {
+  // Stilzwijgend terugvallen op het aanmeldscherm liet iemand denken dat de
+  // link niet werkte, terwijl hij binnen was en de installatie een instelling
+  // miste.
+  assert.ok(html.includes('uitkomst.status === 409'), 'een ontbrekend seizoen hoort gemeld te worden');
+  assert.ok(html.includes('uitkomst.status === 401'));
+  assert.ok(html.includes('uitkomst.status === 403'));
+  assert.ok(html.includes('geen uitleg'), 'ook een onbekende status hoort iets te tonen');
+});
+
+test('de sessie wordt enkel bij een 401 weggegooid', () => {
+  // Bij een 409 opnieuw laten aanmelden lost niets op en verbergt de oorzaak.
+  const begin = html.indexOf("const uitkomst = await api('/api/mij')");
+  const eind = html.indexOf("el('aanmeldform')");
+  const inStart = html.slice(begin, eind);
+  const weggooien = (inStart.match(/bewaarSessie\(null\)/g) ?? []).length;
+  assert.equal(weggooien, 1, 'binnen start() hoort precies één plaats de sessie te wissen');
+  assert.ok(inStart.includes('uitkomst.status === 401'));
+});
+
+test('het aanvinken van een ploeg loopt via api(), niet via een kale fetch', () => {
+  // api() vernieuwt een verlopen token; een kale fetch niet. Een Supabase-token
+  // is maar enkele minuten geldig, dus dat verschil is hier niet theoretisch.
+  const blok = html.slice(html.indexOf('async function laadPloegen'), html.indexOf('async function synchroniseerPloegen'));
+  assert.ok(blok.includes("api('/api/admin/teams/gevolgd', 'POST'"), 'hoort via api() te gaan');
+  assert.ok(!blok.includes('fetch('), 'geen kale fetch in dit blok');
+});
+
+test('een mislukt vinkje springt terug', () => {
+  const blok = html.slice(html.indexOf('async function laadPloegen'), html.indexOf('async function synchroniseerPloegen'));
+  assert.ok(blok.includes('vinkje.checked = !gewild'), 'het scherm mag niets anders tonen dan de databank');
+});

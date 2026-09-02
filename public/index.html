@@ -374,8 +374,12 @@ async function start() {
   const uitkomst = await api('/api/mij');
   if (uitkomst.status === 200) return toonProfiel(uitkomst.body);
 
+  // Elke andere uitkomst hoort uitgelegd te worden. Stilzwijgend terugvallen op
+  // het aanmeldscherm liet iemand denken dat de link niet werkte, terwijl hij
+  // wel degelijk binnen was en de installatie nog een instelling miste.
+  toonAanmelden();
+
   if (uitkomst.status === 403) {
-    toonAanmelden();
     toon(
       'aanmeldmelding',
       'Je bent aangemeld, maar dit adres is nog niet gekoppeld aan iemand in TeamAssist. ' +
@@ -385,8 +389,30 @@ async function start() {
     return;
   }
 
-  bewaarSessie(null);
-  toonAanmelden();
+  if (uitkomst.status === 409) {
+    toon(
+      'aanmeldmelding',
+      'Je bent aangemeld, maar er is nog geen actief seizoen ingesteld. ' +
+        'Zolang dat ontbreekt, kan de app niets tonen.',
+      true
+    );
+    return;
+  }
+
+  if (uitkomst.status === 401) {
+    // Enkel hier de sessie weggooien: het token deugt niet meer. Bij een 409 of
+    // een 500 zou opnieuw aanmelden niets oplossen.
+    bewaarSessie(null);
+    toon('aanmeldmelding', 'Je aanmelding is verlopen. Vraag een nieuwe link aan.', true);
+    return;
+  }
+
+  toon(
+    'aanmeldmelding',
+    `Je bent aangemeld, maar de app antwoordde met ${uitkomst.status}: ` +
+      `${uitkomst.body?.fout ?? 'geen uitleg'}.`,
+    true
+  );
 }
 
 el('aanmeldform').addEventListener('submit', async (e) => {
@@ -416,14 +442,30 @@ async function laadPloegen() {
 
   for (const vinkje of el('ploegenlijf').querySelectorAll('input[type=checkbox]')) {
     vinkje.addEventListener('change', async () => {
-      await fetch('/api/admin/teams/gevolgd', {
-        method: 'POST',
-        headers: {
-          'content-type': 'application/json',
-          authorization: `Bearer ${sessie().access_token}`,
-        },
-        body: JSON.stringify({ guid: vinkje.dataset.guid, gevolgd: vinkje.checked }),
+      // Via api() en niet via een kale fetch: die laatste vernieuwt het token
+      // niet, en een Supabase-token is maar enkele minuten geldig. Het vinkje
+      // bewoog dan wel, maar er werd niets bewaard en niemand zag het.
+      const gewild = vinkje.checked;
+      vinkje.disabled = true;
+      const uitkomst = await api('/api/admin/teams/gevolgd', 'POST', {
+        guid: vinkje.dataset.guid,
+        gevolgd: gewild,
       });
+      vinkje.disabled = false;
+
+      if (uitkomst.status === 200) {
+        toon('ploegenplan', `${vinkje.dataset.guid}: ${gewild ? 'gevolgd' : 'niet meer gevolgd'}.`);
+        return;
+      }
+
+      // Mislukt het, dan hoort het vinkje terug te springen. Anders toont het
+      // scherm iets anders dan wat er in de databank staat.
+      vinkje.checked = !gewild;
+      toon(
+        'ploegenplan',
+        `Dat lukte niet (${uitkomst.status}): ${uitkomst.body?.fout ?? 'geen uitleg'}.`,
+        true
+      );
     });
   }
 }

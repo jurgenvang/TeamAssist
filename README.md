@@ -1,30 +1,36 @@
-# TeamAssist 0.3.2 — het fundament
+# TeamAssist — installatie en beheer
 
-Eerste pakket. Het bevat geen functionaliteit voor de club: geen
-synchronisatie, geen import, geen aanwezigheden. Wat het wel bevat, is het
-geraamte waar al die dingen op komen te staan, en de zwaarst geteste laag van de
-applicatie.
+Het huidige versienummer staat in `src/versie.js` en op `/api/versie`. Het staat
+bewust niet in deze titel: daar liep het stil achter.
 
-## Wat erin zit
+Dit document beschrijft hoe je TeamAssist opzet en draaiende houdt. Wat elke
+versie toevoegt, staat in de bijhorende `WIJZIGINGEN-x.y.z.md`.
 
-- Het volledige schema voor personen, accounts, rollen, teams, spelers,
+## Wat er staat
+
+- Het schema voor personen, accounts, rollen, ploegen, spelers,
   ouder-kindkoppelingen, logboek, instellingen en taken.
 - Aanmelden via Supabase Auth met een magic link, geverifieerd in de Worker. De
   link wordt aangevraagd via `/api/aanmeldlink`, die eerst nakijkt of het adres
   bij een actieve persoon hoort — anders kan iedereen via de app mails laten
   sturen naar willekeurige adressen, op ons quota.
-- De rechtenlaag: één functie die zegt wat iemand mag, met 21 tests die voor
-  elke rol en elk recht zowel bewijzen dat het mag als dat het niet mag.
+- De rechtenlaag: één functie die zegt wat iemand mag, met een testreeks die
+  voor elke rol en elk recht zowel bewijst dat het mag als dat het niet mag.
 - De uurplanner, met daarin de dagelijkse `supabase-ping`.
-- Eén scherm: wie ben je, welke rollen heb je, op welke ploegen, en welke
-  rechten volgen daaruit.
+- Ploegen ophalen bij Basketbal Vlaanderen en aanvinken welke de club beheert.
+- Spelers en staf van elke gevolgde ploeg ophalen, met matching op de
+  relatie-GUID en een lijst twijfelgevallen die niemand automatisch samenvoegt.
+- Eén scherm: wie ben je, wat mag je, en voor een beheerder de ploegen en een
+  venster op de ruwe gegevens van de bond.
 
-78 tests, met `cd test && npm test`. Ze draaien zonder netwerk en zonder één
+Alles wat gegevens aanmaakt of wegzet, is eerst een droogloop.
+
+De tests draaien met `cd test && npm test`, zonder netwerk en zonder één
 dependency: `node:sqlite` doet dienst als D1. Node 22 of nieuwer is nodig.
 
-## Databank
+## Databank — eerste installatie
 
-Dit is de eerste installatie, dus geen ALTER maar een volledige opbouw. Voer
+Bij een verse installatie geen ALTER maar een volledige opbouw. Voer
 `schema-alles-in-een.sql` uit in de D1-console. Dat bestand begint met de
 DROP's, zodat het ook later herbruikbaar is bij een schemawijziging die niet met
 `ALTER TABLE ... ADD COLUMN` kan.
@@ -83,10 +89,27 @@ SELECT p.email, p.actief, r.rol, s.code AS seizoen
 Eén rij, met `actief = 1` en een seizoen ingevuld. Staat er `NULL` bij seizoen,
 dan ontbreekt die eerste insert nog.
 
+### Waarom de eerste beheerder handmatig moet
+
+Er staat geen enkel e-mailadres in de code, en dat is een keuze.
+
+Een beheerder hardcoderen zou een achterdeur zijn die elke databankwijziging
+overleeft: wie het bestand ooit leest, weet welk adres altijd binnen raakt. Ze
+wijzigen zou bovendien een deploy vragen, en het adres zou in een repo staan die
+op GitHub gepubliceerd is.
+
+Het alternatief — een scherm dat de eerste gebruiker tot beheerder maakt — is
+erger. Zo'n scherm staat open tot iemand het gebruikt, en wie als eerste toevallig
+de app opent, is beheerder van een club met gegevens van minderjarigen.
+
+Daarom: de eerste rij komt via de D1-console binnen. Wie daar toegang toe heeft,
+beheert de installatie sowieso al. Dat is meteen ook de weg terug wanneer er ooit
+niemand meer binnen raakt.
+
 ### Een tweede beheerder
 
 Doen vóór je verdergaat. Nu hangt alle toegang aan één rij; raakt dat adres
-onbruikbaar, dan is de D1-console de enige weg terug.
+onbruikbaar, dan blijft enkel de D1-console over.
 
 ```sql
 INSERT INTO personen (id, voornaam, achternaam, email)
@@ -94,6 +117,17 @@ VALUES ('p-tweede', 'Voornaam', 'Achternaam', 'adres@example.org');
 
 INSERT INTO rollen (persoon_id, rol) VALUES ('p-tweede', 'ADMIN');
 ```
+
+Meerdere beheerders naast elkaar is gewoon: `rollen` staat één rij per persoon en
+per rol toe, en ADMIN geldt clubbreed. Iemand de rol weer afnemen gaat met één
+regel:
+
+```sql
+DELETE FROM rollen WHERE persoon_id = 'p-tweede' AND rol = 'ADMIN';
+```
+
+Zijn persoon blijft dan bestaan — met zijn ploegen, zijn aanwezigheden en zijn
+geschiedenis. Enkel wat hij mag verandert.
 
 ### Waar de toegang in de databank staat
 
@@ -280,6 +314,36 @@ fout in de applicatie.
 niet bij een actieve persoon. Kijk in `aanmeldingen_wachtrij`: daar staat het
 adres waarmee je binnenkwam. Het verschil met `personen.email` is meestal een
 hoofdletter, een plusadres, of bij Gmail een punt.
+
+**"Er is nog geen actief seizoen ingesteld."** Elke route weigert met een 409
+zolang er geen rij met `actief = 1` in `seizoenen` staat. Zie het begin van dit
+document.
+
+### Waarom sommige meldingen vaag zijn en andere niet
+
+Dat verschil is opzettelijk, en het hoort zo te blijven.
+
+**Het aanmeldformulier blijft vaag.** Wie een link vraagt, krijgt altijd
+hetzelfde te lezen: *is dat adres bij ons bekend, dan is er een link onderweg*.
+Ook wanneer er niets vertrok. Die route is publiek — iedereen kan er elk adres
+invullen — en een verschillend antwoord zou ze bruikbaar maken om af te tasten
+wie er lid is van de club. Daar hangen namen van minderjarigen achter.
+
+Wil je weten of er werkelijk iets vertrok, kijk dan in het logboek. Daar staat
+`aanmeldlink verstuurd` of `aanvraag voor een onbekend adres`. Van dat laatste
+wordt het adres bewust niet bewaard: dat zou gegevens bijhouden van mensen die
+niets met de club te maken hebben.
+
+**De meldingen ná een geslaagde aanmelding zijn wél duidelijk.** Om die te zien
+moet je op een link geklikt hebben die naar dat adres ging, dus moet je die
+mailbox beheren. Je leert er enkel iets over je eigen adres. Vaag blijven zou
+daar niets beschermen en wel iemand laten zoeken naar een fout die er niet is.
+
+Eén ding blijft over: het duurt iets langer voor het antwoord komt wanneer het
+adres bekend is, want dan wordt Supabase aangesproken. Wie meet, ziet dat
+verschil. Dat is bewust aanvaard — het wegwerken vraagt een kunstmatige
+vertraging in een pad dat elke gebruiker doorloopt, en dat weegt hier niet op
+tegen wat het beschermt.
 
 **Er komt geen mail, terwijl het adres wel klopt.** Kijk eerst naar de
 maillimiet. Zonder eigen SMTP-server stuurt Supabase er twee per uur; met Resend

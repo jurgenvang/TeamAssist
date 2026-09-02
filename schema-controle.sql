@@ -1,4 +1,4 @@
--- TeamAssist — controle op de databankstructuur (versie 0.5.0)
+-- TeamAssist — controle op de databankstructuur (versie 0.5.3)
 --
 -- Plak dit in de D1-console na het uitvoeren van een schemawijziging. Het wijzigt
 -- niets; het vergelijkt wat er staat met wat er hoort te staan.
@@ -135,7 +135,7 @@ SELECT 0 AS volgorde,
             THEN 'ALLES OK'
             ELSE (SELECT count(*) FROM problemen) || ' PROBLEEM/PROBLEMEN'
        END AS soort,
-       'structuur versie 0.5.0' AS naam
+       'structuur versie 0.5.3' AS naam
 UNION ALL
 SELECT 1, soort, naam FROM problemen
 ORDER BY volgorde, soort, naam;
