@@ -1,4 +1,4 @@
-# TeamAssist 0.2.2 — het fundament
+# TeamAssist 0.3.1 — het fundament
 
 Eerste pakket. Het bevat geen functionaliteit voor de club: geen
 synchronisatie, geen import, geen aanwezigheden. Wat het wel bevat, is het
@@ -157,6 +157,40 @@ er `localhost`, dan ontbreekt het adres in Redirect URLs.
 
 Zet daarna bij Providers e-mail aan en wachtwoorden uit.
 
+**4. Resend als SMTP-server.** Dit is geen verfijning maar een voorwaarde. De
+ingebouwde mailservice van Supabase stuurt **twee berichten per uur** en is
+uitdrukkelijk enkel voor testen bedoeld — er is geen garantie op levering en het
+aantal kan zonder aankondiging wijzigen. Met een paar honderd leden komt daar
+niets van terecht, en zelfs tijdens het opzetten loop je er binnen het halfuur
+tegenaan.
+
+Authentication, dan SMTP Settings, en Enable Custom SMTP aanzetten:
+
+| Veld | Waarde |
+|---|---|
+| Host | `smtp.resend.com` |
+| Port | `465` |
+| Username | `resend` (letterlijk dat woord) |
+| Password | een API-sleutel uit het Resend-dashboard |
+| Sender email | een adres op een domein dat in Resend geverifieerd is |
+| Sender name | TeamAssist |
+
+Het afzenderadres moet op een geverifieerd domein staan, anders weigert Resend
+het bericht. Controleer de exacte host en poort in het Resend-dashboard onder
+SMTP; die kunnen wijzigen.
+
+**Verhoog daarna de limiet.** Zodra er een eigen SMTP-server staat, legt Supabase
+zelf een voorzichtige grens van dertig berichten per uur op, om de reputatie van
+een nieuw domein te beschermen. Dat is te weinig voor het moment waarop je een
+ploeg in één keer uitnodigt. De instelling staat bij Authentication, dan Rate
+Limits.
+
+**Bent u al geblokkeerd?** De limiet loopt per uur; een uur wachten volstaat.
+Wat er precies misging, staat in Logs, dan Auth: daar verschijnt de melding over
+de overschreden limiet. In TeamAssist zelf zie je dat niet — daar staat enkel
+`aanmeldlink niet verstuurd` in het logboek, want de reden van Supabase hoort niet
+op het scherm van wie een link vroeg.
+
 ## Waar je de sleutels vindt
 
 **Het adres van het project.** Settings, dan API Keys — of de knop Connect
@@ -247,8 +281,14 @@ niet bij een actieve persoon. Kijk in `aanmeldingen_wachtrij`: daar staat het
 adres waarmee je binnenkwam. Het verschil met `personen.email` is meestal een
 hoofdletter, een plusadres, of bij Gmail een punt.
 
-**Er komt geen mail.** `/api/aanmeldlink` verstuurt enkel naar een adres dat bij
-een actieve persoon hoort, en het antwoord op het scherm is altijd hetzelfde —
+**Er komt geen mail, terwijl het adres wel klopt.** Kijk eerst naar de
+maillimiet. Zonder eigen SMTP-server stuurt Supabase er twee per uur; met Resend
+ingesteld dertig, tot je die grens verhoogt. In Logs, dan Auth staat de melding.
+In het logboek van TeamAssist verschijnt dan `aanmeldlink niet verstuurd`, als
+onafgehandelde regel.
+
+**Er komt geen mail en het adres is misschien onbekend.** `/api/aanmeldlink`
+verstuurt enkel naar een adres dat bij een actieve persoon hoort, en het antwoord op het scherm is altijd hetzelfde —
 ook wanneer er niets vertrok. Dat is opzettelijk: een verschillend antwoord zou
 de route bruikbaar maken om af te tasten wie er lid is van de club. Kijk in het
 logboek: `aanvraag voor een onbekend adres` betekent dat het adres niet in

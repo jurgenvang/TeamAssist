@@ -15,6 +15,7 @@ import { voerPingUit } from './lib/ping.js';
 import { logSchrijf } from './lib/logboek.js';
 import { mij } from './routes/mij.js';
 import { aanmeldlink } from './routes/aanmeldlink.js';
+import { vblDiagnose } from './routes/admin/vbl-diagnose.js';
 import { VERSIE } from './versie.js';
 
 export const ROUTES = [
@@ -43,6 +44,14 @@ export const ROUTES = [
   { methode: 'POST', pad: '/api/aanmeldlink', publiek: true, doe: aanmeldlink },
 
   { methode: 'GET', pad: '/api/mij', doe: mij },
+
+  // Enkel voor wie het systeem beheert: het toont ruwe gegevens van de bond.
+  {
+    methode: 'GET',
+    pad: '/api/admin/vbl-diagnose',
+    recht: 'systeem.beheren',
+    doe: vblDiagnose,
+  },
 ];
 
 function zoekRoute(methode, pad) {

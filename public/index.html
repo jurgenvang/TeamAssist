@@ -79,6 +79,24 @@
   .melding { padding: .7rem .85rem; border-radius: var(--radius); background: var(--vlak); margin-top: 1rem; }
   .melding.fout { background: #fdf2f2; border-left: 3px solid var(--accent); }
 
+  pre {
+    background: var(--vlak);
+    padding: .8rem;
+    border-radius: var(--radius);
+    overflow-x: auto;
+    font-size: .8rem;
+    line-height: 1.45;
+    max-height: 28rem;
+  }
+  input[type=text] {
+    flex: 1 1 16rem;
+    padding: .55rem .7rem;
+    border: 1px solid var(--lijn);
+    border-radius: var(--radius);
+    font: inherit;
+  }
+  .klein { font-size: .82rem; color: var(--gedempt); margin: .4rem 0 0; }
+
   footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--lijn); color: var(--gedempt); font-size: .82rem; }
   [hidden] { display: none !important; }
 </style>
@@ -125,6 +143,24 @@
       <thead><tr><th>Recht</th><th>Waar</th></tr></thead>
       <tbody id="rechtenlijf"></tbody>
     </table>
+
+    <section id="diagnose" hidden>
+      <h2>Gegevens van de bond bekijken</h2>
+      <p>
+        Laat leeg voor de ploegenlijst van de club, of vul een ploeg-GUID in
+        zoals <code>BVBL1125J16&nbsp;&nbsp;2</code> — met twee spaties.
+      </p>
+      <form>
+        <input type="text" id="diagnoseteam" placeholder="ploeg-GUID (optioneel)">
+        <button type="button" id="diagnoseknop">Ophalen</button>
+        <button type="button" class="stil" id="diagnoseruw">Volledig antwoord</button>
+      </form>
+      <p class="klein">
+        Het volledige antwoord bevat namen en geboortedata van spelers. Vraag het
+        enkel op wanneer je het nodig hebt; het wordt apart gelogd.
+      </p>
+      <pre id="diagnoseuitvoer" hidden></pre>
+    </section>
 
     <form>
       <button type="button" class="stil" id="afmelden">Afmelden</button>
@@ -264,6 +300,10 @@ function toonProfiel(gegevens) {
   el('ploegentabel').hidden = ploegen.length === 0;
   el('geenploegen').hidden = ploegen.length > 0;
 
+  // Het diagnosescherm is er enkel voor wie het systeem beheert. Verbergen is
+  // een gemak, geen beveiliging: de backend weigert de route sowieso.
+  el('diagnose').hidden = !(gegevens.rechten ?? {})['systeem.beheren'];
+
   const rechten = gegevens.rechten ?? {};
   el('rechtenlijf').innerHTML = Object.entries(rechten)
     .map(([recht, waar]) => {
@@ -326,6 +366,23 @@ el('aanmeldform').addEventListener('submit', async (e) => {
     toon('aanmeldmelding', `Versturen lukte niet: ${fout.message}`, true);
   }
 });
+
+async function toonDiagnose(ruw) {
+  const team = el('diagnoseteam').value.trim();
+  const vraag = new URLSearchParams();
+  if (team) vraag.set('team', team);
+  if (ruw) vraag.set('ruw', '1');
+
+  const uitvoer = el('diagnoseuitvoer');
+  uitvoer.hidden = false;
+  uitvoer.textContent = 'Ophalen bij de bond …';
+
+  const uitkomst = await api(`/api/admin/vbl-diagnose?${vraag}`);
+  uitvoer.textContent = JSON.stringify(uitkomst.body, null, 2);
+}
+
+el('diagnoseknop').addEventListener('click', () => toonDiagnose(false));
+el('diagnoseruw').addEventListener('click', () => toonDiagnose(true));
 
 el('afmelden').addEventListener('click', () => {
   bewaarSessie(null);
