@@ -6,7 +6,7 @@
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { bouwRechten, beperkTot, RECHTEN } from '../src/lib/rechten.js';
+import { bouwRechten, beperkTot, magTestrolGebruiken, RECHTEN } from '../src/lib/rechten.js';
 import { INSTELBAAR } from '../src/routes/admin/instellingen.js';
 
 const J16 = 'BVBL1125J16  2';
@@ -94,4 +94,39 @@ test('de instelling staat standaard uit', () => {
 
 test('de berichtmodus kent enkel drie standen', () => {
   assert.deepEqual(INSTELBAAR.bericht_modus.keuzes, ['uit', 'omleiden', 'normaal']);
+});
+
+// --- Wie mag de schakelaar gebruiken -----------------------------------------
+
+test('enkel een beheerder mag met een andere rol kijken', () => {
+  // De kop meesturen als coach levert niets op: de schakelaar is er voor wie
+  // het systeem beheert, en voor niemand anders.
+  assert.equal(magTestrolGebruiken(admin, '1', 'COACH'), true);
+  assert.equal(magTestrolGebruiken(coachJ16, '1', 'ADMIN'), false);
+  assert.equal(magTestrolGebruiken(bouwRechten(), '1', 'ADMIN'), false);
+});
+
+test('een FINADM is geen beheerder', () => {
+  const finadm = bouwRechten({ rollen: [{ rol: 'FINADM', team_guid: null }] });
+  assert.equal(magTestrolGebruiken(finadm, '1', 'ADMIN'), false);
+});
+
+test('zonder de instelling gebeurt er niets, ook niet voor een beheerder', () => {
+  for (const stand of ['0', '', null, undefined, 'ja', 'true']) {
+    assert.equal(magTestrolGebruiken(admin, stand, 'COACH'), false, `stand ${stand}`);
+  }
+  assert.equal(magTestrolGebruiken(admin, '1', 'COACH'), true);
+});
+
+test('zonder gevraagde rol gebeurt er niets', () => {
+  assert.equal(magTestrolGebruiken(admin, '1', null), false);
+  assert.equal(magTestrolGebruiken(admin, '1', ''), false);
+});
+
+test('het beheerrecht wordt op de echte rechten gemeten', () => {
+  // Anders kon een beheerder zich tot coach versmallen en daarna niet meer
+  // terug, omdat de versmalde rechten het beheerrecht niet meer bevatten.
+  const alsCoach = beperkTot(admin, 'COACH', J16);
+  assert.equal(magTestrolGebruiken(alsCoach, '1', 'ADMIN'), false);
+  assert.equal(magTestrolGebruiken(admin, '1', 'ADMIN'), true);
 });

@@ -9,7 +9,7 @@ import { fout, json } from './lib/http.js';
 import { tokenUitVerzoek, verifieerToken } from './lib/supabase.js';
 import { identiteitVoor } from './lib/identiteit.js';
 import { rechtenVoor } from './lib/rechten-db.js';
-import { beperkTot } from './lib/rechten.js';
+import { beperkTot, magTestrolGebruiken } from './lib/rechten.js';
 import { seizoenUitVerzoek } from './lib/seizoen.js';
 import { brusselUur } from './lib/klok.js';
 import { voerPingUit } from './lib/ping.js';
@@ -128,9 +128,9 @@ async function bouwContext(request, env, route) {
   // De uitkomst is altijd de doorsnede met wat hij echt mag — de schakelaar kan
   // daardoor enkel wegnemen.
   const gevraagdeRol = request.headers.get('x-teamassist-rol');
-  if (gevraagdeRol && rechten.mag('systeem.beheren')) {
+  if (gevraagdeRol) {
     const toegelaten = await instellingLezen(env.DB, 'testrol_toegelaten', '0');
-    if (toegelaten === '1') {
+    if (magTestrolGebruiken(rechten, toegelaten, gevraagdeRol)) {
       rechten = beperkTot(rechten, gevraagdeRol, request.headers.get('x-teamassist-team'));
     }
   }

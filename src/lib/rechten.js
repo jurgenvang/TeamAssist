@@ -93,6 +93,29 @@ export const ROLRECHTEN = {
 };
 
 /**
+ * Mag deze persoon met een andere rol kijken?
+ *
+ * Drie voorwaarden, en alle drie moeten ze kloppen. Ze staan hier als één
+ * functie zodat er een echte test op kan in plaats van een tekstvergelijking op
+ * de broncode — die vangt een verwijderde regel, maar niet een verkeerd
+ * herschreven regel.
+ *
+ * Het beheerrecht wordt gemeten op de **echte** rechten. Zou het op de al
+ * versmalde rechten gemeten worden, dan kon een beheerder zichzelf tot coach
+ * versmallen en daarna niet meer terug.
+ *
+ * @param {object} echteRechten  de rechten zoals ze uit de databank volgen
+ * @param {string|null} instelling  de waarde van testrol_toegelaten
+ * @param {string|null} gevraagdeRol
+ */
+export function magTestrolGebruiken(echteRechten, instelling, gevraagdeRol) {
+  if (!gevraagdeRol) return false;
+  // Alles behalve een uitdrukkelijke 1 geldt als uit, ook een ontbrekende rij.
+  if (instelling !== '1') return false;
+  return echteRechten.mag('systeem.beheren');
+}
+
+/**
  * Versmalt een rechtenoverzicht tot wat één rol op één ploeg zou mogen.
  *
  * Voor de testrol: een beheerder kan zo kijken zoals een coach kijkt. De

@@ -16,13 +16,13 @@ test('de rol komt uit een kop en niet uit de body', () => {
   assert.ok(!blok.includes('body'), 'de gebruiker komt nooit uit de request body');
 });
 
-test('enkel wie werkelijk het systeem beheert, mag versmallen', () => {
-  assert.ok(blok.includes("rechten.mag('systeem.beheren')"));
+test('de instelling wordt opgehaald', () => {
+  assert.ok(blok.includes("instellingLezen(env.DB, 'testrol_toegelaten', '0')"));
 });
 
-test('de instelling moet aanstaan', () => {
-  assert.ok(blok.includes("instellingLezen(env.DB, 'testrol_toegelaten', '0')"));
-  assert.ok(blok.includes("toegelaten === '1'"), 'alles behalve een uitdrukkelijke 1 geldt als uit');
+test('de beslissing loopt via magTestrolGebruiken', () => {
+  // De voorwaarden zelf worden hieronder echt getest, niet op tekst.
+  assert.ok(blok.includes('magTestrolGebruiken(rechten, toegelaten, gevraagdeRol)'));
 });
 
 test('er wordt versmald met beperkTot en niet met een nieuwe berekening', () => {
