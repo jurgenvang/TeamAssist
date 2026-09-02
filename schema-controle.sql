@@ -1,4 +1,4 @@
--- TeamAssist — controle op de databankstructuur (versie 0.3.1)
+-- TeamAssist — controle op de databankstructuur (versie 0.5.0)
 --
 -- Plak dit in de D1-console na het uitvoeren van een schemawijziging. Het wijzigt
 -- niets; het vergelijkt wat er staat met wat er hoort te staan.
@@ -106,8 +106,11 @@ verwacht_kolom(tabel, kolom) AS (VALUES
   ('teams', 'seizoen'),
   ('teams', 'naam'),
   ('teams', 'categorie'),
+  ('teams', 'onderwijsgroep'),
   ('teams', 'gevolgd'),
   ('teams', 'selectie_aan'),
+  ('teams', 'bij_bond'),
+  ('teams', 'laatst_gezien'),
   ('teams', 'aangemaakt')
 ),
 ontbrekend_object AS (
@@ -132,7 +135,7 @@ SELECT 0 AS volgorde,
             THEN 'ALLES OK'
             ELSE (SELECT count(*) FROM problemen) || ' PROBLEEM/PROBLEMEN'
        END AS soort,
-       'structuur versie 0.3.1' AS naam
+       'structuur versie 0.5.0' AS naam
 UNION ALL
 SELECT 1, soort, naam FROM problemen
 ORDER BY volgorde, soort, naam;

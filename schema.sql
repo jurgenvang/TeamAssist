@@ -92,13 +92,21 @@ CREATE TABLE aanmeldingen_wachtrij (
 -- Eén rij per ploeg per seizoen: een ploeg-GUID keert elk jaar terug maar hoort
 -- bij andere spelers.
 CREATE TABLE teams (
-  guid         TEXT NOT NULL,                       -- 'BVBL1125J16  2'
-  seizoen      TEXT NOT NULL,
-  naam         TEXT NOT NULL,
-  categorie    TEXT,                                -- 'J16', 'G12', 'HSE'
-  gevolgd      INTEGER NOT NULL DEFAULT 0 CHECK (gevolgd IN (0, 1)),
-  selectie_aan INTEGER NOT NULL DEFAULT 0 CHECK (selectie_aan IN (0, 1)),
-  aangemaakt   TEXT NOT NULL DEFAULT (datetime('now')),
+  guid           TEXT NOT NULL,                     -- 'BVBL1125J16  2'
+  seizoen        TEXT NOT NULL,
+  naam           TEXT NOT NULL,
+  categorie      TEXT,                              -- 'J16', 'G12', 'HSE'
+  -- Bepaalt welke examenperiodes op deze ploeg slaan. Afgeleid uit de
+  -- categorie, maar te overschrijven: in een U19 zitten vaak al studenten.
+  onderwijsgroep TEXT NOT NULL DEFAULT 'geen'
+                 CHECK (onderwijsgroep IN ('geen', 'secundair', 'hoger')),
+  gevolgd        INTEGER NOT NULL DEFAULT 0 CHECK (gevolgd IN (0, 1)),
+  selectie_aan   INTEGER NOT NULL DEFAULT 0 CHECK (selectie_aan IN (0, 1)),
+  -- Staat de ploeg nog bij de bond? Verdwijnt ze daar, dan gaat deze vlag op 0
+  -- en blijft de rij bestaan: er hangen spelers en aanwezigheden aan.
+  bij_bond       INTEGER NOT NULL DEFAULT 1 CHECK (bij_bond IN (0, 1)),
+  laatst_gezien  TEXT,
+  aangemaakt     TEXT NOT NULL DEFAULT (datetime('now')),
   PRIMARY KEY (guid, seizoen),
   FOREIGN KEY (seizoen) REFERENCES seizoenen (code)
 );

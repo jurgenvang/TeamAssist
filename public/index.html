@@ -144,6 +144,27 @@
       <tbody id="rechtenlijf"></tbody>
     </table>
 
+    <section id="ploegen" hidden>
+      <h2>Ploegen</h2>
+      <p>
+        Vink aan welke ploegen TeamAssist beheert. Een nieuwe ploeg staat
+        standaard uit.
+      </p>
+      <form>
+        <button type="button" id="ploegenladen">Lijst verversen</button>
+        <button type="button" class="stil" id="ploegensync">Ophalen bij de bond</button>
+      </form>
+      <div id="ploegenplan" class="melding" hidden></div>
+      <form>
+        <button type="button" class="stil" id="ledensync">Spelers en staf ophalen</button>
+      </form>
+      <div id="ledenplan" class="melding" hidden></div>
+      <table>
+        <thead><tr><th>Volgen</th><th>Categorie</th><th>Ploeg</th><th></th></tr></thead>
+        <tbody id="ploegenlijf"></tbody>
+      </table>
+    </section>
+
     <section id="diagnose" hidden>
       <h2>Gegevens van de bond bekijken</h2>
       <p>
@@ -263,16 +284,25 @@ async function vernieuwToken(huidige) {
 
 // --- De eigen API -----------------------------------------------------------
 
-async function api(pad) {
+async function api(pad, methode = 'GET', body = null) {
   let s = sessie();
   if (!s) return { status: 401 };
 
-  let antwoord = await fetch(pad, { headers: { authorization: `Bearer ${s.access_token}` } });
+  const opties = (token) => ({
+    method: methode,
+    headers: {
+      authorization: `Bearer ${token}`,
+      ...(body ? { 'content-type': 'application/json' } : {}),
+    },
+    ...(body ? { body: JSON.stringify(body) } : {}),
+  });
+
+  let antwoord = await fetch(pad, opties(s.access_token));
   if (antwoord.status === 401 && s.refresh_token) {
     const nieuw = await vernieuwToken(s);
     if (nieuw) {
       bewaarSessie(nieuw);
-      antwoord = await fetch(pad, { headers: { authorization: `Bearer ${nieuw.access_token}` } });
+      antwoord = await fetch(pad, opties(nieuw.access_token));
     }
   }
   return { status: antwoord.status, body: await antwoord.json().catch(() => null) };
@@ -302,7 +332,10 @@ function toonProfiel(gegevens) {
 
   // Het diagnosescherm is er enkel voor wie het systeem beheert. Verbergen is
   // een gemak, geen beveiliging: de backend weigert de route sowieso.
-  el('diagnose').hidden = !(gegevens.rechten ?? {})['systeem.beheren'];
+  const beheerder = Boolean((gegevens.rechten ?? {})['systeem.beheren']);
+  el('diagnose').hidden = !beheerder;
+  el('ploegen').hidden = !beheerder;
+  if (beheerder) laadPloegen();
 
   const rechten = gegevens.rechten ?? {};
   el('rechtenlijf').innerHTML = Object.entries(rechten)
@@ -366,6 +399,99 @@ el('aanmeldform').addEventListener('submit', async (e) => {
     toon('aanmeldmelding', `Versturen lukte niet: ${fout.message}`, true);
   }
 });
+
+async function laadPloegen() {
+  const uitkomst = await api('/api/admin/teams');
+  const ploegen = uitkomst.body?.teams ?? [];
+  el('ploegenlijf').innerHTML = ploegen
+    .map(
+      (p) => `<tr>
+        <td><input type="checkbox" data-guid="${p.guid}" ${p.gevolgd ? 'checked' : ''}></td>
+        <td>${p.categorie ?? '?'}</td>
+        <td>${p.naam}</td>
+        <td class="ploegen">${p.bij_bond ? '' : 'niet meer bij de bond'}</td>
+      </tr>`
+    )
+    .join('');
+
+  for (const vinkje of el('ploegenlijf').querySelectorAll('input[type=checkbox]')) {
+    vinkje.addEventListener('change', async () => {
+      await fetch('/api/admin/teams/gevolgd', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          authorization: `Bearer ${sessie().access_token}`,
+        },
+        body: JSON.stringify({ guid: vinkje.dataset.guid, gevolgd: vinkje.checked }),
+      });
+    });
+  }
+}
+
+// Twee stappen: eerst tonen wat er zou gebeuren, pas na bevestiging uitvoeren.
+// De synchronisatie raakt de ploegindeling van een heel seizoen aan.
+async function synchroniseerPloegen() {
+  const vak = el('ploegenplan');
+  vak.hidden = false;
+  vak.textContent = 'Ophalen bij de bond …';
+
+  const proef = await api('/api/admin/teams/sync', 'POST');
+  const plan = proef.body;
+  if (proef.status !== 200) {
+    vak.textContent = `Dat lukte niet: ${plan?.fout ?? proef.status}`;
+    return;
+  }
+
+  const samenvatting =
+    `${plan.nieuw.length} nieuw, ${plan.gewijzigd.length} gewijzigd, ` +
+    `${plan.ongewijzigd.length} ongewijzigd, ${plan.verdwenen.length} niet meer bij de bond` +
+    (plan.melding ? `\n\nLet op: ${plan.melding}` : '');
+
+  if (!confirm(`Dit zou er gebeuren:\n\n${samenvatting}\n\nUitvoeren?`)) {
+    vak.textContent = `Niets gewijzigd. ${samenvatting}`;
+    return;
+  }
+
+  const echt = await api('/api/admin/teams/sync?uitvoeren=1', 'POST');
+  vak.textContent = echt.status === 200 ? `Klaar. ${samenvatting}` : 'Uitvoeren lukte niet.';
+  await laadPloegen();
+}
+
+el('ploegenladen').addEventListener('click', laadPloegen);
+el('ploegensync').addEventListener('click', synchroniseerPloegen);
+
+// Spelers en staf van alle gevolgde ploegen. Ook hier eerst tonen wat er zou
+// gebeuren: dit maakt personen aan en koppelt ze aan ploegen.
+async function synchroniseerLeden() {
+  const vak = el('ledenplan');
+  vak.hidden = false;
+  vak.textContent = 'Ophalen bij de bond …';
+
+  const proef = await api('/api/admin/leden/sync', 'POST');
+  if (proef.status !== 200) {
+    vak.textContent = `Dat lukte niet: ${proef.body?.fout ?? proef.status}`;
+    return;
+  }
+
+  const t = proef.body.totalen;
+  const twijfels = proef.body.ploegen.flatMap((p) => p.twijfel ?? []);
+  const samenvatting =
+    `${proef.body.ploegen.length} ploegen: ${t.nieuw} nieuwe personen, ` +
+    `${t.koppelen} gekoppeld aan iemand die er al stond, ${t.bijwerken} bijgewerkt, ` +
+    `${t.uit_ploeg} niet meer bij de bond` +
+    (t.twijfel ? `\n\n${t.twijfel} twijfelgeval(len) — die worden overgeslagen:\n` +
+      twijfels.map((x) => `  ${x.lid.naam_vbl}: ${x.reden}`).join('\n') : '');
+
+  if (!confirm(`Dit zou er gebeuren:\n\n${samenvatting}\n\nUitvoeren?`)) {
+    vak.textContent = `Niets gewijzigd. ${samenvatting}`;
+    return;
+  }
+
+  const echt = await api('/api/admin/leden/sync?uitvoeren=1', 'POST');
+  vak.textContent = echt.status === 200 ? `Klaar. ${samenvatting}` : 'Uitvoeren lukte niet.';
+}
+
+el('ledensync').addEventListener('click', synchroniseerLeden);
 
 async function toonDiagnose(ruw) {
   const team = el('diagnoseteam').value.trim();

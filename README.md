@@ -1,4 +1,4 @@
-# TeamAssist 0.3.1 — het fundament
+# TeamAssist 0.3.2 — het fundament
 
 Eerste pakket. Het bevat geen functionaliteit voor de club: geen
 synchronisatie, geen import, geen aanwezigheden. Wat het wel bevat, is het

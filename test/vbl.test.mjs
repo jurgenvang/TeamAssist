@@ -22,13 +22,13 @@ const PLOEGANTWOORD = [
     guid: J16,
     naam: 'J16 B',
     spelers: [
-      { lidNr: '717331', relGuid: 'REL-1', naam: 'Dries van Geijstelen Forier', sGebDat: '17-03-2010', sAanslDat: '01-09-2018', ma: 'N' },
+      { lidNr: '717331', relGuid: 'REL-1', naam: 'Dries van Geijstelen Forier', sGebDat: '17-03-2010', sAanslDat: '11-08-2026 13:40', ma: null },
       { lidNr: '730885', relGuid: 'REL-2', naam: 'Otto Muñiz Espinoza', sGebDat: '02-11-2010', sAanslDat: '01-09-2021', ma: 'J' },
       { lidNr: '725314', relGuid: 'REL-3', naam: 'Max Cuyvers', sGebDat: '25-06-2010', sAanslDat: '01-09-2019', ma: 'N' },
     ],
     tvlijst: [
-      { lidNr: '48713', relGuid: 'REL-C1', naam: 'Dieter Devroey', tvCaC: 'Coach', tvNr: 1 },
-      { lidNr: '601903', relGuid: 'REL-C2', naam: 'Mathias Vanduffel', tvCaC: 'Coach', tvNr: 2 },
+      { lidNr: '48713', relGuid: 'REL-C1', naam: 'Dieter Devroey', tvCaC: 'Coach', tvNr: '51125J162_48713' },
+      { lidNr: '601903', relGuid: 'REL-C2', naam: 'Mathias Vanduffel', tvCaC: 'Coach', tvNr: '51125J162_601903' },
     ],
   },
 ];
@@ -89,9 +89,13 @@ test('de sleutelpaden tonen ook velden binnen een lijst', () => {
 test('de samenvatting telt waarden zonder namen te tonen', () => {
   const s = vatPloegSamen(PLOEGANTWOORD);
   assert.equal(s.spelers.aantal, 3);
-  assert.deepEqual(s.spelers.ma, { N: 2, J: 1 });
+  // Zoals in het echte antwoord: ma is bij een deel van de spelers leeg.
+  assert.deepEqual(s.spelers.ma, { N: 1, J: 1, '(leeg)': 1 });
   assert.equal(s.staf.aantal, 2);
   assert.deepEqual(s.staf.tvCaC, { Coach: 2 });
+  // tvNr is een samengestelde sleutel, geen volgnummer: tellen zou enkel
+  // eenlingen opleveren.
+  assert.equal(s.staf.tvNr_voorbeelden.length, 2);
 
   // Dit is de kern: hier gaan gegevens van minderjarigen over de lijn, dus er
   // hoort geen naam in te zitten.

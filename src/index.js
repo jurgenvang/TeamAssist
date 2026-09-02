@@ -16,6 +16,8 @@ import { logSchrijf } from './lib/logboek.js';
 import { mij } from './routes/mij.js';
 import { aanmeldlink } from './routes/aanmeldlink.js';
 import { vblDiagnose } from './routes/admin/vbl-diagnose.js';
+import { teamsLijst, teamsSync, teamGevolgd } from './routes/admin/teams.js';
+import { ledenSync } from './routes/admin/leden.js';
 import { VERSIE } from './versie.js';
 
 export const ROUTES = [
@@ -52,6 +54,15 @@ export const ROUTES = [
     recht: 'systeem.beheren',
     doe: vblDiagnose,
   },
+
+  // Ploegen beheren. De synchronisatie is standaard een droogloop; uitvoeren
+  // vraagt ?uitvoeren=1.
+  { methode: 'GET', pad: '/api/admin/teams', recht: 'systeem.beheren', doe: teamsLijst },
+  { methode: 'POST', pad: '/api/admin/teams/sync', recht: 'systeem.beheren', doe: teamsSync },
+  { methode: 'POST', pad: '/api/admin/teams/gevolgd', recht: 'systeem.beheren', doe: teamGevolgd },
+
+  // Spelers en staf van de gevolgde ploegen. Ook hier: standaard een droogloop.
+  { methode: 'POST', pad: '/api/admin/leden/sync', recht: 'personen.beheren', doe: ledenSync },
 ];
 
 function zoekRoute(methode, pad) {

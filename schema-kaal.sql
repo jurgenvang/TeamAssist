@@ -68,13 +68,19 @@ CREATE TABLE aanmeldingen_wachtrij (
 );
 
 CREATE TABLE teams (
-  guid         TEXT NOT NULL,
-  seizoen      TEXT NOT NULL,
-  naam         TEXT NOT NULL,
-  categorie    TEXT,
-  gevolgd      INTEGER NOT NULL DEFAULT 0 CHECK (gevolgd IN (0, 1)),
-  selectie_aan INTEGER NOT NULL DEFAULT 0 CHECK (selectie_aan IN (0, 1)),
-  aangemaakt   TEXT NOT NULL DEFAULT (datetime('now')),
+  guid           TEXT NOT NULL,
+  seizoen        TEXT NOT NULL,
+  naam           TEXT NOT NULL,
+  categorie      TEXT,
+
+  onderwijsgroep TEXT NOT NULL DEFAULT 'geen'
+                 CHECK (onderwijsgroep IN ('geen', 'secundair', 'hoger')),
+  gevolgd        INTEGER NOT NULL DEFAULT 0 CHECK (gevolgd IN (0, 1)),
+  selectie_aan   INTEGER NOT NULL DEFAULT 0 CHECK (selectie_aan IN (0, 1)),
+
+  bij_bond       INTEGER NOT NULL DEFAULT 1 CHECK (bij_bond IN (0, 1)),
+  laatst_gezien  TEXT,
+  aangemaakt     TEXT NOT NULL DEFAULT (datetime('now')),
   PRIMARY KEY (guid, seizoen),
   FOREIGN KEY (seizoen) REFERENCES seizoenen (code)
 );
