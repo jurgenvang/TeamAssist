@@ -44,8 +44,23 @@ test('publieke routes geven geen persoonsgegevens terug', () => {
 
 test('een route die geen recht vraagt, doet dat bewust', () => {
   // /api/mij gaat over jezelf: het recht zit in de identiteit, niet in een
-  // aparte controle. Elke andere route zonder recht hoort hier opgemerkt te
-  // worden bij het toevoegen.
+  // aparte controle. De aanwezigheidsroutes leiden het team af uit een
+  // activiteit die pas na een databankoproep bekend is, en controleren de
+  // rechten daarom zelf in de route. Elke andere route zonder recht hoort
+  // hier opgemerkt te worden bij het toevoegen.
   const zonderRecht = ROUTES.filter((r) => !r.publiek && !r.recht).map((r) => r.pad);
-  assert.deepEqual(zonderRecht, ['/api/mij']);
+  assert.deepEqual(
+    zonderRecht.sort(),
+    [
+      '/api/mij',
+      '/api/aanwezigheid/opgave',
+      '/api/aanwezigheid/mijn',
+      '/api/admin/aanwezigheid',
+      '/api/admin/aanwezigheid/vaststellen',
+      '/api/admin/aanwezigheid/uitsluiten',
+      '/api/admin/selectie',
+      '/api/admin/selectie/publiceren',
+      '/api/admin/trainingen',
+    ].sort()
+  );
 });

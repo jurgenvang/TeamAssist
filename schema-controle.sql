@@ -1,4 +1,4 @@
--- TeamAssist — controle op de databankstructuur (versie 0.10.0)
+-- TeamAssist — controle op de databankstructuur (versie 0.13.0)
 --
 -- Plak dit in de D1-console na het uitvoeren van een schemawijziging. Het wijzigt
 -- niets; het vergelijkt wat er staat met wat er hoort te staan.
@@ -12,6 +12,9 @@
 -- draai 'node tools/genereer-controle.mjs' en er staat een test op.
 
 WITH verwacht_object(soort, naam) AS (VALUES
+  ('index', 'idx_aanwezigheden_activiteit'),
+  ('index', 'idx_aanwezigheden_persoon'),
+  ('index', 'idx_aanwezigheden_uniek'),
   ('index', 'idx_logboek_tijdstip'),
   ('index', 'idx_ouder_kind_kind'),
   ('index', 'idx_periodes_seizoen'),
@@ -28,6 +31,7 @@ WITH verwacht_object(soort, naam) AS (VALUES
   ('index', 'idx_zaal_blokken_zaal'),
   ('index', 'idx_zaal_sluitingen_zaal'),
   ('table', 'aanmeldingen_wachtrij'),
+  ('table', 'aanwezigheden'),
   ('table', 'accounts'),
   ('table', 'instellingen'),
   ('table', 'logboek'),
@@ -42,6 +46,7 @@ WITH verwacht_object(soort, naam) AS (VALUES
   ('table', 'trainingen'),
   ('table', 'trainingsreeksen'),
   ('table', 'wedstrijden'),
+  ('table', 'wedstrijdselecties'),
   ('table', 'zaal_blokken'),
   ('table', 'zaal_sluitingen'),
   ('table', 'zalen')
@@ -52,6 +57,26 @@ verwacht_kolom(tabel, kolom) AS (VALUES
   ('aanmeldingen_wachtrij', 'eerste_poging'),
   ('aanmeldingen_wachtrij', 'laatste_poging'),
   ('aanmeldingen_wachtrij', 'pogingen'),
+  ('aanwezigheden', 'id'),
+  ('aanwezigheden', 'soort'),
+  ('aanwezigheden', 'activiteit_id'),
+  ('aanwezigheden', 'team_guid'),
+  ('aanwezigheden', 'seizoen'),
+  ('aanwezigheden', 'persoon_id'),
+  ('aanwezigheden', 'hoedanigheid'),
+  ('aanwezigheden', 'opgave_status'),
+  ('aanwezigheden', 'opgave_reden'),
+  ('aanwezigheden', 'opgave_toelichting'),
+  ('aanwezigheden', 'opgave_door'),
+  ('aanwezigheden', 'opgave_tijdstip'),
+  ('aanwezigheden', 'uitgesloten'),
+  ('aanwezigheden', 'uitgesloten_reden'),
+  ('aanwezigheden', 'uitgesloten_door'),
+  ('aanwezigheden', 'uitgesloten_tijdstip'),
+  ('aanwezigheden', 'vaststelling_status'),
+  ('aanwezigheden', 'vaststelling_door'),
+  ('aanwezigheden', 'vaststelling_tijdstip'),
+  ('aanwezigheden', 'aangemaakt'),
   ('accounts', 'sub'),
   ('accounts', 'persoon_id'),
   ('accounts', 'email'),
@@ -131,6 +156,10 @@ verwacht_kolom(tabel, kolom) AS (VALUES
   ('teams', 'onderwijsgroep'),
   ('teams', 'gevolgd'),
   ('teams', 'selectie_aan'),
+  ('teams', 'opgave_toegelaten_training'),
+  ('teams', 'opgave_toegelaten_wedstrijd'),
+  ('teams', 'opgave_termijn_training_uren'),
+  ('teams', 'opgave_termijn_wedstrijd_uren'),
   ('teams', 'bij_bond'),
   ('teams', 'laatst_gezien'),
   ('teams', 'aangemaakt'),
@@ -176,7 +205,11 @@ verwacht_kolom(tabel, kolom) AS (VALUES
   ('wedstrijden', 'wijzigingshash'),
   ('wedstrijden', 'bij_bond'),
   ('wedstrijden', 'laatst_gezien'),
+  ('wedstrijden', 'selectie_gepubliceerd'),
   ('wedstrijden', 'aangemaakt'),
+  ('wedstrijdselecties', 'wedstrijd_id'),
+  ('wedstrijdselecties', 'persoon_id'),
+  ('wedstrijdselecties', 'aangemaakt'),
   ('zaal_blokken', 'id'),
   ('zaal_blokken', 'zaal_id'),
   ('zaal_blokken', 'seizoen'),
@@ -217,7 +250,7 @@ SELECT 0 AS volgorde,
             THEN 'ALLES OK'
             ELSE (SELECT count(*) FROM problemen) || ' PROBLEEM/PROBLEMEN'
        END AS soort,
-       'structuur versie 0.10.0' AS naam
+       'structuur versie 0.13.0' AS naam
 UNION ALL
 SELECT 1, soort, naam FROM problemen
 ORDER BY volgorde, soort, naam;

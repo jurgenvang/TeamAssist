@@ -148,3 +148,52 @@ test('de instellingenlijst bevat de drie huisstijlvelden', async () => {
   assert.ok('clublogo_url' in body.instellingen);
   assert.ok('clublogo_bron' in body.instellingen);
 });
+
+test('de instellingenlijst bevat nu ook clubkleur_topbalk', async () => {
+  const db = zetKlaar();
+  const res = await instellingenTonen({ db });
+  const body = await res.json();
+  assert.ok('clubkleur_topbalk' in body.instellingen);
+});
+
+test('een felle merkkleur wordt geweigerd als accent maar aanvaard als topbalkkleur', async () => {
+  const db = zetKlaar();
+  const alsAccent = await instellingBewaren({
+    db, persoon, request: verzoek('/x', { sleutel: 'clubkleur_accent', waarde: '#f5821f' }),
+  });
+  assert.equal(alsAccent.status, 400);
+
+  const alsTopbalk = await instellingBewaren({
+    db, persoon, request: verzoek('/x', { sleutel: 'clubkleur_topbalk', waarde: '#f5821f' }),
+  });
+  assert.equal(alsTopbalk.status, 200);
+});
+
+test('/api/branding geeft de topbalkkleur mee met de juiste tekstkleur', async () => {
+  const db = zetKlaar();
+  await instellingBewaren({
+    db, persoon, request: verzoek('/x', { sleutel: 'clubkleur_topbalk', waarde: '#f5821f' }),
+  });
+  const res = await brandingTonen({ db });
+  const body = await res.json();
+  assert.equal(body.kleur_topbalk, '#f5821f');
+  assert.equal(body.kleur_topbalk_tekst, '#000000');
+});
+
+test('/api/branding geeft geen topbalkkleur wanneer er geen ingesteld is', async () => {
+  const db = zetKlaar();
+  const res = await brandingTonen({ db });
+  const body = await res.json();
+  assert.equal(body.kleur_topbalk, null);
+  assert.equal(body.kleur_topbalk_tekst, null);
+});
+
+test('een ongeldige waarde in clubkleur_topbalk wordt door /api/branding genegeerd', async () => {
+  const db = zetKlaar();
+  db._sqlite.exec(
+    `INSERT INTO instellingen (sleutel, waarde) VALUES ('clubkleur_topbalk', 'niet-geldig')`
+  );
+  const res = await brandingTonen({ db });
+  const body = await res.json();
+  assert.equal(body.kleur_topbalk, null);
+});

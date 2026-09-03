@@ -4,7 +4,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { maakDb } from './d1.mjs';
 import { ROUTES } from '../src/index.js';
-import { reeksAanmaken, reeksGenereren, reeksStoppen } from '../src/routes/admin/trainingsreeksen.js';
+import { reeksAanmaken, reeksGenereren, reeksStoppen, trainingenTonen } from '../src/routes/admin/trainingsreeksen.js';
+import { bouwRechten } from '../src/lib/rechten.js';
 
 const seizoen = { code: '2026-27', naam: '2026-2027' };
 const persoon = { id: 'p-admin' };
@@ -168,4 +169,38 @@ test('genereren voor een onbestaande reeks geeft 404', async () => {
   const db = zetKlaar();
   const res = await reeksGenereren({ db, persoon, request: verzoek('/x?reeks=999', null, 'POST') });
   assert.equal(res.status, 404);
+});
+
+// --- trainingenTonen: de individuele trainingen, niet de reeksen ------------
+
+test('trainingenTonen toont de geplande trainingen voor wie het team mag bekijken', async () => {
+  const db = zetKlaar();
+  const { id } = await maakReeks(db);
+  await reeksGenereren({ db, persoon, request: verzoek(`/x?reeks=${id}&uitvoeren=1`, null, 'POST') });
+
+  const coachRechten = bouwRechten({ rollen: [{ rol: 'COACH', team_guid: T1 }] });
+  const res = await trainingenTonen({
+    db, rechten: coachRechten, seizoen,
+    request: verzoek(`/x?team=${encodeURIComponent(T1)}`, null, 'GET'),
+  });
+  const body = await res.json();
+  assert.equal(res.status, 200);
+  assert.ok(body.trainingen.length > 0);
+});
+
+test('trainingenTonen weigert wie geen recht heeft op de ploeg', async () => {
+  const db = zetKlaar();
+  const geenRechten = bouwRechten();
+  const res = await trainingenTonen({
+    db, rechten: geenRechten, seizoen,
+    request: verzoek(`/x?team=${encodeURIComponent(T1)}`, null, 'GET'),
+  });
+  assert.equal(res.status, 403);
+});
+
+test('trainingenTonen vraagt een team', async () => {
+  const db = zetKlaar();
+  const coachRechten = bouwRechten({ rollen: [{ rol: 'COACH', team_guid: T1 }] });
+  const res = await trainingenTonen({ db, rechten: coachRechten, seizoen, request: verzoek('/x', null, 'GET') });
+  assert.equal(res.status, 400);
 });

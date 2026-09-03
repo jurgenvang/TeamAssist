@@ -167,3 +167,86 @@ test('een kleur wissen bewaart een lege waarde, geen geraden vervangkleur', () =
   const bron = lees('../public/js/schermen/instellingen.js');
   assert.ok(bron.includes("waarde: ''"));
 });
+
+test('het brandingvoorstel toont het logo als afbeelding, niet enkel de URL als tekst', () => {
+  const bron = lees('../public/js/schermen/instellingen.js');
+  assert.ok(bron.includes("createElement('img')"), 'het logo hoort zichtbaar te zijn, geen kale link');
+  assert.ok(bron.includes('logoImg.src = b.logo_url'));
+});
+
+test('een logo dat niet laadt, valt terug op tekst in plaats van kapot te blijven staan', () => {
+  const bron = lees('../public/js/schermen/instellingen.js');
+  assert.ok(bron.includes("addEventListener('error'"), 'geen zichtbaar gebroken-afbeelding-icoon');
+  assert.ok(bron.match(/logoImg\.addEventListener\('error'[\s\S]{0,150}logoImg\.remove\(\)/));
+});
+
+test('de topbalk gebruikt CSS-variabelen voor kleur en tekst, met een nette terugval', () => {
+  const css = lees('../public/stijl.css');
+  assert.ok(css.includes('var(--topbalk-achtergrond, transparent)'));
+  assert.ok(css.includes('var(--topbalk-tekst, var(--inkt))'));
+});
+
+test('huisstijl.js past de topbalkkleur toe zonder ze zelf te herberekenen', () => {
+  const bron = lees('../public/js/huisstijl.js');
+  assert.ok(bron.includes('kleur_topbalk'));
+  assert.ok(bron.includes('kleur_topbalk_tekst'));
+  assert.ok(!bron.includes('kiesLeesbareTekstkleur'), 'de tekstkleur komt van de backend, niet van een eigen berekening in de frontend');
+});
+
+test('het voorstelscherm biedt zowel accent- als topbalkkleur aan wanneer beide bruikbaar zijn', () => {
+  const bron = lees('../public/js/schermen/instellingen.js');
+  assert.ok(bron.includes('shirt_kleur_bruikbaar_topbalk'));
+  assert.ok(bron.includes("'clubkleur_topbalk'"));
+});
+
+test('het sjabloon downloaden gebruikt apiRuw, geen kale link naar een beveiligde route', () => {
+  const bron = lees('../public/js/schermen/ploegen.js');
+  assert.ok(bron.includes('apiRuw('), 'de route vraagt een token, dus een gewone <a href> volstaat niet');
+  assert.ok(bron.includes('createObjectURL'), 'het bestand wordt lokaal aangeboden na het ophalen');
+});
+
+test('het sjabloon uploaden toont eerst een droogloop', () => {
+  const bron = lees('../public/js/schermen/ploegen.js');
+  assert.ok(bron.match(/uploadSjabloon[\s\S]*?confirm\(/), 'uitvoeren vraagt bevestiging');
+  assert.ok(bron.includes('&uitvoeren=1'));
+});
+
+test('een JSON-lichaam op de sjabloonroute wordt nooit met JSON.stringify verstuurd', () => {
+  // apiRuw stuurt platte tekst; JSON.stringify() op een CSV-string zou de
+  // aanhalingstekens verdubbelen en het bestand onbruikbaar maken.
+  const bron = lees('../public/js/api.js');
+  const start = bron.indexOf('export async function apiRuw');
+  const eind = bron.indexOf('export async function', start + 1);
+  const apiRuwBlok = bron.slice(start, eind);
+  assert.ok(!apiRuwBlok.includes('JSON.stringify'));
+});
+
+test('rijfouten en overgeslagen ouderkoppelingen worden getoond, niet verzwegen', () => {
+  const bron = lees('../public/js/schermen/ploegen.js');
+  assert.ok(bron.includes('rijfouten'));
+  assert.ok(bron.includes('overgeslagenOuders'));
+});
+
+test('uitsluiten vraagt altijd een reden vóór de oproep', () => {
+  const bron = lees('../public/js/schermen/aanwezigheid-beheer.js');
+  assert.ok(bron.match(/if \(!alUitgesloten\)[\s\S]{0,120}prompt\(/), 'een reden hoort verplicht te zijn, ook in de frontend');
+});
+
+test('publiceren van een selectie vraagt bevestiging', () => {
+  const bron = lees('../public/js/schermen/aanwezigheid-beheer.js');
+  assert.ok(bron.match(/publiceerSelectie[\s\S]*?confirm\(/));
+});
+
+test('de opgave- en beheerschermen ontsmetten namen voor ze in HTML komen', () => {
+  const opgave = lees('../public/js/schermen/mijn-opgaven.js');
+  const beheer = lees('../public/js/schermen/aanwezigheid-beheer.js');
+  assert.ok(opgave.includes('veilig('));
+  assert.ok(beheer.includes('veilig(s.voornaam)'));
+});
+
+test('elke oproep in de nieuwe aanwezigheidsmodules loopt via api()', () => {
+  for (const bestand of ['mijn-opgaven.js', 'aanwezigheid-beheer.js']) {
+    const bron = lees(`../public/js/schermen/${bestand}`);
+    assert.ok(!bron.match(/fetch\(['"`]\/api\//), `geen kale fetch in ${bestand}`);
+  }
+});

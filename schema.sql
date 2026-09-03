@@ -102,6 +102,15 @@ CREATE TABLE teams (
                  CHECK (onderwijsgroep IN ('geen', 'secundair', 'hoger')),
   gevolgd        INTEGER NOT NULL DEFAULT 0 CHECK (gevolgd IN (0, 1)),
   selectie_aan   INTEGER NOT NULL DEFAULT 0 CHECK (selectie_aan IN (0, 1)),
+  -- Of vooraf opgeven toegelaten is, en hoeveel uur op voorhand het sluit —
+  -- apart voor trainingen en wedstrijden, want een ploeg met selectie heeft
+  -- voor wedstrijden een langere termijn nodig (de coach moet zijn lijst
+  -- kunnen maken vóór de dag zelf; 48 uur is de aanbevolen waarde in het
+  -- scherm zodra selectie_aan staat, maar wordt hier niet afgedwongen).
+  opgave_toegelaten_training  INTEGER NOT NULL DEFAULT 1 CHECK (opgave_toegelaten_training IN (0, 1)),
+  opgave_toegelaten_wedstrijd INTEGER NOT NULL DEFAULT 1 CHECK (opgave_toegelaten_wedstrijd IN (0, 1)),
+  opgave_termijn_training_uren  INTEGER NOT NULL DEFAULT 1,
+  opgave_termijn_wedstrijd_uren INTEGER NOT NULL DEFAULT 1,
   -- Staat de ploeg nog bij de bond? Verdwijnt ze daar, dan gaat deze vlag op 0
   -- en blijft de rij bestaan: er hangen spelers en aanwezigheden aan.
   bij_bond       INTEGER NOT NULL DEFAULT 1 CHECK (bij_bond IN (0, 1)),
@@ -394,11 +403,90 @@ CREATE TABLE wedstrijden (
   wijzigingshash  TEXT,
   bij_bond        INTEGER NOT NULL DEFAULT 1 CHECK (bij_bond IN (0, 1)),
   laatst_gezien   TEXT,
+  -- Een selectie is een klad tot ze gepubliceerd wordt. Zolang deze vlag op 0
+  -- staat, ziet enkel de begeleiding wie erop staat in wedstrijdselecties.
+  selectie_gepubliceerd INTEGER NOT NULL DEFAULT 0 CHECK (selectie_gepubliceerd IN (0, 1)),
   aangemaakt      TEXT NOT NULL DEFAULT (datetime('now')),
   FOREIGN KEY (team_guid, seizoen) REFERENCES teams (guid, seizoen)
 );
 
 CREATE INDEX idx_wedstrijden_team ON wedstrijden (team_guid, seizoen, datum);
+
+-- ---------------------------------------------------------------------------
+-- Aanwezigheden
+-- ---------------------------------------------------------------------------
+-- Drie velden, geen twee: de opgave (wat de speler of ouder vooraf invulde),
+-- de selectie (enkel bij wedstrijden, in een eigen tabel hieronder — wie de
+-- coach meeneemt is geen aanwezigheid), en de vaststelling (wat de coach
+-- achteraf noteerde). De coach overschrijft de opgave nooit: wie zich afmeldde
+-- en toch kwam, blijft zichtbaar als precies dat.
+--
+-- soort + activiteit_id verwijst naar trainingen.id of wedstrijden.id,
+-- afhankelijk van soort. Geen foreign key over twee tabellen — SQLite kan dat
+-- niet — vandaar de test die controleert dat elke rij bij een bestaande
+-- training of wedstrijd hoort.
+--
+-- persoon_id met hoedanigheid, niet team_spelers.id: bij een wedstrijd moet
+-- ook een ouder kunnen opgeven of hij aanwezig is, voor de tafeltaken die
+-- later komen (klok, 24 seconden, tablet, ploegafgevaardigde — backlog T1).
+--
+-- Uitsluiting is een eigen soort afwezigheid, los van opgave en vaststelling:
+-- een coach kan een speler vooraf op afwezig zetten (disciplinair, of een
+-- blessure die de coach kent), waarna de speler zichzelf niet meer op
+-- aanwezig kan zetten. De reden is verplicht — een maatregel zonder motief is
+-- door niemand anders te beoordelen.
+CREATE TABLE aanwezigheden (
+  id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+  soort               TEXT NOT NULL CHECK (soort IN ('training', 'wedstrijd')),
+  activiteit_id       INTEGER NOT NULL,
+  team_guid           TEXT NOT NULL,
+  seizoen             TEXT NOT NULL,
+  persoon_id          TEXT NOT NULL,
+  hoedanigheid        TEXT NOT NULL CHECK (hoedanigheid IN ('SPELER', 'OUVO')),
+
+  opgave_status       TEXT CHECK (opgave_status IN ('aanwezig', 'afwezig')),
+  opgave_reden        TEXT CHECK (opgave_reden IN ('ziek', 'gekwetst', 'ander')),
+  opgave_toelichting  TEXT,
+  opgave_door         TEXT,                          -- persoon_id: de speler zelf, of een ouder namens
+  opgave_tijdstip     TEXT,
+
+  uitgesloten         INTEGER NOT NULL DEFAULT 0 CHECK (uitgesloten IN (0, 1)),
+  uitgesloten_reden   TEXT,
+  uitgesloten_door    TEXT,
+  uitgesloten_tijdstip TEXT,
+
+  vaststelling_status TEXT CHECK (vaststelling_status IN ('aanwezig', 'afwezig', 'te_laat')),
+  vaststelling_door   TEXT,
+  vaststelling_tijdstip TEXT,
+
+  aangemaakt          TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (persoon_id) REFERENCES personen (id),
+  FOREIGN KEY (team_guid, seizoen) REFERENCES teams (guid, seizoen),
+  CHECK (uitgesloten = 0 OR uitgesloten_reden IS NOT NULL)
+);
+
+-- Eén rij per persoon per activiteit: de opgave en de vaststelling van
+-- dezelfde speler op dezelfde training horen samen te vallen, niet in twee
+-- rijen te kunnen staan.
+CREATE UNIQUE INDEX idx_aanwezigheden_uniek ON aanwezigheden (soort, activiteit_id, persoon_id);
+CREATE INDEX idx_aanwezigheden_activiteit ON aanwezigheden (soort, activiteit_id);
+CREATE INDEX idx_aanwezigheden_persoon ON aanwezigheden (persoon_id, seizoen);
+
+-- ---------------------------------------------------------------------------
+-- Wedstrijdselecties
+-- ---------------------------------------------------------------------------
+-- Wie de coach meeneemt. Een aparte tabel, geen kolom op aanwezigheden: een
+-- selectie is een klad tot ze gepubliceerd wordt (wedstrijden.selectie_gepubliceerd),
+-- en 'niet geselecteerd' is geen afwezigheid — dat zou een speler bestraffen
+-- voor een beslissing van zijn coach.
+CREATE TABLE wedstrijdselecties (
+  wedstrijd_id INTEGER NOT NULL,
+  persoon_id   TEXT NOT NULL,
+  aangemaakt   TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (wedstrijd_id, persoon_id),
+  FOREIGN KEY (wedstrijd_id) REFERENCES wedstrijden (id),
+  FOREIGN KEY (persoon_id) REFERENCES personen (id)
+);
 
 -- ---------------------------------------------------------------------------
 -- Taken
