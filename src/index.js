@@ -32,6 +32,8 @@ import {
 import { periodesTonen, periodeAanmaken, periodeVerwijderen, vakantiesSync } from './routes/admin/periodes.js';
 import { wedstrijdenSync, wedstrijdenTonen } from './routes/admin/wedstrijden.js';
 import { sjabloonExporteren, sjabloonImporteren } from './routes/admin/sjabloon.js';
+import { zaalsjabloonExporteren, zaalsjabloonImporteren } from './routes/admin/zaalsjabloon.js';
+import { reeksensjabloonExporteren, reeksensjabloonImporteren } from './routes/admin/reeksensjabloon.js';
 import {
   aanwezigheidTonen, vaststellen, uitsluiten, selectieZetten, selectiePubliceren,
 } from './routes/admin/aanwezigheid-beheer.js';
@@ -168,6 +170,14 @@ export const ROUTES = [
   // hoort bij hetzelfde recht als het aanpassen van een persoon zelf.
   { methode: 'GET', pad: '/api/admin/sjabloon', recht: 'personen.beheren', doe: sjabloonExporteren },
   { methode: 'POST', pad: '/api/admin/sjabloon', recht: 'personen.beheren', doe: sjabloonImporteren },
+
+  // Zaaluren-sjabloon: hetzelfde recht als het aanmaken van een zaal.
+  { methode: 'GET', pad: '/api/admin/zalen/sjabloon', recht: 'systeem.beheren', doe: zaalsjabloonExporteren },
+  { methode: 'POST', pad: '/api/admin/zalen/sjabloon', recht: 'systeem.beheren', doe: zaalsjabloonImporteren },
+
+  // Trainingsuren-sjabloon: hetzelfde recht als het aanmaken van een reeks.
+  { methode: 'GET', pad: '/api/admin/trainingsreeksen/sjabloon', recht: 'systeem.beheren', doe: reeksensjabloonExporteren },
+  { methode: 'POST', pad: '/api/admin/trainingsreeksen/sjabloon', recht: 'systeem.beheren', doe: reeksensjabloonImporteren },
 
   // Aanwezigheid beheren. Ook hier geen route.recht: het team wordt afgeleid
   // uit de opgevraagde activiteit, wat een databankoproep vraagt vóór de

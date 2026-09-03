@@ -111,7 +111,7 @@ test('de trainingenmodule gebruikt api() en geen kale fetch', () => {
   const bron = readdirSync(new URL('../public/js/schermen', import.meta.url)).includes('trainingen.js')
     ? lees('../public/js/schermen/trainingen.js')
     : '';
-  assert.ok(bron.includes("import { api }"));
+  assert.match(bron, /import \{ api(, apiRuw)? \} from/);
   assert.ok(!bron.includes('fetch('));
 });
 
@@ -249,4 +249,61 @@ test('elke oproep in de nieuwe aanwezigheidsmodules loopt via api()', () => {
     const bron = lees(`../public/js/schermen/${bestand}`);
     assert.ok(!bron.match(/fetch\(['"`]\/api\//), `geen kale fetch in ${bestand}`);
   }
+});
+
+test('een periode kan nu handmatig aangemaakt worden, met soort examens beschikbaar', () => {
+  assert.ok(html.includes('id="periodesoort"'));
+  assert.ok(html.includes('<option value="examens">'));
+  const bron = lees('../public/js/schermen/trainingen.js');
+  assert.ok(bron.includes('export async function maakPeriode'));
+  assert.ok(bron.includes("api('/api/admin/periodes', 'POST'"));
+});
+
+test('een periode verwijderen vraagt bevestiging en is enkel zichtbaar bij handmatige periodes', () => {
+  const bron = lees('../public/js/schermen/trainingen.js');
+  assert.ok(bron.match(/data-periode-verwijderen[\s\S]*?confirm\(/));
+  assert.ok(bron.includes("p.bron === 'club'"), 'de knop hoort enkel bij handmatige periodes te staan');
+});
+
+test('een zaalblok kan verwijderd worden, met bevestiging', () => {
+  const bron = lees('../public/js/schermen/trainingen.js');
+  assert.ok(bron.match(/data-blok-verwijderen[\s\S]*?confirm\(/));
+});
+
+test('een zaalsluiting kan gemeld worden vanuit het scherm', () => {
+  assert.ok(html.includes('id="sluitingzaal"'));
+  const bron = lees('../public/js/schermen/trainingen.js');
+  assert.ok(bron.includes('export async function maakSluiting'));
+});
+
+test('geen twee elementen in index.html delen dezelfde id', () => {
+  const ids = [...html.matchAll(/id="([^"]+)"/g)].map((m) => m[1]);
+  const gezien = new Set();
+  const dubbel = [];
+  for (const id of ids) {
+    if (gezien.has(id)) dubbel.push(id);
+    gezien.add(id);
+  }
+  assert.deepEqual(dubbel, []);
+});
+
+test('beide nieuwe sjablonen tonen eerst een droogloop vóór uitvoeren', () => {
+  const bron = lees('../public/js/schermen/trainingen.js');
+  assert.ok(bron.match(/uploadZaalsjabloon[\s\S]*?confirm\(/));
+  assert.ok(bron.match(/uploadReeksensjabloon[\s\S]*?confirm\(/));
+});
+
+test('onbekende teams en zalen worden getoond, niet verzwegen', () => {
+  const bron = lees('../public/js/schermen/trainingen.js');
+  assert.ok(bron.includes('onbekendeTeams'));
+  assert.ok(bron.includes('onbekendeZalen'));
+  assert.ok(bron.includes('verdwenenBlokken'));
+  assert.ok(bron.includes('verdwenenReeksen'));
+});
+
+test('de sjabloondownloads gebruiken apiRuw, geen kale link', () => {
+  const bron = lees('../public/js/schermen/trainingen.js');
+  const downloadBlok = bron.slice(bron.indexOf('async function downloadCsv'), bron.indexOf('function leesBestand'));
+  assert.ok(downloadBlok.includes('apiRuw'));
+  assert.ok(downloadBlok.includes('createObjectURL'));
 });
