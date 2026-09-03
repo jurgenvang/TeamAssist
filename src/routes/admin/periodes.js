@@ -7,11 +7,15 @@ import { haalVakanties, naarPeriodes } from '../../lib/vakanties.js';
 // Nog te bevestigen tegen de echte API welke subdivisiecode Vlaanderen precies
 // draagt (zie backlog, punt AA) — vandaar de diagnoseroute hieronder.
 //
-// Bijgewerkt: België werkt niet met gewone ISO-subdivisies maar met `groups`.
-// Bevestigd via GET /Groups?countryIsoCode=BE: BE-NL (Vlaamse gemeenschap),
-// BE-FR, BE-DE. De eerdere waarde 'BE-VLG' bestond niet. Nog niet bevestigd:
-// of de query-parameter voor deze groepscode ook 'subdivisionCode' heet.
-const SUBDIVISIE_VLAANDEREN = 'BE-NL';
+// België werkt niet met gewone ISO-subdivisies maar met `groups` — bevestigd
+// via GET /Groups?countryIsoCode=BE: BE-NL (Vlaamse gemeenschap), BE-FR,
+// BE-DE. En een groepscode gaat via een eigen parameter, `groupCode`, niet via
+// `subdivisionCode` — bevestigd via de officiële OpenAPI-specificatie
+// (openholidaysapi.org/swagger/v1/swagger.json). Beide fouten zaten aanvankelijk
+// in de code: eerst de niet-bestaande waarde 'BE-VLG' via subdivisionCode
+// (0.8.0), toen de juiste waarde 'BE-NL' nog steeds via de verkeerde
+// parameter (0.11.1).
+const GROEPSCODE_VLAANDEREN = 'BE-NL';
 
 export async function periodesTonen(ctx) {
   const { db, seizoen } = ctx;
@@ -88,7 +92,7 @@ export async function vakantiesSync(ctx) {
 
   let antwoord;
   try {
-    antwoord = await haalVakanties(van, tot, SUBDIVISIE_VLAANDEREN);
+    antwoord = await haalVakanties(van, tot, { groepscode: GROEPSCODE_VLAANDEREN });
   } catch (e) {
     await logSchrijf(db, {
       soort: 'fout',

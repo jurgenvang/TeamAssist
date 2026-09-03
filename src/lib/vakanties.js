@@ -7,7 +7,16 @@
 
 const BASIS = 'https://openholidaysapi.org';
 
-export function periodeUrl(van, tot, subdivisieCode) {
+/**
+ * subdivisieCode en groepscode zijn twee aparte parameters bij de API, niet
+ * inwisselbaar — bevestigd via de officiële OpenAPI-specificatie
+ * (openholidaysapi.org/swagger/v1/swagger.json). Een gewone ISO-subdivisie
+ * (zoals 'DE-BY') hoort in subdivisionCode; een groepscode voor een land dat
+ * met taalgrenzen of zones werkt (zoals België: 'BE-NL', 'BE-FR', 'BE-DE')
+ * hoort in groupCode. Beide meesturen kan; een land dat er maar één van
+ * gebruikt, negeert de andere.
+ */
+export function periodeUrl(van, tot, { subdivisieCode, groepscode } = {}) {
   const p = new URLSearchParams({
     countryIsoCode: 'BE',
     languageIsoCode: 'NL',
@@ -15,6 +24,7 @@ export function periodeUrl(van, tot, subdivisieCode) {
     validTo: tot,
   });
   if (subdivisieCode) p.set('subdivisionCode', subdivisieCode);
+  if (groepscode) p.set('groupCode', groepscode);
   return `${BASIS}/SchoolHolidays?${p}`;
 }
 
@@ -40,8 +50,8 @@ export function naarPeriodes(antwoord, seizoen) {
   });
 }
 
-export async function haalVakanties(seizoenVan, seizoenTot, subdivisieCode, fetcher = fetch) {
-  const url = periodeUrl(seizoenVan, seizoenTot, subdivisieCode);
+export async function haalVakanties(seizoenVan, seizoenTot, codes, fetcher = fetch) {
+  const url = periodeUrl(seizoenVan, seizoenTot, codes);
   const antwoord = await fetcher(url, { headers: { accept: 'application/json' } });
   if (!antwoord.ok) throw new Error(`OpenHolidays gaf status ${antwoord.status}`);
   return antwoord.json();

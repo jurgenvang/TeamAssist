@@ -34,10 +34,33 @@ function verzoek(pad, body) {
   return new Request(`https://x${pad}`, { method: body ? 'POST' : 'GET', body: body ? JSON.stringify(body) : undefined });
 }
 
-test('de URL bevat het land, de taal en de subdivisiecode', () => {
-  const url = periodeUrl('2026-08-01', '2027-06-30', 'BE-VLG');
+test('de URL bevat het land, de taal en de subdivisiecode wanneer die is meegegeven', () => {
+  const url = periodeUrl('2026-08-01', '2027-06-30', { subdivisieCode: 'DE-BY' });
   assert.match(url, /countryIsoCode=BE/);
-  assert.match(url, /subdivisionCode=BE-VLG/);
+  assert.match(url, /subdivisionCode=DE-BY/);
+  assert.ok(!url.includes('groupCode'), 'geen groupCode als er geen groepscode is meegegeven');
+});
+
+test('een groepscode gaat via groupCode, niet via subdivisionCode', () => {
+  // De officiële OpenAPI-specificatie (openholidaysapi.org/swagger/v1/swagger.json)
+  // toont deze twee als aparte parameters bij /SchoolHolidays. Een groepscode
+  // (zoals BE-NL voor Vlaanderen) die per ongeluk via subdivisionCode gaat,
+  // levert stilzwijgend geen resultaten op — precies de fout die dit ving.
+  const url = periodeUrl('2026-08-01', '2027-06-30', { groepscode: 'BE-NL' });
+  assert.match(url, /groupCode=BE-NL/);
+  assert.ok(!url.includes('subdivisionCode'), 'BE-NL is een groepscode, geen subdivisiecode');
+});
+
+test('beide codes kunnen samen meegegeven worden', () => {
+  const url = periodeUrl('2026-08-01', '2027-06-30', { subdivisieCode: 'DE-BY', groepscode: 'X' });
+  assert.match(url, /subdivisionCode=DE-BY/);
+  assert.match(url, /groupCode=X/);
+});
+
+test('zonder enige code bevat de URL geen van beide parameters', () => {
+  const url = periodeUrl('2026-08-01', '2027-06-30');
+  assert.ok(!url.includes('subdivisionCode'));
+  assert.ok(!url.includes('groupCode'));
 });
 
 test('de Nederlandstalige naam wordt gekozen', () => {
