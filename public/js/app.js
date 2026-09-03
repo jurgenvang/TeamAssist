@@ -12,8 +12,9 @@ import { laadMijnOpgaven } from './schermen/mijn-opgaven.js';
 import { toonDiagnose } from './schermen/diagnose.js';
 import { pasHuisstijlToe } from './huisstijl.js';
 import {
-  laadZalen, maakZaal, maakBlok, laadPeriodes, synchroniseerVakanties, maakReeks,
+  laadZalen, maakZaal, maakBlok, maakSluiting, laadPeriodes, maakPeriode, synchroniseerVakanties, maakReeks,
   synchroniseerWedstrijden, getHuidigWedstrijdenTeam,
+  downloadZaalsjabloon, uploadZaalsjabloon, downloadReeksensjabloon, uploadReeksensjabloon,
 } from './schermen/trainingen.js';
 import { toonTestbalk, vulTestrolkeuze, koppelTestrol } from './schermen/testrol.js';
 
@@ -173,6 +174,12 @@ el('zoekterm').addEventListener('keydown', (e) => {
 });
 el('zaalmaken').addEventListener('click', maakZaal);
 el('blokmaken').addEventListener('click', maakBlok);
+el('sluitingmaken').addEventListener('click', maakSluiting);
+el('periodemaken').addEventListener('click', maakPeriode);
+el('zaalsjabloondownload').addEventListener('click', downloadZaalsjabloon);
+el('zaalsjabloonupload').addEventListener('click', uploadZaalsjabloon);
+el('reeksensjabloondownload').addEventListener('click', downloadReeksensjabloon);
+el('reeksensjabloonupload').addEventListener('click', uploadReeksensjabloon);
 el('vakantiesync').addEventListener('click', synchroniseerVakanties);
 el('reeksmaken').addEventListener('click', maakReeks);
 el('wedstrijdensync').addEventListener('click', () => synchroniseerWedstrijden(getHuidigWedstrijdenTeam()));

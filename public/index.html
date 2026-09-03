@@ -262,18 +262,87 @@
         <button type="button" id="blokmaken">Blok toevoegen</button>
       </form>
       <div id="zalenmelding" class="melding" hidden></div>
+
+      <h3>Een zaal tijdelijk sluiten</h3>
+      <p class="klein">
+        Raakt elke training die in dat venster op die zaal gepland staat — die krijgt de
+        status 'zaal niet beschikbaar' in plaats van stil te verdwijnen.
+      </p>
+      <form>
+        <select id="sluitingzaal"></select>
+        <label class="veld">Van <input type="date" id="sluitingvan"></label>
+        <label class="veld">Tot <input type="date" id="sluitingtot"></label>
+        <input type="text" id="sluitingreden" placeholder="reden (optioneel)">
+        <button type="button" id="sluitingmaken">Melden</button>
+      </form>
+      <table>
+        <thead><tr><th>Zaal</th><th>Periode</th><th>Reden</th></tr></thead>
+        <tbody id="sluitingenlijf"></tbody>
+      </table>
+
+      <h3>Zaaluren-sjabloon</h3>
+      <p class="klein">
+        Eén rij per blok: zaal, weekdag, begin, einde, seizoen. Een onbekende zaalnaam wordt
+        als nieuwe zaal aangemaakt bij het uitvoeren.
+      </p>
+      <form>
+        <button type="button" class="stil" id="zaalsjabloondownload">Sjabloon downloaden</button>
+      </form>
+      <form>
+        <input type="file" id="zaalsjabloonbestand" accept=".csv,text/csv">
+        <button type="button" id="zaalsjabloonupload">Inlezen</button>
+      </form>
+      <div id="zaalsjabloonplan" class="melding" hidden></div>
+
+      <h3>Trainingsuren-sjabloon</h3>
+      <p class="klein">
+        Eén rij per team per tijdslot: team_naam, zaal, weekdag, begin, einde, seizoen, en
+        optioneel van/tot. Een team dat de bond nog niet kent (bijvoorbeeld een recreatieve
+        reeks) wordt gerapporteerd en overgeslagen, niet als fout behandeld.
+      </p>
+      <form>
+        <button type="button" class="stil" id="reeksensjabloondownload">Sjabloon downloaden</button>
+      </form>
+      <form>
+        <input type="file" id="reeksensjabloonbestand" accept=".csv,text/csv">
+        <button type="button" id="reeksensjabloonupload">Inlezen</button>
+      </form>
+      <div id="reeksensjabloonplan" class="melding" hidden></div>
     </section>
 
     <section id="tab-dagelijksbeheer" hidden>
       <h2>Schoolvakanties en examens</h2>
       <table>
-        <thead><tr><th>Naam</th><th>Periode</th><th>Soort</th><th>Doelgroep</th><th>Bron</th></tr></thead>
+        <thead><tr><th>Naam</th><th>Periode</th><th>Soort</th><th>Doelgroep</th><th>Bron</th><th></th></tr></thead>
         <tbody id="periodeslijf"></tbody>
       </table>
       <form>
         <button type="button" id="vakantiesync">Vakanties ophalen bij OpenHolidays</button>
       </form>
       <div id="periodesplan" class="melding" hidden></div>
+
+      <h3>Handmatig een periode toevoegen</h3>
+      <p class="klein">
+        Voor examenperiodes, of een correctie op een opgehaalde vakantie. Vakanties komen
+        automatisch binnen via de knop hierboven; examens moet je hier zelf ingeven.
+      </p>
+      <form>
+        <input type="text" id="periodenaam" placeholder="naam, bv. Examens januari">
+        <label class="veld">Van <input type="date" id="periodevan"></label>
+        <label class="veld">Tot <input type="date" id="periodetot"></label>
+      </form>
+      <form>
+        <select id="periodesoort">
+          <option value="vakantie">vakantie</option>
+          <option value="examens">examens</option>
+        </select>
+        <select id="periodedoelgroep">
+          <option value="iedereen">iedereen</option>
+          <option value="secundair">secundair</option>
+          <option value="hoger">hoger onderwijs</option>
+        </select>
+        <button type="button" id="periodemaken">Toevoegen</button>
+      </form>
 
       <h2>Gegevens van de bond bekijken</h2>
       <p class="klein">
