@@ -13,7 +13,11 @@ export const TABBLADEN = [
   { id: 'mij', naam: 'Overzicht', recht: null },
   { id: 'ploegen', naam: 'Ploegen', recht: 'team.bekijken' },
   { id: 'personen', naam: 'Personen', recht: 'personen.beheren' },
-  { id: 'beheer', naam: 'Beheer', recht: 'systeem.beheren' },
+  // Zoals bij YOAssist: twee menu-items in plaats van één, zodat wat je vaak
+  // doet (vakanties verversen, de bond bekijken) niet tussen wat je zelden
+  // wijzigt (instellingen, zalen) staat te zoeken.
+  { id: 'dagelijksbeheer', naam: 'Dagelijks beheer', recht: 'systeem.beheren' },
+  { id: 'configuratie', naam: 'Configuratie', recht: 'systeem.beheren' },
 ];
 
 export function zichtbareTabbladen(rechten) {

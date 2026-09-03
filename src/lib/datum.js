@@ -33,3 +33,17 @@ export function vblDatumNaarIso(waarde) {
 
   return iso;
 }
+
+/**
+ * Het uur van een VBL-wedstrijd: `10.30` — met een punt, niet een dubbele punt.
+ * Geeft `uu:mm` terug, of null wanneer het niet klopt.
+ */
+export function vblTijdNaarUur(waarde) {
+  if (typeof waarde !== 'string') return null;
+  const match = waarde.trim().match(/^(\d{1,2})[.:](\d{2})$/);
+  if (!match) return null;
+  const [, u, m] = match;
+  const uur = Number(u);
+  if (uur < 0 || uur > 23 || Number(m) > 59) return null;
+  return `${String(uur).padStart(2, '0')}:${m}`;
+}

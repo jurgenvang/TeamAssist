@@ -22,6 +22,15 @@ import { ledenSync } from './routes/admin/leden.js';
 import { teamLeden, personenZoeken } from './routes/admin/bekijken.js';
 import { persoonTonen, persoonBewaren, persoonActief } from './routes/admin/persoon.js';
 import { instellingenTonen, instellingBewaren, instellingLezen } from './routes/admin/instellingen.js';
+import {
+  zalenTonen, zaalAanmaken, blokAanmaken, blokVerwijderen, vrijeBlokken, sluitingAanmaken,
+} from './routes/admin/zalen.js';
+import {
+  reeksenTonen, reeksAanmaken, reeksStoppen, reeksGenereren,
+} from './routes/admin/trainingsreeksen.js';
+import { periodesTonen, periodeAanmaken, periodeVerwijderen, vakantiesSync } from './routes/admin/periodes.js';
+import { wedstrijdenSync, wedstrijdenTonen } from './routes/admin/wedstrijden.js';
+import { brandingVoorstel, brandingTonen } from './routes/admin/branding.js';
 import { VERSIE } from './versie.js';
 
 export const ROUTES = [
@@ -42,6 +51,11 @@ export const ROUTES = [
         versie: VERSIE,
       }),
   },
+
+  // Publiek, net als /api/config: het aanmeldscherm mag de huisstijl al kennen
+  // vóór iemand ingelogd is. Enkel wat op het scherm komt, nooit gevoelige
+  // gegevens.
+  { methode: 'GET', pad: '/api/branding', publiek: true, doe: brandingTonen },
 
   // Publiek, want wie een link vraagt is per definitie nog niet aangemeld. De
   // route verstuurt enkel iets naar een adres dat bij een actieve persoon hoort,
@@ -88,6 +102,52 @@ export const ROUTES = [
 
   { methode: 'GET', pad: '/api/admin/instellingen', recht: 'systeem.beheren', doe: instellingenTonen },
   { methode: 'POST', pad: '/api/admin/instellingen', recht: 'systeem.beheren', doe: instellingBewaren },
+
+  // Zalen: clubbrede infrastructuur, dus enkel wie het systeem beheert.
+  { methode: 'GET', pad: '/api/admin/zalen', recht: 'systeem.beheren', doe: zalenTonen },
+  { methode: 'POST', pad: '/api/admin/zalen', recht: 'systeem.beheren', doe: zaalAanmaken },
+  { methode: 'POST', pad: '/api/admin/zalen/blok', recht: 'systeem.beheren', doe: blokAanmaken },
+  { methode: 'POST', pad: '/api/admin/zalen/blok/verwijderen', recht: 'systeem.beheren', doe: blokVerwijderen },
+  { methode: 'GET', pad: '/api/admin/zalen/vrij', recht: 'systeem.beheren', doe: vrijeBlokken },
+  // Sluitingen mag ook een coördinator melden.
+  { methode: 'POST', pad: '/api/admin/zalen/sluiting', recht: 'team.configureren', doe: sluitingAanmaken },
+
+  // Trainingsreeksen: bekijken op de eigen ploeg, aanmaken enkel op club- of
+  // coördinatieniveau — anders ontstaat er een race om de goede zaaluren.
+  {
+    methode: 'GET',
+    pad: '/api/admin/trainingsreeksen',
+    recht: 'team.configureren',
+    team: (request) => new URL(request.url).searchParams.get('team'),
+    doe: reeksenTonen,
+  },
+  { methode: 'POST', pad: '/api/admin/trainingsreeksen', recht: 'systeem.beheren', doe: reeksAanmaken },
+  { methode: 'POST', pad: '/api/admin/trainingsreeksen/stoppen', recht: 'systeem.beheren', doe: reeksStoppen },
+  {
+    methode: 'POST',
+    pad: '/api/admin/trainingsreeksen/genereren',
+    recht: 'systeem.beheren',
+    doe: reeksGenereren,
+  },
+
+  { methode: 'GET', pad: '/api/admin/periodes', recht: 'systeem.beheren', doe: periodesTonen },
+  { methode: 'POST', pad: '/api/admin/periodes', recht: 'systeem.beheren', doe: periodeAanmaken },
+  { methode: 'POST', pad: '/api/admin/periodes/verwijderen', recht: 'systeem.beheren', doe: periodeVerwijderen },
+  { methode: 'POST', pad: '/api/admin/periodes/sync', recht: 'systeem.beheren', doe: vakantiesSync },
+
+  // Wedstrijden: bekijken op de eigen ploeg, synchroniseren enkel voor wie het
+  // systeem beheert.
+  {
+    methode: 'GET',
+    pad: '/api/admin/wedstrijden',
+    recht: 'team.bekijken',
+    team: (request) => new URL(request.url).searchParams.get('team'),
+    doe: wedstrijdenTonen,
+  },
+  { methode: 'POST', pad: '/api/admin/wedstrijden/sync', recht: 'systeem.beheren', doe: wedstrijdenSync },
+
+  // Clubkleur en logo: enkel een voorstel, nooit rechtstreeks bewaard.
+  { methode: 'GET', pad: '/api/admin/branding-voorstel', recht: 'systeem.beheren', doe: brandingVoorstel },
 ];
 
 function zoekRoute(methode, pad) {

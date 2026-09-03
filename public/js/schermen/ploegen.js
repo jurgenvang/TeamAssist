@@ -3,6 +3,7 @@
 import { api } from '../api.js';
 import { el, toon, veilig } from '../hulp.js';
 import { toonPersoon } from './persoon.js';
+import { toonReeksen, toonWedstrijden } from './trainingen.js';
 
 export async function laadPloegen() {
   const uitkomst = await api('/api/admin/teams');
@@ -23,7 +24,11 @@ export async function laadPloegen() {
     .join('');
 
   for (const knop of el('ploegenlijf').querySelectorAll('button[data-toon]')) {
-    knop.addEventListener('click', () => toonLeden(knop.dataset.toon));
+    knop.addEventListener('click', () => {
+      toonLeden(knop.dataset.toon);
+      toonReeksen(knop.dataset.toon);
+      toonWedstrijden(knop.dataset.toon);
+    });
   }
 
   for (const vinkje of el('ploegenlijf').querySelectorAll('input[type=checkbox]')) {

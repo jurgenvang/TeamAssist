@@ -25,14 +25,32 @@
 
   main { max-width: 44rem; margin: 0 auto; }
 
-  header { border-bottom: 2px solid var(--inkt); padding-bottom: .75rem; margin-bottom: 2rem; }
+  /* Topbalk: logo en clubnaam links onder de apptitel, naam en rol(len)
+     rechts — dezelfde opbouw als bij YOAssist ('club onder de apptitel,
+     rol(len) onder de eigen naam'). */
+  .topbalk {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    flex-wrap: wrap;
+    border-bottom: 2px solid var(--inkt);
+    padding-bottom: .75rem;
+    margin-bottom: 2rem;
+  }
+  .topbalk-merk { display: flex; align-items: center; gap: .7rem; }
+  .topbalk-merk img { height: 2.5rem; width: auto; max-width: 6rem; object-fit: contain; }
   h1 { margin: 0; font-size: 1.5rem; letter-spacing: -.01em; }
-  header p { margin: .15rem 0 0; color: var(--gedempt); font-size: .9rem; }
+  #clubnaam { margin: .15rem 0 0; color: var(--gedempt); font-size: .9rem; }
+
+  .topbalk-ik { text-align: right; }
+  .topbalk-ik-tekst { display: flex; flex-direction: column; }
+  #topbalknaam { font-weight: 600; }
+  .topbalk-rollen { color: var(--gedempt); font-size: .85rem; }
 
   h2 { font-size: 1rem; margin: 2rem 0 .6rem; }
 
-  .naam { font-size: 1.75rem; font-weight: 600; margin: 0 0 .1rem; letter-spacing: -.02em; }
-  .adres { color: var(--gedempt); margin: 0 0 1.25rem; }
+  .adres { color: var(--gedempt); margin: 0 0 .1rem; }
 
   .rollen { display: flex; flex-wrap: wrap; gap: .4rem; margin: 0 0 .5rem; padding: 0; list-style: none; }
   .rollen li {
@@ -74,6 +92,19 @@
 
   .melding { padding: .7rem .85rem; border-radius: var(--radius); background: var(--vlak); margin-top: 1rem; }
   .melding.fout { background: #fdf2f2; border-left: 3px solid var(--accent); }
+  .melding p { margin: 0 0 .5rem; }
+  .melding p:last-child { margin-bottom: 0; }
+  .melding button { margin-top: .3rem; }
+
+  input[type=color] {
+    width: 2.6rem;
+    height: 2.2rem;
+    padding: 0;
+    border: 1px solid var(--lijn);
+    border-radius: var(--radius);
+    vertical-align: middle;
+    cursor: pointer;
+  }
 
   pre {
     background: var(--vlak);

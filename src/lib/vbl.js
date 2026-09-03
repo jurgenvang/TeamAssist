@@ -25,6 +25,14 @@ export function orgDetailUrl(clubGuid, basis = VBL_BASIS) {
   return `${basis}/OrgDetailByGuid?issguid=${encodeURIComponent(clubGuid)}`;
 }
 
+/**
+ * De wedstrijden van één ploeg, thuis én uit — anders dan YOAssist, dat enkel
+ * thuiswedstrijden nodig heeft.
+ */
+export function teamMatchesUrl(guid, basis = VBL_BASIS) {
+  return `${basis}/TeamMatchesByGuid?teamguid=${encodeURIComponent(guid)}`;
+}
+
 export async function haalVbl(url, fetcher = fetch) {
   const antwoord = await fetcher(url, { headers: { accept: 'application/json' } });
   if (!antwoord.ok) throw new Error(`VBL gaf status ${antwoord.status}`);
@@ -104,6 +112,67 @@ export function leesPloegen(data, clubGuid) {
 
   loop(data);
   return [...perGuid.values()].sort((a, b) => a.guid.localeCompare(b.guid));
+}
+
+/**
+ * Leest wedstrijden uit een TeamMatchesByGuid-antwoord.
+ *
+ * De veldnamen zijn afgeleid uit YOAssist, dat dezelfde API al gebruikt voor
+ * thuiswedstrijden: `guid`, `tTGUID` (thuisploeg), `datumString` (dd-mm-jjjj),
+ * `beginTijd` (uu.mm — met een punt, niet een dubbele punt), `accGUID` en
+ * `accNaam` (locatie), `wedOff` (aangeduide scheidsrechters). Dat is nooit
+ * bevestigd tegen een écht TeamMatchesByGuid-antwoord voor TeamAssist zelf —
+ * enkel tegen YOAssist se documentatie. Zie backlog.
+ *
+ * `guid` van de ploeg zelf bepaalt thuis of uit: staat de ploeg-GUID in
+ * `tTGUID`, dan is het een thuiswedstrijd.
+ */
+export function leesWedstrijden(data, ploegGuid) {
+  const records = Array.isArray(data) ? data : [data];
+  return records
+    .filter((w) => w && w.guid)
+    .map((w) => ({
+      wedstrijd_guid: w.guid,
+      thuis: w.tTGUID === ploegGuid,
+      tegenstander: w.tTGUID === ploegGuid ? w.uTNaam ?? null : w.tTNaam ?? null,
+      datum_ruw: w.datumString ?? null,
+      begin_ruw: w.beginTijd ?? null,
+      locatie_tekst: w.accNaam ?? null,
+      vbl_acc_guid: w.accGUID ?? null,
+      uitslag: w.uitslag ? String(w.uitslag).trim() : null,
+      gespeeld: w.gespeeld === 'G',
+      scheidsrechters: Array.isArray(w.wedOff) ? w.wedOff : [],
+    }));
+}
+
+/**
+ * Logo-URL van een club, afgeleid uit het club-GUID.
+ *
+ * Dit patroon staat niet in de officiële API-documentatie — het is enkel
+ * waargenomen op de huidige website van Basketbal Vlaanderen, niet bevestigd
+ * als stabiel. Vandaar dat de club deze waarde altijd kan overschrijven; ze
+ * wordt nooit dwingend opgelegd.
+ */
+export function clubLogoUrl(clubGuid, klein = true) {
+  const suffix = klein ? '_small' : '';
+  return `https://vblapi1.wisseq.eu/vbldataOrgLogo/${clubGuid}${suffix}.jpg`;
+}
+
+/**
+ * Zoekt shirtkleuren in een OrgDetailByGuid-antwoord.
+ *
+ * Bevestigd bestaan in een echt antwoord (via /api/admin/vbl-diagnose): de
+ * velden `shirtKleur` en `shirtReserve` kwamen voor in TeamDetailByGuid. Niet
+ * bevestigd: of ze in OrgDetailByGuid ook op clubniveau voorkomen, en of de
+ * waarde een hexkleur is — de bond garandeert dat niet. Vandaar dat dit enkel
+ * een *voorstel* oplevert: de aanroeper beslist of de waarde bruikbaar is.
+ */
+export function zoekShirtkleur(data) {
+  const record = Array.isArray(data) ? data[0] : data;
+  return {
+    shirt_kleur: record?.shirtKleur ?? null,
+    shirt_reserve: record?.shirtReserve ?? null,
+  };
 }
 
 /** Alle sleutelpaden in een antwoord, zodat onbekende velden zichtbaar worden. */
