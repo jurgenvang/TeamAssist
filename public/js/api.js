@@ -53,33 +53,62 @@ async function vernieuwToken(huidige) {
   return { access_token: body.access_token, refresh_token: body.refresh_token };
 }
 
-export async function api(pad, methode = 'GET', body = null) {
-  let s = sessie();
-  if (!s) return { status: 401 };
-
+function kopHeaders(token, extra = {}) {
   const rol = testrol();
-  const opties = (token) => ({
-    method: methode,
-    headers: {
-      authorization: `Bearer ${token}`,
-      ...(body ? { 'content-type': 'application/json' } : {}),
-      // De gekozen rol gaat in een kop mee. De backend versmalt daarmee de
-      // rechten; verbreden kan ze niet.
-      ...(rol ? { 'x-teamassist-rol': rol.rol } : {}),
-      ...(rol?.team ? { 'x-teamassist-team': rol.team } : {}),
-    },
-    ...(body ? { body: JSON.stringify(body) } : {}),
-  });
+  return {
+    authorization: `Bearer ${token}`,
+    // De gekozen rol gaat in een kop mee. De backend versmalt daarmee de
+    // rechten; verbreden kan ze niet.
+    ...(rol ? { 'x-teamassist-rol': rol.rol } : {}),
+    ...(rol?.team ? { 'x-teamassist-team': rol.team } : {}),
+    ...extra,
+  };
+}
 
-  let antwoord = await fetch(pad, opties(s.access_token));
+/** Voert het verzoek uit en vernieuwt eenmalig het token bij een 401. */
+async function voerUit(pad, optiesVoorToken) {
+  let s = sessie();
+  if (!s) return null;
+
+  let antwoord = await fetch(pad, optiesVoorToken(s.access_token));
   if (antwoord.status === 401 && s.refresh_token) {
     const nieuw = await vernieuwToken(s);
     if (nieuw) {
       bewaarSessie(nieuw);
-      antwoord = await fetch(pad, opties(nieuw.access_token));
+      antwoord = await fetch(pad, optiesVoorToken(nieuw.access_token));
     }
   }
+  return antwoord;
+}
+
+export async function api(pad, methode = 'GET', body = null) {
+  const opties = (token) => ({
+    method: methode,
+    headers: kopHeaders(token, body ? { 'content-type': 'application/json' } : {}),
+    ...(body ? { body: JSON.stringify(body) } : {}),
+  });
+
+  const antwoord = await voerUit(pad, opties);
+  if (!antwoord) return { status: 401 };
   return { status: antwoord.status, body: await antwoord.json().catch(() => null) };
+}
+
+/**
+ * Zoals api(), maar met platte tekst in plaats van JSON — voor het CSV-
+ * sjabloon. Een eigen functie in plaats van api() overladen: JSON.stringify()
+ * op een CSV-string zou de aanhalingstekens verdubbelen en het bestand
+ * onbruikbaar maken.
+ */
+export async function apiRuw(pad, methode, lichaam, contentType) {
+  const opties = (token) => ({
+    method: methode,
+    headers: kopHeaders(token, lichaam !== undefined ? { 'content-type': contentType } : {}),
+    ...(lichaam !== undefined ? { body: lichaam } : {}),
+  });
+
+  const antwoord = await voerUit(pad, opties);
+  if (!antwoord) return { status: 401 };
+  return { status: antwoord.status, tekst: await antwoord.text().catch(() => '') };
 }
 
 /** Vraagt een aanmeldlink via de eigen route, niet rechtstreeks bij Supabase. */

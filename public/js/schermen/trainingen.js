@@ -110,6 +110,7 @@ export async function toonWedstrijden(teamGuid) {
         <td>${veilig(w.locatie_tekst ?? '')}</td>
         <td>${veilig(w.uitslag ?? '')}</td>
         <td class="ploegen">${w.bij_bond ? '' : 'niet meer bij de bond'}</td>
+        <td><button type="button" class="alslink" data-wedstrijd-aanwezigheid="${w.id}">Aanwezigheid</button></td>
       </tr>`
     )
     .join('');

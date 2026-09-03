@@ -3,10 +3,12 @@
 import { api, haalConfig, sessie, bewaarSessie, leesTokensUitUrl, vraagAanmeldlink, testrol } from './api.js';
 import { el, toon, veilig } from './hulp.js';
 import { bouwNavigatie } from './navigatie.js';
-import { laadPloegen, synchroniseerPloegen, synchroniseerLeden } from './schermen/ploegen.js';
+import { laadPloegen, synchroniseerPloegen, synchroniseerLeden, downloadSjabloon, uploadSjabloon } from './schermen/ploegen.js';
+import { bewaarSelectie, publiceerSelectie } from './schermen/aanwezigheid-beheer.js';
 import { zoekPersonen } from './schermen/personen.js';
 import { koppelPersoonscherm } from './schermen/persoon.js';
 import { laadInstellingen, haalBrandingvoorstel } from './schermen/instellingen.js';
+import { laadMijnOpgaven } from './schermen/mijn-opgaven.js';
 import { toonDiagnose } from './schermen/diagnose.js';
 import { pasHuisstijlToe } from './huisstijl.js';
 import {
@@ -55,6 +57,12 @@ function toonApp(gegevens) {
       return `<tr><td>${veilig(recht)}</td><td class="ploegen">${bereik}</td></tr>`;
     })
     .join('');
+
+  // Enkel tonen voor wie iets kan opgeven: SPELER of OUVO. Voor ADMIN zonder
+  // eigen ploeg zou een lege sectie hier enkel verwarrend zijn.
+  if ('aanwezigheid.opgeven.eigen' in rechten || 'aanwezigheid.opgeven.kind' in rechten) {
+    laadMijnOpgaven();
+  }
 
   // Elk tabblad laadt pas wanneer het geopend wordt: dat scheelt oproepen voor
   // schermen die iemand nooit bekijkt.
@@ -154,6 +162,8 @@ el('afmelden').addEventListener('click', () => {
 el('ploegenladen').addEventListener('click', laadPloegen);
 el('ploegensync').addEventListener('click', synchroniseerPloegen);
 el('ledensync').addEventListener('click', synchroniseerLeden);
+el('sjabloondownload').addEventListener('click', downloadSjabloon);
+el('sjabloonupload').addEventListener('click', uploadSjabloon);
 el('zoekknop').addEventListener('click', zoekPersonen);
 el('zoekterm').addEventListener('keydown', (e) => {
   if (e.key === 'Enter') {
@@ -166,6 +176,8 @@ el('blokmaken').addEventListener('click', maakBlok);
 el('vakantiesync').addEventListener('click', synchroniseerVakanties);
 el('reeksmaken').addEventListener('click', maakReeks);
 el('wedstrijdensync').addEventListener('click', () => synchroniseerWedstrijden(getHuidigWedstrijdenTeam()));
+el('selectiebewaren').addEventListener('click', bewaarSelectie);
+el('selectiepubliceren').addEventListener('click', publiceerSelectie);
 
 el('diagnoseknop').addEventListener('click', () => toonDiagnose(false));
 el('diagnoseruw').addEventListener('click', () => toonDiagnose(true));

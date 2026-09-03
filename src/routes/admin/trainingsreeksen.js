@@ -190,3 +190,28 @@ export async function reeksGenereren(ctx) {
 
   return json({ droogloop: false, ...plan });
 }
+
+/**
+ * Toont de eerstvolgende geplande trainingen van een ploeg — nodig om vanuit
+ * het scherm naar een specifieke training te kunnen klikken voor de
+ * aanwezigheid, wat tot nu toe enkel via de reeksen zichtbaar was.
+ */
+export async function trainingenTonen(ctx) {
+  const { db, rechten, request, seizoen } = ctx;
+  const team = new URL(request.url).searchParams.get('team');
+  if (!team) return fout(400, 'team ontbreekt');
+  if (!rechten.mag('team.aanwezigheid.bekijken', team)) return fout(403, 'geen recht op deze ploeg');
+
+  const rijen = await db
+    .prepare(
+      `SELECT id, datum, begin, einde, status, locatie_tekst
+         FROM trainingen
+        WHERE team_guid = ? AND seizoen = ? AND datum >= date('now', '-7 days')
+        ORDER BY datum, begin
+        LIMIT 30`
+    )
+    .bind(team, seizoen.code)
+    .all();
+
+  return json({ trainingen: rijen.results ?? [] });
+}

@@ -15,6 +15,7 @@ import { brusselUur } from './lib/klok.js';
 import { voerPingUit } from './lib/ping.js';
 import { logSchrijf } from './lib/logboek.js';
 import { mij } from './routes/mij.js';
+import { opgaveZetten, mijnOpgaven } from './routes/aanwezigheid-opgave.js';
 import { aanmeldlink } from './routes/aanmeldlink.js';
 import { vblDiagnose } from './routes/admin/vbl-diagnose.js';
 import { teamsLijst, teamsSync, teamGevolgd } from './routes/admin/teams.js';
@@ -26,10 +27,14 @@ import {
   zalenTonen, zaalAanmaken, blokAanmaken, blokVerwijderen, vrijeBlokken, sluitingAanmaken,
 } from './routes/admin/zalen.js';
 import {
-  reeksenTonen, reeksAanmaken, reeksStoppen, reeksGenereren,
+  reeksenTonen, reeksAanmaken, reeksStoppen, reeksGenereren, trainingenTonen,
 } from './routes/admin/trainingsreeksen.js';
 import { periodesTonen, periodeAanmaken, periodeVerwijderen, vakantiesSync } from './routes/admin/periodes.js';
 import { wedstrijdenSync, wedstrijdenTonen } from './routes/admin/wedstrijden.js';
+import { sjabloonExporteren, sjabloonImporteren } from './routes/admin/sjabloon.js';
+import {
+  aanwezigheidTonen, vaststellen, uitsluiten, selectieZetten, selectiePubliceren,
+} from './routes/admin/aanwezigheid-beheer.js';
 import { brandingVoorstel, brandingTonen } from './routes/admin/branding.js';
 import { VERSIE } from './versie.js';
 
@@ -64,6 +69,15 @@ export const ROUTES = [
   { methode: 'POST', pad: '/api/aanmeldlink', publiek: true, doe: aanmeldlink },
 
   { methode: 'GET', pad: '/api/mij', doe: mij },
+
+  // Aanwezigheid opgeven. Geen route.recht: het team waar het over gaat komt
+  // pas na een databankoproep boven water (via de activiteit), en of iemand
+  // 'eigen' of 'namens een kind' invult, hangt af van de body — geen van
+  // beide is uit de request-URL alleen af te leiden zoals bij de andere
+  // routes. De route controleert dit zelf, met ctx.persoon als enige bron
+  // voor wie de aanroeper is.
+  { methode: 'POST', pad: '/api/aanwezigheid/opgave', doe: opgaveZetten },
+  { methode: 'GET', pad: '/api/aanwezigheid/mijn', doe: mijnOpgaven },
 
   // Enkel voor wie het systeem beheert: het toont ruwe gegevens van de bond.
   {
@@ -129,6 +143,9 @@ export const ROUTES = [
     recht: 'systeem.beheren',
     doe: reeksGenereren,
   },
+  // Geen route.recht: trainingenTonen controleert zelf, want het gaat om
+  // team.aanwezigheid.bekijken en niet om team.configureren zoals de reeksen.
+  { methode: 'GET', pad: '/api/admin/trainingen', doe: trainingenTonen },
 
   { methode: 'GET', pad: '/api/admin/periodes', recht: 'systeem.beheren', doe: periodesTonen },
   { methode: 'POST', pad: '/api/admin/periodes', recht: 'systeem.beheren', doe: periodeAanmaken },
@@ -145,6 +162,22 @@ export const ROUTES = [
     doe: wedstrijdenTonen,
   },
   { methode: 'POST', pad: '/api/admin/wedstrijden/sync', recht: 'systeem.beheren', doe: wedstrijdenSync },
+
+  // Het sjabloon voor wat de bond niet levert: e-mail, telefoon, adres, ouders.
+  // Enkel wie personen mag beheren; het aanmaken van ouders die dit oplevert,
+  // hoort bij hetzelfde recht als het aanpassen van een persoon zelf.
+  { methode: 'GET', pad: '/api/admin/sjabloon', recht: 'personen.beheren', doe: sjabloonExporteren },
+  { methode: 'POST', pad: '/api/admin/sjabloon', recht: 'personen.beheren', doe: sjabloonImporteren },
+
+  // Aanwezigheid beheren. Ook hier geen route.recht: het team wordt afgeleid
+  // uit de opgevraagde activiteit, wat een databankoproep vraagt vóór de
+  // rechtencontrole kan gebeuren — de routes doen dit zelf, met dezelfde
+  // rechten.mag() die de rest van de app gebruikt.
+  { methode: 'GET', pad: '/api/admin/aanwezigheid', doe: aanwezigheidTonen },
+  { methode: 'POST', pad: '/api/admin/aanwezigheid/vaststellen', doe: vaststellen },
+  { methode: 'POST', pad: '/api/admin/aanwezigheid/uitsluiten', doe: uitsluiten },
+  { methode: 'POST', pad: '/api/admin/selectie', doe: selectieZetten },
+  { methode: 'POST', pad: '/api/admin/selectie/publiceren', doe: selectiePubliceren },
 
   // Clubkleur en logo: enkel een voorstel, nooit rechtstreeks bewaard.
   { methode: 'GET', pad: '/api/admin/branding-voorstel', recht: 'systeem.beheren', doe: brandingVoorstel },

@@ -6,7 +6,7 @@
 
 import { json, fout, leesJson } from '../../lib/http.js';
 import { logSchrijf } from '../../lib/logboek.js';
-import { keurAccentkleurGoed } from '../../lib/kleur.js';
+import { keurAccentkleurGoed, keurAchtergrondkleurGoed } from '../../lib/kleur.js';
 
 export const INSTELBAAR = {
   clubnaam: { soort: 'tekst' },
@@ -16,11 +16,18 @@ export const INSTELBAAR = {
   // Laat een beheerder kiezen met welke rol hij wil werken. Staat uit bij een
   // verse installatie en hoort uit te staan zodra de club er echt mee werkt.
   testrol_toegelaten: { soort: 'vlag' },
-  // Huisstijl. De kleur wordt bij het bewaren gecontroleerd op leesbaarheid
+  // Huisstijl. Elke kleur wordt bij het bewaren gecontroleerd op leesbaarheid
   // (zie src/lib/kleur.js) — een afgekeurde kleur wordt geweigerd, nooit
   // stilzwijgend aangepast. Het logo is een URL, geen upload: D1 is geen
   // plaats voor afbeeldingen (backlog, punt X).
-  clubkleur_accent: { soort: 'kleur' },
+  //
+  // clubkleur_accent staat op knoppen en links tegen een witte achtergrond,
+  // dus die moet contrasteren met wit. clubkleur_topbalk is een
+  // achtergrondkleur — de felle merkkleur van een club faalt daar vaak de
+  // eis van de accentkleur (te weinig contrast met wit), maar leest wél goed
+  // met zwarte tekst erop. Vandaar een eigen, ruimere contrastregel.
+  clubkleur_accent: { soort: 'kleur', kleurcontrole: 'accent' },
+  clubkleur_topbalk: { soort: 'kleur', kleurcontrole: 'achtergrond' },
   clublogo_url: { soort: 'tekst' },
   // 'vbl' betekent dat het logo automatisch is afgeleid uit het club-GUID; een
   // eigen upload elders (of geen logo) zet dit op 'eigen'. Enkel om in het
@@ -64,8 +71,12 @@ export async function instellingBewaren(ctx) {
 
   // Een lege clubkleur betekent 'terug naar de standaard' en mag dus door de
   // controle heen; enkel een ingevulde waarde wordt op leesbaarheid getoetst.
+  // Welke contrasteis geldt, hangt af van het veld: een accentkleur moet
+  // contrasteren met wit, een achtergrondkleur met haar eigen leesbaarste
+  // tekstkleur.
   if (def.soort === 'kleur' && waarde) {
-    const oordeel = keurAccentkleurGoed(waarde);
+    const keur = def.kleurcontrole === 'achtergrond' ? keurAchtergrondkleurGoed : keurAccentkleurGoed;
+    const oordeel = keur(waarde);
     if (!oordeel.ok) return fout(400, `deze kleur wordt niet gebruikt: ${oordeel.reden}`);
   }
 

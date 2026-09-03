@@ -57,7 +57,8 @@ async function bewaarInstelling(sleutel, invoer) {
   }
   // De testrolschakelaar verandert wat er op het scherm hoort te staan.
   if (sleutel === 'testrol_toegelaten') location.reload();
-  if (sleutel === 'clubkleur_accent' || sleutel === 'clublogo_url') await pasHuisstijlToe();
+  const beinvloedtHuisstijl = ['clubkleur_accent', 'clubkleur_topbalk', 'clublogo_url'];
+  if (beinvloedtHuisstijl.includes(sleutel)) await pasHuisstijlToe();
 }
 
 // --- Voorstel ophalen bij de bond -------------------------------------------
@@ -75,18 +76,46 @@ export async function haalBrandingvoorstel() {
 
   const b = uit.body;
   const stukken = [];
-  stukken.push(`Logo (nog niet uit de officiële documentatie bevestigd, enkel afgeleid): ${b.logo_url}`);
   if (b.shirt_kleur_ruw) {
+    stukken.push(`Kleur van de bond: ${b.shirt_kleur_ruw}`);
     stukken.push(
       b.shirt_kleur_bruikbaar.ok
-        ? `Kleur van de bond: ${b.shirt_kleur_ruw} — bruikbaar als accentkleur.`
-        : `Kleur van de bond: ${b.shirt_kleur_ruw} — niet bruikbaar (${b.shirt_kleur_bruikbaar.reden}).`
+        ? '— bruikbaar als accentkleur (knoppen, links).'
+        : `— niet bruikbaar als accentkleur (${b.shirt_kleur_bruikbaar.reden}).`
+    );
+    stukken.push(
+      b.shirt_kleur_bruikbaar_topbalk.ok
+        ? `— bruikbaar als topbalkkleur, met ${b.shirt_kleur_bruikbaar_topbalk.tekstkleur === '#000000' ? 'zwarte' : 'witte'} tekst erop.`
+        : `— niet bruikbaar als topbalkkleur (${b.shirt_kleur_bruikbaar_topbalk.reden}).`
     );
   } else {
     stukken.push('De bond gaf geen shirtkleur terug.');
   }
 
-  vak.innerHTML = `<p>${stukken.map(veilig).join('</p><p>')}</p>`;
+  vak.innerHTML = '';
+
+  // Het logo zelf tonen in plaats van enkel de URL: een link zegt niets over
+  // hoe het logo eruitziet, een voorbeeld wel. Laadt het niet — het
+  // URL-patroon is niet uit de officiële documentatie bevestigd — dan valt
+  // dit terug op de tekst, net als bij het toepassen in huisstijl.js.
+  const logoRij = document.createElement('p');
+  const logoImg = document.createElement('img');
+  logoImg.src = b.logo_url;
+  logoImg.alt = 'Voorgesteld clublogo';
+  logoImg.className = 'logovoorbeeld';
+  const logoOnderschrift = document.createElement('span');
+  logoOnderschrift.className = 'klein';
+  logoOnderschrift.textContent = 'Niet uit de officiële documentatie bevestigd, enkel afgeleid uit het club-GUID.';
+  logoImg.addEventListener('error', () => {
+    logoImg.remove();
+    logoOnderschrift.textContent = `Logo kon niet geladen worden (${b.logo_url}).`;
+  });
+  logoRij.append(logoImg, document.createElement('br'), logoOnderschrift);
+  vak.appendChild(logoRij);
+
+  const tekstRij = document.createElement('p');
+  tekstRij.innerHTML = stukken.map(veilig).join('<br>');
+  vak.appendChild(tekstRij);
 
   const knoppenRij = document.createElement('p');
   const logoKnop = document.createElement('button');
@@ -102,21 +131,32 @@ export async function haalBrandingvoorstel() {
   knoppenRij.appendChild(logoKnop);
 
   if (b.shirt_kleur_bruikbaar?.ok) {
-    const kleurKnop = document.createElement('button');
-    kleurKnop.type = 'button';
-    kleurKnop.className = 'stil';
-    kleurKnop.textContent = 'Deze kleur gebruiken';
-    kleurKnop.addEventListener('click', async () => {
-      const res = await api('/api/admin/instellingen', 'POST', { sleutel: 'clubkleur_accent', waarde: b.shirt_kleur_ruw });
-      if (res.status === 200) {
-        await laadInstellingen();
-        await pasHuisstijlToe();
-        toon('instellingmelding', 'Kleur overgenomen.');
-      } else {
-        toon('instellingmelding', `Dat lukte niet: ${res.body?.fout}`, true);
-      }
-    });
-    knoppenRij.appendChild(kleurKnop);
+    knoppenRij.appendChild(
+      maakKleurknop('Als accentkleur gebruiken', 'clubkleur_accent', b.shirt_kleur_ruw, 'stil')
+    );
+  }
+  if (b.shirt_kleur_bruikbaar_topbalk?.ok) {
+    knoppenRij.appendChild(
+      maakKleurknop('Als topbalkkleur gebruiken', 'clubkleur_topbalk', b.shirt_kleur_ruw, 'stil')
+    );
   }
   vak.appendChild(knoppenRij);
+}
+
+function maakKleurknop(tekst, sleutel, waarde, klasse) {
+  const knop = document.createElement('button');
+  knop.type = 'button';
+  if (klasse) knop.className = klasse;
+  knop.textContent = tekst;
+  knop.addEventListener('click', async () => {
+    const res = await api('/api/admin/instellingen', 'POST', { sleutel, waarde });
+    if (res.status === 200) {
+      await laadInstellingen();
+      await pasHuisstijlToe();
+      toon('instellingmelding', 'Kleur overgenomen.');
+    } else {
+      toon('instellingmelding', `Dat lukte niet: ${res.body?.fout}`, true);
+    }
+  });
+  return knop;
 }

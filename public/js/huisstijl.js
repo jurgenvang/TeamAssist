@@ -27,6 +27,18 @@ export async function pasHuisstijlToe() {
     root.removeProperty('--accent');
   }
 
+  // De topbalk is een aparte instelling: een felle merkkleur (zoals
+  // clubroranje) faalt vaak als accentkleur maar leest goed als achtergrond
+  // met de juiste tekstkleur erop. De backend bepaalt die tekstkleur al
+  // (kleur_topbalk_tekst); hier wordt ze enkel toegepast, niet herberekend.
+  if (gegevens.kleur_topbalk) {
+    root.setProperty('--topbalk-achtergrond', gegevens.kleur_topbalk);
+    root.setProperty('--topbalk-tekst', gegevens.kleur_topbalk_tekst || '#000000');
+  } else {
+    root.removeProperty('--topbalk-achtergrond');
+    root.removeProperty('--topbalk-tekst');
+  }
+
   const clubnaamEl = el('clubnaam');
   if (clubnaamEl && gegevens.clubnaam) clubnaamEl.textContent = gegevens.clubnaam;
 

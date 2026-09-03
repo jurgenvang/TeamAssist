@@ -9,7 +9,7 @@
 
 import { json, fout } from '../../lib/http.js';
 import { haalVbl, orgDetailUrl, teamDetailUrl, clubLogoUrl, zoekShirtkleur, zoekPloegGuids } from '../../lib/vbl.js';
-import { geldigeHex, keurAccentkleurGoed } from '../../lib/kleur.js';
+import { geldigeHex, keurAccentkleurGoed, keurAchtergrondkleurGoed, kiesLeesbareTekstkleur } from '../../lib/kleur.js';
 import { logSchrijf } from '../../lib/logboek.js';
 
 async function clubGuid(db) {
@@ -46,8 +46,14 @@ export async function brandingVoorstel(ctx) {
 
     voorstel.shirt_kleur_ruw = kleuren.shirt_kleur;
     voorstel.shirt_reserve_ruw = kleuren.shirt_reserve;
+    // Twee aparte oordelen: een felle merkkleur faalt vaak als accent (te
+    // weinig contrast met wit) maar leest wél goed als achtergrond met de
+    // juiste tekstkleur erop — vandaar dat beide getoond worden.
     voorstel.shirt_kleur_bruikbaar = geldigeHex(kleuren.shirt_kleur)
       ? keurAccentkleurGoed(kleuren.shirt_kleur)
+      : { ok: false, reden: 'geen hexwaarde ontvangen van de bond' };
+    voorstel.shirt_kleur_bruikbaar_topbalk = geldigeHex(kleuren.shirt_kleur)
+      ? keurAchtergrondkleurGoed(kleuren.shirt_kleur)
       : { ok: false, reden: 'geen hexwaarde ontvangen van de bond' };
   } catch (e) {
     voorstel.fout = `shirtkleur ophalen mislukt: ${e.message}`;
@@ -67,13 +73,18 @@ export async function brandingTonen(ctx) {
   const rijen = await db
     .prepare(
       `SELECT sleutel, waarde FROM instellingen
-        WHERE sleutel IN ('clubnaam', 'clubkleur_accent', 'clublogo_url')`
+        WHERE sleutel IN ('clubnaam', 'clubkleur_accent', 'clubkleur_topbalk', 'clublogo_url')`
     )
     .all();
   const gevonden = Object.fromEntries((rijen.results ?? []).map((r) => [r.sleutel, r.waarde]));
+  const topbalkKleur = geldigeHex(gevonden.clubkleur_topbalk) ? gevonden.clubkleur_topbalk : null;
   return json({
     clubnaam: gevonden.clubnaam || '',
     kleur_accent: geldigeHex(gevonden.clubkleur_accent) ? gevonden.clubkleur_accent : null,
+    kleur_topbalk: topbalkKleur,
+    // De tekstkleur wordt hier bepaald en niet in de frontend herberekend: één
+    // plaats die weet welke tekstkleur bij welke achtergrond hoort.
+    kleur_topbalk_tekst: topbalkKleur ? kiesLeesbareTekstkleur(topbalkKleur) : null,
     logo_url: gevonden.clublogo_url || null,
   });
 }

@@ -15,10 +15,28 @@ function relatieveLuminantie(hex) {
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 
+/** Contrastverhouding tussen twee willekeurige kleuren, volgens WCAG. */
+export function contrastTussen(hexA, hexB) {
+  const lA = relatieveLuminantie(hexA);
+  const lB = relatieveLuminantie(hexB);
+  const [licht, donker] = lA >= lB ? [lA, lB] : [lB, lA];
+  return (licht + 0.05) / (donker + 0.05);
+}
+
 /** Contrastverhouding tussen een kleur en wit, volgens WCAG. */
 export function contrastMetWit(hex) {
-  const l = relatieveLuminantie(hex);
-  return (1.05) / (l + 0.05);
+  return contrastTussen(hex, '#ffffff');
+}
+
+/**
+ * Welke tekstkleur — zwart of wit — leest het best op deze achtergrond?
+ * Voor een felle merkkleur (zoals clubroranje) is dat niet vanzelfsprekend
+ * wit: oranje leest vaak beter met zwarte tekst erop.
+ */
+export function kiesLeesbareTekstkleur(hex) {
+  const metZwart = contrastTussen(hex, '#000000');
+  const metWit = contrastTussen(hex, '#ffffff');
+  return metZwart >= metWit ? '#000000' : '#ffffff';
 }
 
 // WCAG AA voor gewone tekst is 4.5; voor een knop met vetgedrukte, grote tekst
@@ -43,4 +61,40 @@ export function keurAccentkleurGoed(hex) {
     };
   }
   return { ok: true, contrast };
+}
+
+/**
+ * Keurt een kleur goed als achtergrond — de topbalk, bijvoorbeeld — waar de
+ * tekstkleur niet vastligt op wit. Een felle merkkleur zoals clubroranje faalt
+ * vaak de eis van keurAccentkleurGoed (te weinig contrast met wit), maar
+ * leest prima met zwarte tekst erop. Deze functie kiest zelf de leesbaarste
+ * tekstkleur en toetst het contrast daartegen.
+ *
+ * Wiskundige eigenschap, geen toeval: met "de beste van zwart of wit" haalt
+ * zelfs de slechtste mogelijke kleur (het middengrijs waar zwart en wit
+ * precies gelijk scoren, rond #757575) nog altijd een contrast van 4,608 —
+ * net boven de grens van 4,5. Er bestaat dus geen geldige hexkleur die deze
+ * controle om reden van contrast weigert; de weigering hieronder vangt enkel
+ * een ongeldige of ontbrekende waarde op. Dat is een garantie, geen dode tak:
+ * het betekent dat elke geldige kleur veilig als topbalkachtergrond kan
+ * dienen zolang de tekstkleur automatisch meekiest.
+ *
+ * Geeft, net als keurAccentkleurGoed, nooit een aangepaste kleur terug — een
+ * afgekeurde kleur wordt geweigerd, niet verdonkerd.
+ */
+export function keurAchtergrondkleurGoed(hex) {
+  if (!geldigeHex(hex)) return { ok: false, reden: 'geen geldige hexkleur (verwacht #rrggbb)' };
+  const tekstkleur = kiesLeesbareTekstkleur(hex);
+  const contrast = contrastTussen(hex, tekstkleur);
+  if (contrast < MINIMUM_CONTRAST) {
+    return {
+      ok: false,
+      contrast,
+      tekstkleur,
+      reden:
+        `te weinig contrast, ook met de leesbaarste tekstkleur (${tekstkleur}): ` +
+        `${contrast.toFixed(2)}, minimum ${MINIMUM_CONTRAST}`,
+    };
+  }
+  return { ok: true, contrast, tekstkleur };
 }

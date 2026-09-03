@@ -27,28 +27,37 @@
 
   /* Topbalk: logo en clubnaam links onder de apptitel, naam en rol(len)
      rechts — dezelfde opbouw als bij YOAssist ('club onder de apptitel,
-     rol(len) onder de eigen naam'). */
+     rol(len) onder de eigen naam').
+
+     --topbalk-achtergrond en --topbalk-tekst komen van huisstijl.js, enkel
+     wanneer een beheerder een topbalkkleur instelde. Zonder die instelling
+     vallen ze terug op transparant/de gewone inktkleur — precies het huidige
+     uiterlijk. */
   .topbalk {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
     gap: 1rem;
     flex-wrap: wrap;
-    border-bottom: 2px solid var(--inkt);
-    padding-bottom: .75rem;
-    margin-bottom: 2rem;
+    background: var(--topbalk-achtergrond, transparent);
+    color: var(--topbalk-tekst, var(--inkt));
+    border-bottom: 2px solid var(--topbalk-achtergrond, var(--inkt));
+    border-radius: var(--radius) var(--radius) 0 0;
+    padding: .75rem 1rem;
+    margin: 0 0 2rem;
   }
   .topbalk-merk { display: flex; align-items: center; gap: .7rem; }
   .topbalk-merk img { height: 2.5rem; width: auto; max-width: 6rem; object-fit: contain; }
-  h1 { margin: 0; font-size: 1.5rem; letter-spacing: -.01em; }
-  #clubnaam { margin: .15rem 0 0; color: var(--gedempt); font-size: .9rem; }
+  h1 { margin: 0; font-size: 1.5rem; letter-spacing: -.01em; color: inherit; }
+  #clubnaam { margin: .15rem 0 0; color: var(--topbalk-tekst, var(--gedempt)); opacity: .8; font-size: .9rem; }
 
   .topbalk-ik { text-align: right; }
   .topbalk-ik-tekst { display: flex; flex-direction: column; }
-  #topbalknaam { font-weight: 600; }
-  .topbalk-rollen { color: var(--gedempt); font-size: .85rem; }
+  #topbalknaam { font-weight: 600; color: inherit; }
+  .topbalk-rollen { color: var(--topbalk-tekst, var(--gedempt)); opacity: .8; font-size: .85rem; }
 
   h2 { font-size: 1rem; margin: 2rem 0 .6rem; }
+  h3 { font-size: .92rem; margin: 1.5rem 0 .4rem; color: var(--gedempt); }
 
   .adres { color: var(--gedempt); margin: 0 0 .1rem; }
 
@@ -90,11 +99,21 @@
   }
   button.stil { background: #fff; color: var(--inkt); }
 
-  .melding { padding: .7rem .85rem; border-radius: var(--radius); background: var(--vlak); margin-top: 1rem; }
+  .melding { padding: .7rem .85rem; border-radius: var(--radius); background: var(--vlak); margin-top: 1rem; white-space: pre-line; }
   .melding.fout { background: #fdf2f2; border-left: 3px solid var(--accent); }
   .melding p { margin: 0 0 .5rem; }
   .melding p:last-child { margin-bottom: 0; }
   .melding button { margin-top: .3rem; }
+
+  .logovoorbeeld {
+    max-height: 5rem;
+    max-width: 12rem;
+    object-fit: contain;
+    background: #fff;
+    border: 1px solid var(--lijn);
+    border-radius: var(--radius);
+    padding: .5rem;
+  }
 
   input[type=color] {
     width: 2.6rem;

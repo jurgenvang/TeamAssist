@@ -1,9 +1,12 @@
 // Ploegen: de lijst, het aanvinken, de synchronisatie en de ledenlijst.
 
-import { api } from '../api.js';
+import { api, apiRuw } from '../api.js';
 import { el, toon, veilig } from '../hulp.js';
 import { toonPersoon } from './persoon.js';
+
+let huidigTeamVoorSjabloon = null;
 import { toonReeksen, toonWedstrijden } from './trainingen.js';
+import { laadTrainingenVoorAanwezigheid, koppelWedstrijdenAanAanwezigheid } from './aanwezigheid-beheer.js';
 
 export async function laadPloegen() {
   const uitkomst = await api('/api/admin/teams');
@@ -24,10 +27,12 @@ export async function laadPloegen() {
     .join('');
 
   for (const knop of el('ploegenlijf').querySelectorAll('button[data-toon]')) {
-    knop.addEventListener('click', () => {
+    knop.addEventListener('click', async () => {
       toonLeden(knop.dataset.toon);
       toonReeksen(knop.dataset.toon);
-      toonWedstrijden(knop.dataset.toon);
+      await toonWedstrijden(knop.dataset.toon);
+      koppelWedstrijdenAanAanwezigheid(); // pas nadat de rijen met wedstrijden er staan
+      laadTrainingenVoorAanwezigheid(knop.dataset.toon);
     });
   }
 
@@ -54,6 +59,7 @@ export async function laadPloegen() {
 }
 
 export async function toonLeden(guid) {
+  huidigTeamVoorSjabloon = guid;
   const uitkomst = await api(`/api/admin/team-leden?team=${encodeURIComponent(guid)}`);
   const vak = el('ledenlijst');
   vak.hidden = false;
@@ -142,4 +148,94 @@ export async function synchroniseerLeden() {
 
   const echt = await api('/api/admin/leden/sync?uitvoeren=1', 'POST');
   vak.textContent = echt.status === 200 ? `Klaar. ${samenvatting}` : 'Uitvoeren lukte niet.';
+}
+
+// --- Sjabloon: e-mail, telefoon en adres -------------------------------------
+
+export async function downloadSjabloon() {
+  if (!huidigTeamVoorSjabloon) return;
+  const uit = await apiRuw(`/api/admin/sjabloon?team=${encodeURIComponent(huidigTeamVoorSjabloon)}`, 'GET');
+  if (uit.status !== 200) {
+    toon('sjabloonplan', `Downloaden lukte niet (${uit.status}).`, true);
+    return;
+  }
+
+  // Een echt bestand aanbieden kan hier niet via een gewone link, want de
+  // route vraagt een token in de header. In plaats daarvan wordt de tekst
+  // opgehaald en lokaal als download aangeboden.
+  const blob = new Blob([uit.tekst], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `sjabloon-${huidigTeamVoorSjabloon.trim()}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+async function leesBestand(bestand) {
+  return new Promise((resolve, reject) => {
+    const lezer = new FileReader();
+    lezer.onload = () => resolve(lezer.result);
+    lezer.onerror = () => reject(lezer.error);
+    lezer.readAsText(bestand, 'utf-8');
+  });
+}
+
+export async function uploadSjabloon() {
+  if (!huidigTeamVoorSjabloon) return;
+  const invoer = el('sjabloonbestand');
+  const bestand = invoer.files?.[0];
+  if (!bestand) {
+    toon('sjabloonplan', 'Kies eerst een bestand.', true);
+    return;
+  }
+
+  const vak = el('sjabloonplan');
+  vak.hidden = false;
+  vak.textContent = 'Bezig …';
+
+  const tekst = await leesBestand(bestand);
+  const pad = `/api/admin/sjabloon?team=${encodeURIComponent(huidigTeamVoorSjabloon)}`;
+
+  const proef = await apiRuw(pad, 'POST', tekst, 'text/csv');
+  if (proef.status !== 200) {
+    let melding = `Dat lukte niet (${proef.status}).`;
+    try {
+      melding = JSON.parse(proef.tekst)?.fout ?? melding;
+    } catch {
+      /* het antwoord was geen JSON; de generieke melding volstaat */
+    }
+    vak.textContent = melding;
+    return;
+  }
+
+  const plan = JSON.parse(proef.tekst);
+  const stukken = [
+    `${plan.spelerwijzigingen.length} spelers zouden bijgewerkt worden`,
+    `${plan.nieuweOuderkoppelingen.length} nieuwe ouderkoppelingen`,
+  ];
+  if (plan.rijfouten.length) {
+    stukken.push(
+      `${plan.rijfouten.length} rij(en) met een fout, worden overgeslagen:\n` +
+        plan.rijfouten.map((f) => `  regel ${f.regel}: ${f.reden}`).join('\n')
+    );
+  }
+  if (plan.overgeslagenOuders.length) {
+    stukken.push(
+      `${plan.overgeslagenOuders.length} bestaande ouderkoppeling(en) staan niet meer in het ` +
+        'bestand — die blijven staan tenzij je ze zelf ontkoppelt op het persoonsscherm.'
+    );
+  }
+  const samenvatting = stukken.join('\n\n');
+
+  if (!confirm(`${samenvatting}\n\nUitvoeren?`)) {
+    vak.textContent = `Niets gewijzigd.\n\n${samenvatting}`;
+    return;
+  }
+
+  const echt = await apiRuw(`${pad}&uitvoeren=1`, 'POST', tekst, 'text/csv');
+  vak.textContent = echt.status === 200 ? `Klaar.\n\n${samenvatting}` : 'Uitvoeren lukte niet.';
+  if (echt.status === 200) await toonLeden(huidigTeamVoorSjabloon);
 }

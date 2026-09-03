@@ -5,8 +5,13 @@ import { logSchrijf } from '../../lib/logboek.js';
 import { haalVakanties, naarPeriodes } from '../../lib/vakanties.js';
 
 // Nog te bevestigen tegen de echte API welke subdivisiecode Vlaanderen precies
-// draagt (zie backlog, punt U3) — vandaar de diagnoseroute hieronder.
-const SUBDIVISIE_VLAANDEREN = 'BE-VLG';
+// draagt (zie backlog, punt AA) — vandaar de diagnoseroute hieronder.
+//
+// Bijgewerkt: België werkt niet met gewone ISO-subdivisies maar met `groups`.
+// Bevestigd via GET /Groups?countryIsoCode=BE: BE-NL (Vlaamse gemeenschap),
+// BE-FR, BE-DE. De eerdere waarde 'BE-VLG' bestond niet. Nog niet bevestigd:
+// of de query-parameter voor deze groepscode ook 'subdivisionCode' heet.
+const SUBDIVISIE_VLAANDEREN = 'BE-NL';
 
 export async function periodesTonen(ctx) {
   const { db, seizoen } = ctx;

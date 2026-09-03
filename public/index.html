@@ -49,6 +49,19 @@
       <p class="adres" id="emailadres"></p>
       <p class="klein" id="seizoenregel"></p>
 
+      <div id="opgaveblok" hidden>
+        <h2>Mijn eerstvolgende trainingen</h2>
+        <p class="klein">
+          Geef aan of je komt. Dat kan tot de opgavetermijn van je ploeg verstrijkt; daarna
+          vult enkel nog de begeleiding in.
+        </p>
+        <table>
+          <thead><tr><th>Wanneer</th><th>Voor</th><th>Status</th><th></th></tr></thead>
+          <tbody id="opgavelijf"></tbody>
+        </table>
+        <p id="geenopgaven" class="melding" hidden>Er staat voorlopig niets gepland.</p>
+      </div>
+
       <h2>Rollen</h2>
       <ul class="rollen" id="rollenlijst"></ul>
       <p id="geenrollen" class="melding" hidden>
@@ -126,9 +139,36 @@
         </form>
         <div id="wedstrijdenplan" class="melding" hidden></div>
         <table>
-          <thead><tr><th>Datum</th><th>Tegen</th><th>Locatie</th><th>Uitslag</th><th></th></tr></thead>
+          <thead><tr><th>Datum</th><th>Tegen</th><th>Locatie</th><th>Uitslag</th><th></th><th></th></tr></thead>
           <tbody id="wedstrijdenlijf"></tbody>
         </table>
+      </div>
+
+      <div id="aanwezigheidtrainingen">
+        <h3>Trainingen</h3>
+        <table>
+          <thead><tr><th>Wanneer</th><th>Status</th><th></th></tr></thead>
+          <tbody id="aanwezigheidtrainingenlijf"></tbody>
+        </table>
+      </div>
+
+      <div id="aanwezigheidscherm" hidden>
+        <h3 id="aanwezigheidkop">Aanwezigheid</h3>
+        <div id="aanwezigheidmelding" class="melding" hidden></div>
+        <table>
+          <thead><tr><th>Naam</th><th>Opgave</th><th>Vaststelling</th><th></th></tr></thead>
+          <tbody id="aanwezigheidlijf"></tbody>
+        </table>
+
+        <div id="selectieblok" hidden>
+          <h3>Selectie</h3>
+          <p class="klein" id="selectiestatus"></p>
+          <div id="selectielijf"></div>
+          <form>
+            <button type="button" class="stil" id="selectiebewaren">Bewaren (klad)</button>
+            <button type="button" id="selectiepubliceren">Publiceren</button>
+          </form>
+        </div>
       </div>
 
       <div id="ledenlijst" hidden>
@@ -137,6 +177,20 @@
           <thead><tr><th>Naam</th><th>Volgens de bond</th><th>Geboren</th><th></th></tr></thead>
           <tbody id="ledenlijf"></tbody>
         </table>
+
+        <h3>Sjabloon: e-mail, telefoon en adres</h3>
+        <p class="klein">
+          Download het sjabloon voor deze ploeg — de gegevens die de bond al levert staan
+          er vooraf in. Vul de ontbrekende kolommen aan en laad het bestand opnieuw in.
+        </p>
+        <form>
+          <button type="button" class="stil" id="sjabloondownload">Sjabloon downloaden</button>
+        </form>
+        <form>
+          <input type="file" id="sjabloonbestand" accept=".csv,text/csv">
+          <button type="button" id="sjabloonupload">Inlezen</button>
+        </form>
+        <div id="sjabloonplan" class="melding" hidden></div>
       </div>
     </section>
 
