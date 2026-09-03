@@ -80,6 +80,8 @@ CREATE TABLE teams (
   guid           TEXT NOT NULL,
   seizoen        TEXT NOT NULL,
   naam           TEXT NOT NULL,
+
+  naam_kort      TEXT,
   categorie      TEXT,
 
   onderwijsgroep TEXT NOT NULL DEFAULT 'geen'

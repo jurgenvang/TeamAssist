@@ -20,7 +20,8 @@ function zetKlaar() {
   db._sqlite.exec(`
     INSERT INTO seizoenen (code, naam, actief) VALUES ('2026-27', '2026-2027', 1);
     INSERT INTO personen (id, voornaam, achternaam) VALUES ('p-admin', 'Beheer', 'der');
-    INSERT INTO teams (guid, seizoen, naam) VALUES ('${T1}', '2026-27', 'U14 A');
+    INSERT INTO teams (guid, seizoen, naam, naam_kort) VALUES
+      ('${T1}', '2026-27', 'AB InBev Leuven Bears G14 A', 'U14 A');
     INSERT INTO zalen (id, naam) VALUES ('z1', 'Sportoase Heverlee');
   `);
   return db;
@@ -123,4 +124,39 @@ test('een reeks die niet meer in het bestand staat, blijft actief', async () => 
   assert.equal(uit.body.verdwenenReeksen.length, 1);
   const rij = db._sqlite.prepare(`SELECT actief FROM trainingsreeksen WHERE weekdag = 5`).get();
   assert.equal(rij.actief, 1, 'de reeks blijft actief, wordt niet stil uitgeschakeld');
+});
+
+test('de export gebruikt naam_kort, niet de volledige VBL-naam van de bond', async () => {
+  const db = zetKlaar();
+  db._sqlite.exec(
+    `INSERT INTO trainingsreeksen (team_guid, seizoen, weekdag, begin, einde, zaal_id, van, tot)
+          VALUES ('${T1}', '2026-27', 1, '18:00', '19:15', 'z1', '2026-08-01', '2027-06-30')`
+  );
+  const res = await reeksensjabloonExporteren({ db, seizoen });
+  const rijen = csvLezen(await res.text());
+  assert.equal(rijen[0].team_naam, 'U14 A', 'de korte naam, niet de volledige clubnaam-naam');
+});
+
+test('rondtrip: exporteren en meteen weer inlezen matcht zonder handmatig ingrijpen', async () => {
+  const db = zetKlaar();
+  db._sqlite.exec(
+    `INSERT INTO trainingsreeksen (team_guid, seizoen, weekdag, begin, einde, zaal_id, van, tot)
+          VALUES ('${T1}', '2026-27', 1, '18:00', '19:15', 'z1', '2026-08-01', '2027-06-30')`
+  );
+  const geexporteerd = await (await reeksensjabloonExporteren({ db, seizoen })).text();
+
+  // Simuleer een lege databank (bijvoorbeeld een ander seizoen) met enkel het
+  // team en de zaal, geen bestaande reeksen — de export moet zonder verdere
+  // aanpassing opnieuw inleesbaar zijn.
+  const db2 = maakDb();
+  db2._sqlite.exec(`
+    INSERT INTO seizoenen (code, naam, actief) VALUES ('2026-27', '2026-2027', 1);
+    INSERT INTO personen (id, voornaam, achternaam) VALUES ('p-admin', 'Beheer', 'der');
+    INSERT INTO teams (guid, seizoen, naam, naam_kort) VALUES
+      ('${T1}', '2026-27', 'AB InBev Leuven Bears G14 A', 'U14 A');
+    INSERT INTO zalen (id, naam) VALUES ('z1', 'Sportoase Heverlee');
+  `);
+  const uit = await importeer(db2, geexporteerd, { uitvoeren: true });
+  assert.equal(uit.body.onbekendeTeams.length, 0);
+  assert.equal(uit.body.nieuweReeksen.length, 1);
 });

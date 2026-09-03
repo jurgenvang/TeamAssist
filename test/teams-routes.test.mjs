@@ -181,3 +181,24 @@ test('de lijst toont enkel ploegen van het gevraagde seizoen', async () => {
   const body = await res.json();
   assert.equal(body.teams.length, 3);
 });
+
+test('een synchronisatie leest de clubnaam-instelling en berekent naam_kort ermee', async () => {
+  const db = zetKlaar();
+  // De standaardinstelling 'clubnaam' staat al in het schema, geen eigen
+  // INSERT nodig — die zou botsen met de bestaande rij.
+  const zonderClubnaamInDeMockdata = {
+    naam: 'AB InBev Leuven Bears', guid: 'BVBL1125',
+    teams: [{ guid: 'BVBL1125G12  1', naam: 'AB InBev Leuven Bears G12 A' }],
+  };
+  await sync(db, '?uitvoeren=1', () => new Response(JSON.stringify(zonderClubnaamInDeMockdata), { status: 200 }));
+  const rij = db._sqlite.prepare(`SELECT naam_kort FROM teams WHERE guid = 'BVBL1125G12  1'`).get();
+  assert.equal(rij.naam_kort, 'U12 A');
+});
+
+test('zonder de clubnaam-instelling zelf, gebeurt er geen crash, naam_kort valt netjes terug', async () => {
+  const db = zetKlaar();
+  db._sqlite.exec(`DELETE FROM instellingen WHERE sleutel = 'clubnaam'`);
+  await sync(db, '?uitvoeren=1');
+  const rij = db._sqlite.prepare(`SELECT naam, naam_kort FROM teams WHERE guid = 'BVBL1125G12  1'`).get();
+  assert.equal(rij.naam_kort, 'U12 A');
+});

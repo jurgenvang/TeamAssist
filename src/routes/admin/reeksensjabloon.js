@@ -28,7 +28,7 @@ function grenzenVanSeizoen(seizoenCode) {
 }
 
 async function alleTeams(db, seizoen) {
-  const rijen = await db.prepare(`SELECT guid, naam, seizoen FROM teams WHERE seizoen = ?`).bind(seizoen).all();
+  const rijen = await db.prepare(`SELECT guid, naam, naam_kort, seizoen FROM teams WHERE seizoen = ?`).bind(seizoen).all();
   return rijen.results ?? [];
 }
 
@@ -40,7 +40,7 @@ async function alleZalen(db) {
 async function alleReeksen(db, seizoen) {
   const rijen = await db
     .prepare(
-      `SELECT tr.id, tr.team_guid, t.naam AS team_naam, tr.seizoen, tr.weekdag, tr.begin, tr.einde,
+      `SELECT tr.id, tr.team_guid, COALESCE(t.naam_kort, t.naam) AS team_naam, tr.seizoen, tr.weekdag, tr.begin, tr.einde,
               tr.zaal_id, z.naam AS zaal_naam, tr.van, tr.tot
          FROM trainingsreeksen tr
          JOIN teams t ON t.guid = tr.team_guid AND t.seizoen = tr.seizoen

@@ -110,3 +110,76 @@ test('status is deels zodra er onbekende teams zijn, ook zonder harde rijfouten'
   const plan = maakReeksensjabloonplan([rij({ team_naam: 'Onbekend' })], [team()], [zaal()], [], GRENZEN);
   assert.equal(plan.status, 'deels');
 });
+
+// --- Matchen op de verkorte naam (naam_kort), zoals de bond ze niet levert ---
+
+test('team_naam in het sjabloon matcht op naam_kort, niet op de volledige VBL-naam', () => {
+  // Precies het echte scenario: de bond levert 'AB InBev Leuven Bears G12 A',
+  // de club spreekt intern over 'U12 A', en dat laatste staat in het sjabloon.
+  const teamMetVolledigeNaam = {
+    guid: 'T1', naam: 'AB InBev Leuven Bears G12 A', naam_kort: 'U12 A', seizoen: '2026-27',
+  };
+  const plan = maakReeksensjabloonplan(
+    [rij({ team_naam: 'U12 A' })],
+    [teamMetVolledigeNaam],
+    [zaal()],
+    [],
+    GRENZEN
+  );
+  assert.equal(plan.onbekendeTeams.length, 0);
+  assert.equal(plan.nieuweReeksen[0].team_guid, 'T1');
+});
+
+test('de volledige VBL-naam werkt nog steeds als terugval', () => {
+  const teamMetVolledigeNaam = {
+    guid: 'T1', naam: 'AB InBev Leuven Bears G12 A', naam_kort: 'U12 A', seizoen: '2026-27',
+  };
+  const plan = maakReeksensjabloonplan(
+    [rij({ team_naam: 'AB InBev Leuven Bears G12 A' })],
+    [teamMetVolledigeNaam],
+    [zaal()],
+    [],
+    GRENZEN
+  );
+  assert.equal(plan.onbekendeTeams.length, 0);
+  assert.equal(plan.nieuweReeksen[0].team_guid, 'T1');
+});
+
+test('een team zonder naam_kort matcht enkel op de volledige naam', () => {
+  const teamZonderKorteNaam = { guid: 'T1', naam: 'U14 A', naam_kort: null, seizoen: '2026-27' };
+  const plan = maakReeksensjabloonplan([rij({ team_naam: 'U14 A' })], [teamZonderKorteNaam], [zaal()], [], GRENZEN);
+  assert.equal(plan.onbekendeTeams.length, 0);
+});
+
+test('hoofdlettergebruik maakt ook bij naam_kort niet uit', () => {
+  const team = { guid: 'T1', naam: 'AB InBev Leuven Bears G12 A', naam_kort: 'U12 A', seizoen: '2026-27' };
+  const plan = maakReeksensjabloonplan([rij({ team_naam: 'u12 a' })], [team], [zaal()], [], GRENZEN);
+  assert.equal(plan.onbekendeTeams.length, 0);
+});
+
+// --- Spaties die kunnen ontbreken bij het overtypen of kopiëren -----------
+
+test('een ontbrekende spatie in het sjabloon (U21A) matcht nog op naam_kort (U21 A)', () => {
+  const team = { guid: 'T1', naam: 'AB InBev Leuven Bears J21 A', naam_kort: 'U21 A', seizoen: '2026-27' };
+  const plan = maakReeksensjabloonplan([rij({ team_naam: 'U21A' })], [team], [zaal()], [], GRENZEN);
+  assert.equal(plan.onbekendeTeams.length, 0);
+  assert.equal(plan.nieuweReeksen.length, 1);
+});
+
+test('een overtollige spatie in het sjabloon matcht ook, in beide richtingen', () => {
+  const team = { guid: 'T1', naam: 'AB InBev Leuven Bears J21 A', naam_kort: 'U21A', seizoen: '2026-27' };
+  const plan = maakReeksensjabloonplan([rij({ team_naam: 'U21   A' })], [team], [zaal()], [], GRENZEN);
+  assert.equal(plan.onbekendeTeams.length, 0);
+});
+
+test('spatietolerantie geldt ook voor de volledige naam als terugval', () => {
+  const team = { guid: 'T1', naam: 'AB InBev LeuvenBears J21 A', naam_kort: null, seizoen: '2026-27' };
+  const plan = maakReeksensjabloonplan(
+    [rij({ team_naam: 'AB InBev Leuven Bears J21A' })],
+    [team],
+    [zaal()],
+    [],
+    GRENZEN
+  );
+  assert.equal(plan.onbekendeTeams.length, 0);
+});

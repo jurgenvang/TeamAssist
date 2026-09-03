@@ -54,7 +54,7 @@ test('een ploeg zonder naam valt terug op haar GUID', () => {
 test('een gewijzigde naam wordt gemeld met wat er verschilt', () => {
   const plan = maakPloegplan(
     [{ guid: g('J16', 2), naam: 'J16 B' }],
-    [bestaandeRij(g('J16', 2))],
+    [bestaandeRij(g('J16', 2), { naam_kort: 'U16 B' })],
     CLUB
   );
   assert.equal(plan.gewijzigd.length, 1);
@@ -65,11 +65,21 @@ test('een gewijzigde naam wordt gemeld met wat er verschilt', () => {
 test('een ongewijzigde ploeg staat apart en niet bij gewijzigd', () => {
   const plan = maakPloegplan(
     [{ guid: g('J16', 2), naam: 'J16 B' }],
-    [bestaandeRij(g('J16', 2), { naam: 'J16 B' })],
+    [bestaandeRij(g('J16', 2), { naam: 'J16 B', naam_kort: 'U16 B' })],
     CLUB
   );
   assert.equal(plan.gewijzigd.length, 0);
   assert.equal(plan.ongewijzigd.length, 1);
+});
+
+test('een gewijzigde naam_kort alleen (bijvoorbeeld na een clubnaamwijziging) telt ook als gewijzigd', () => {
+  const plan = maakPloegplan(
+    [{ guid: g('J16', 2), naam: 'J16 B' }],
+    [bestaandeRij(g('J16', 2), { naam: 'J16 B', naam_kort: 'iets anders' })],
+    CLUB
+  );
+  assert.equal(plan.gewijzigd.length, 1);
+  assert.deepEqual(plan.gewijzigd[0].verschillen, ['naam_kort']);
 });
 
 test('een ploeg die terugkeert bij de bond wordt als gewijzigd gemeld', () => {
@@ -145,4 +155,29 @@ test('een ploeg die al weg was, wordt niet opnieuw gemeld', () => {
     CLUB
   );
   assert.equal(plan.verdwenen.length, 0);
+});
+
+test('naam_kort wordt afgeleid met de echte clubnaam: G en J worden U, M blijft M', () => {
+  const CLUBNAAM = 'AB InBev Leuven Bears';
+  const plan = maakPloegplan(
+    [
+      { guid: g('G12', 1), naam: 'AB InBev Leuven Bears G12 A' },
+      { guid: g('M19', 1), naam: 'AB InBev Leuven Bears M19 A' },
+    ],
+    [],
+    CLUB,
+    CLUBNAAM
+  );
+  const g12 = plan.nieuw.find((p) => p.categorie === 'G12');
+  const m19 = plan.nieuw.find((p) => p.categorie === 'M19');
+  assert.equal(g12.naam_kort, 'U12 A');
+  assert.equal(m19.naam_kort, 'M19 A');
+});
+
+test('zonder clubnaam wordt naam_kort niet berekend op basis van een foutieve aanname', () => {
+  // Geen clubnaam meegeven (bijvoorbeeld nog niet ingesteld) mag nooit een
+  // verzonnen of half-geknipte naam opleveren.
+  const plan = maakPloegplan([{ guid: g('G12', 1), naam: 'Iets zonder duidelijke opbouw' }], [], CLUB);
+  const rij = plan.nieuw[0];
+  assert.equal(rij.naam_kort, 'Iets zonder duidelijke opbouw', 'valt terug op de volledige naam');
 });

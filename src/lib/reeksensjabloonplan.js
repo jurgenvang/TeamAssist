@@ -1,6 +1,12 @@
 // Het trainingsuren-sjabloon inlezen: welk team op welk moment in welke zaal
 // traint, per seizoen.
 //
+// Team-matching probeert eerst de verkorte, interne naam ('U12 A' —
+// naam_kort) en valt terug op de volledige naam van de bond ('AB InBev Leuven
+// Bears G12 A' — naam). Roosters zoals dit sjabloon worden in de praktijk in
+// de korte vorm opgesteld; de volledige naam blijft als terugval bruikbaar
+// voor wie die toch invult.
+//
 // Kernvereiste: een team dat nog niet bestaat (bijvoorbeeld een nieuwe
 // categorie zoals BB4FUN, die nog niet via de bond is gesynchroniseerd) mag de
 // import nooit laten mislukken. Die rij wordt gerapporteerd — zichtbaar in de
@@ -14,15 +20,33 @@ function sleutel(teamGuid, weekdag, begin, einde) {
 }
 
 /**
+ * Genormaliseerde vorm voor het matchen van een teamnaam: kleine letters, en
+ * alle witruimte weg. Dat laatste is niet cosmetisch — een spatie tussen de
+ * categoriecode en de letter ('U21 A' versus 'U21A') valt bij het overtypen
+ * of kopiëren van een rooster geregeld weg, en dat mag een team niet
+ * onterecht als onbekend laten gelden.
+ */
+function matchnaam(naam) {
+  return naam.trim().toLowerCase().replace(/\s+/g, '');
+}
+
+/**
  * @param {Array<object>} csvRijen          kolommen team_naam, zaal, weekdag, begin, einde, seizoen, van, tot
- * @param {Array<object>} bestaandeTeams     [{ guid, naam, seizoen }]
+ * @param {Array<object>} bestaandeTeams     [{ guid, naam, naam_kort, seizoen }]
  * @param {Array<object>} bestaandeZalen     [{ id, naam }]
  * @param {Array<object>} bestaandeReeksen   [{ id, team_guid, team_naam, seizoen, weekdag, begin, einde, zaal_id, zaal_naam, van, tot }]
  * @param {object} seizoensgrenzen           { van, tot } — terugval wanneer een rij geen van/tot meegeeft
  */
 export function maakReeksensjabloonplan(csvRijen, bestaandeTeams, bestaandeZalen, bestaandeReeksen, seizoensgrenzen) {
-  const teamOpNaamEnSeizoen = new Map(
-    bestaandeTeams.map((t) => [`${t.naam.trim().toLowerCase()}|${t.seizoen}`, t])
+  // Twee kaarten: op de verkorte naam en op de volledige naam. Bij een
+  // conflict (zeldzaam, maar mogelijk als naam_kort toevallig samenvalt met
+  // een volledige naam) wint de verkorte naam, want dat is de vorm die het
+  // sjabloon in de praktijk gebruikt.
+  const teamOpVolledigeNaam = new Map(
+    bestaandeTeams.map((t) => [`${matchnaam(t.naam)}|${t.seizoen}`, t])
+  );
+  const teamOpKorteNaam = new Map(
+    bestaandeTeams.filter((t) => t.naam_kort).map((t) => [`${matchnaam(t.naam_kort)}|${t.seizoen}`, t])
   );
   const zaalOpNaam = new Map(bestaandeZalen.map((z) => [z.naam.trim().toLowerCase(), z]));
   const reeksOpSleutel = new Map(
@@ -59,7 +83,8 @@ export function maakReeksensjabloonplan(csvRijen, bestaandeTeams, bestaandeZalen
       return;
     }
 
-    const team = teamOpNaamEnSeizoen.get(`${teamNaam.toLowerCase()}|${seizoen}`);
+    const zoeksleutel = `${matchnaam(teamNaam)}|${seizoen}`;
+    const team = teamOpKorteNaam.get(zoeksleutel) ?? teamOpVolledigeNaam.get(zoeksleutel);
     if (!team) {
       // Geen fout: dit is de verwachte, tijdelijke toestand voor een team dat
       // de bond nog niet kent (bv. een recreatieve reeks als BB4FUN). De rij

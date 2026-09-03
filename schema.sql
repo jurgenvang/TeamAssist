@@ -95,6 +95,12 @@ CREATE TABLE teams (
   guid           TEXT NOT NULL,                     -- 'BVBL1125J16  2'
   seizoen        TEXT NOT NULL,
   naam           TEXT NOT NULL,
+  -- De interne, verkorte naam ('U12 A'), afgeleid uit naam + categorie + de
+  -- clubnaam-instelling (src/lib/categorie.js, verkorteTeamnaam). Bewaard in
+  -- plaats van telkens herberekend, zodat een matching (bijvoorbeeld het
+  -- trainingsuren-sjabloon) er rechtstreeks op kan filteren. Kan null zijn
+  -- als de afleiding niet lukte — dan geldt enkel de volledige naam.
+  naam_kort      TEXT,
   categorie      TEXT,                              -- 'J16', 'G12', 'HSE'
   -- Bepaalt welke examenperiodes op deze ploeg slaan. Afgeleid uit de
   -- categorie, maar te overschrijven: in een U19 zitten vaak al studenten.

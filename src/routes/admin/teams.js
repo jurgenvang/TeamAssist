@@ -17,10 +17,15 @@ async function clubGuid(db) {
   return rij?.waarde || 'BVBL1125';
 }
 
+async function clubnaam(db) {
+  const rij = await db.prepare(`SELECT waarde FROM instellingen WHERE sleutel = 'clubnaam'`).first();
+  return rij?.waarde || '';
+}
+
 async function bestaandeTeams(db, seizoen) {
   const rijen = await db
     .prepare(
-      `SELECT guid, naam, categorie, onderwijsgroep, gevolgd, bij_bond, laatst_gezien
+      `SELECT guid, naam, naam_kort, categorie, onderwijsgroep, gevolgd, bij_bond, laatst_gezien
          FROM teams WHERE seizoen = ? ORDER BY categorie, naam`
     )
     .bind(seizoen)
@@ -57,7 +62,8 @@ export async function teamsSync(ctx) {
 
   const gevonden = leesPloegen(data, club);
   const bestaand = await bestaandeTeams(db, seizoen.code);
-  const plan = maakPloegplan(gevonden, bestaand, club);
+  const naamVanClub = await clubnaam(db);
+  const plan = maakPloegplan(gevonden, bestaand, club, naamVanClub);
 
   if (!uitvoeren) {
     return json({ droogloop: true, seizoen: seizoen.code, ...plan });
@@ -66,10 +72,10 @@ export async function teamsSync(ctx) {
   for (const ploeg of plan.nieuw) {
     await db
       .prepare(
-        `INSERT INTO teams (guid, seizoen, naam, categorie, onderwijsgroep, gevolgd, laatst_gezien)
-              VALUES (?, ?, ?, ?, ?, 0, datetime('now'))`
+        `INSERT INTO teams (guid, seizoen, naam, naam_kort, categorie, onderwijsgroep, gevolgd, laatst_gezien)
+              VALUES (?, ?, ?, ?, ?, ?, 0, datetime('now'))`
       )
-      .bind(ploeg.guid, seizoen.code, ploeg.naam, ploeg.categorie, ploeg.onderwijsgroep)
+      .bind(ploeg.guid, seizoen.code, ploeg.naam, ploeg.naam_kort, ploeg.categorie, ploeg.onderwijsgroep)
       .run();
   }
 
@@ -79,10 +85,10 @@ export async function teamsSync(ctx) {
     await db
       .prepare(
         `UPDATE teams
-            SET naam = ?, categorie = ?, bij_bond = 1, laatst_gezien = datetime('now')
+            SET naam = ?, naam_kort = ?, categorie = ?, bij_bond = 1, laatst_gezien = datetime('now')
           WHERE guid = ? AND seizoen = ?`
       )
-      .bind(ploeg.naam, ploeg.categorie, ploeg.guid, seizoen.code)
+      .bind(ploeg.naam, ploeg.naam_kort, ploeg.categorie, ploeg.guid, seizoen.code)
       .run();
   }
 
