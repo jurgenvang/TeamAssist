@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 import { maakDb } from './d1.mjs';
 import { ROUTES } from '../src/index.js';
 import { reeksAanmaken, reeksGenereren, reeksStoppen, trainingenTonen } from '../src/routes/admin/trainingsreeksen.js';
+import { zetOpenOpFeestdagen } from '../src/routes/admin/zalen.js';
 import { bouwRechten } from '../src/lib/rechten.js';
 
 const seizoen = { code: '2026-27', naam: '2026-2027' };
@@ -203,4 +204,54 @@ test('trainingenTonen vraagt een team', async () => {
   const coachRechten = bouwRechten({ rollen: [{ rol: 'COACH', team_guid: T1 }] });
   const res = await trainingenTonen({ db, rechten: coachRechten, seizoen, request: verzoek('/x', null, 'GET') });
   assert.equal(res.status, 400);
+});
+
+// --- Feestdagen: end-to-end via de echte route -----------------------------
+
+test('een feestdag blokkeert een training bij een zaal die standaard dicht is', async () => {
+  const db = zetKlaar();
+  db._sqlite.exec(`
+    INSERT INTO zalen (id, naam) VALUES ('z1', 'Sporthal A');
+    INSERT INTO periodes (seizoen, naam, van, tot, soort, doelgroep, bron)
+         VALUES ('2026-27', 'Feestdag', '2026-09-08', '2026-09-08', 'feestdag', 'iedereen', 'club');
+  `);
+  const { id } = await maakReeks(db, { zaal_id: 'z1', locatie_tekst: null });
+  await reeksGenereren({ db, persoon, request: verzoek(`/x?reeks=${id}&uitvoeren=1`, null, 'POST') });
+
+  const rij = db._sqlite.prepare(`SELECT * FROM trainingen WHERE reeks_id = ${id} AND datum = '2026-09-08'`).get();
+  assert.equal(rij, undefined, 'geen training op de feestdag, want de zaal is standaard dicht');
+
+  const overige = db._sqlite.prepare(`SELECT count(*) AS n FROM trainingen WHERE reeks_id = ${id}`).get().n;
+  assert.equal(overige, 4, 'de andere vier dinsdagen van september blijven gewoon staan');
+});
+
+test('een zaal die open is op feestdagen, laat de training gewoon doorgaan', async () => {
+  const db = zetKlaar();
+  db._sqlite.exec(`
+    INSERT INTO zalen (id, naam, open_op_feestdagen) VALUES ('z1', 'Sporthal A', 1);
+    INSERT INTO periodes (seizoen, naam, van, tot, soort, doelgroep, bron)
+         VALUES ('2026-27', 'Feestdag', '2026-09-08', '2026-09-08', 'feestdag', 'iedereen', 'club');
+  `);
+  const { id } = await maakReeks(db, { zaal_id: 'z1', locatie_tekst: null });
+  await reeksGenereren({ db, persoon, request: verzoek(`/x?reeks=${id}&uitvoeren=1`, null, 'POST') });
+
+  const rij = db._sqlite.prepare(`SELECT * FROM trainingen WHERE reeks_id = ${id} AND datum = '2026-09-08'`).get();
+  assert.ok(rij, 'de training gaat door, want deze zaal is open op feestdagen');
+  assert.equal(rij.status, 'gepland');
+});
+
+test('open_op_feestdagen via de route gezet, werkt meteen door in de generator', async () => {
+  const db = zetKlaar();
+  db._sqlite.exec(`
+    INSERT INTO zalen (id, naam) VALUES ('z1', 'Sporthal A');
+    INSERT INTO periodes (seizoen, naam, van, tot, soort, doelgroep, bron)
+         VALUES ('2026-27', 'Feestdag', '2026-09-08', '2026-09-08', 'feestdag', 'iedereen', 'club');
+  `);
+  const { id } = await maakReeks(db, { zaal_id: 'z1', locatie_tekst: null });
+
+  await zetOpenOpFeestdagen({ db, persoon, request: verzoek('/x', { zaal_id: 'z1', open: true }) });
+  await reeksGenereren({ db, persoon, request: verzoek(`/x?reeks=${id}&uitvoeren=1`, null, 'POST') });
+
+  const rij = db._sqlite.prepare(`SELECT * FROM trainingen WHERE reeks_id = ${id} AND datum = '2026-09-08'`).get();
+  assert.ok(rij, 'de instelling via de route komt echt aan bij de generator');
 });

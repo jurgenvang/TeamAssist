@@ -105,3 +105,67 @@ test('een reeks buiten het schooljaar genereert gewoon door', () => {
   });
   assert.ok(plan.nieuw.length >= 0);
 });
+
+// --- Feestdagen: een eigenschap van de zaal, geen keuze van het team -------
+
+test('een feestdag slaat een training over wanneer de zaal standaard niet open is', () => {
+  const periodes = [{ naam: 'Kerstmis', soort: 'feestdag', doelgroep: 'iedereen', van: '2026-09-08', tot: '2026-09-08' }];
+  const plan = genereerTrainingen({ reeks: reeks(), onderwijsgroep: 'geen', periodes });
+  assert.ok(!plan.nieuw.some((t) => t.datum === '2026-09-08'));
+  assert.equal(plan.overgeslagen_feestdag.length, 0, 'geen bestaande training om over te slaan, dus geen melding nodig');
+  assert.equal(plan.nieuw.length, 4);
+});
+
+test('een zaal die open is op feestdagen, traint gewoon door', () => {
+  const periodes = [{ naam: 'Feestdag', soort: 'feestdag', doelgroep: 'iedereen', van: '2026-09-08', tot: '2026-09-08' }];
+  const plan = genereerTrainingen({
+    reeks: reeks(), onderwijsgroep: 'geen', periodes, zaalOpenOpFeestdagen: true,
+  });
+  assert.ok(plan.nieuw.some((t) => t.datum === '2026-09-08'));
+  assert.equal(plan.nieuw.length, 5);
+});
+
+test('een bestaande training op een feestdag wordt gemeld als ze wegvalt', () => {
+  const periodes = [{ naam: 'Feestdag', soort: 'feestdag', doelgroep: 'iedereen', van: '2026-09-08', tot: '2026-09-08' }];
+  const bestaand = [{ id: 9, datum: '2026-09-08', begin: '18:30', einde: '20:00', status: 'gepland', handmatig_gewijzigd: 0 }];
+  const plan = genereerTrainingen({
+    reeks: reeks(), onderwijsgroep: 'geen', periodes, bestaandeTrainingen: bestaand,
+  });
+  assert.equal(plan.overgeslagen_feestdag.length, 1);
+  assert.equal(plan.overgeslagen_feestdag[0].id, 9);
+  assert.equal(plan.overgeslagen_feestdag[0].reden, 'Feestdag');
+});
+
+test('vakantie_doorlopen op de reeks laat een feestdag niet automatisch mee doorlopen', () => {
+  // Het team kan door de vakantie heen trainen, maar of de zaal open is op
+  // een feestdag blijft een aparte, eigen beslissing van de zaal.
+  const periodes = [
+    { naam: 'Kerstvakantie', soort: 'vakantie', doelgroep: 'iedereen', van: '2026-09-01', tot: '2026-09-30' },
+    { naam: 'Kerstmis', soort: 'feestdag', doelgroep: 'iedereen', van: '2026-09-08', tot: '2026-09-08' },
+  ];
+  const plan = genereerTrainingen({
+    reeks: reeks({ vakantie_doorlopen: 1 }), onderwijsgroep: 'geen', periodes,
+  });
+  assert.ok(!plan.nieuw.some((t) => t.datum === '2026-09-08'), 'de feestdag blokkeert ondanks vakantie_doorlopen');
+  assert.equal(plan.nieuw.length, 4, 'de andere vier dinsdagen van de vakantie lopen wel door');
+});
+
+test('een zaal die open is op feestdagen, respecteert nog steeds vakantie_doorlopen = 0', () => {
+  // Dat de zaal fysiek open kan zijn, betekent niet dat het team tijdens zijn
+  // eigen vakantieweek wil trainen.
+  const periodes = [
+    { naam: 'Vakantie', soort: 'vakantie', doelgroep: 'iedereen', van: '2026-09-01', tot: '2026-09-30' },
+    { naam: 'Feestdag', soort: 'feestdag', doelgroep: 'iedereen', van: '2026-09-08', tot: '2026-09-08' },
+  ];
+  const plan = genereerTrainingen({
+    reeks: reeks({ vakantie_doorlopen: 0 }), onderwijsgroep: 'geen', periodes, zaalOpenOpFeestdagen: true,
+  });
+  assert.equal(plan.nieuw.length, 0, 'de hele vakantie blijft overgeslagen, feestdag of niet');
+});
+
+test('een feestdag buiten een vakantie wordt ook zonder vakantie_doorlopen correct overgeslagen', () => {
+  const periodes = [{ naam: 'Feestdag', soort: 'feestdag', doelgroep: 'iedereen', van: '2026-09-15', tot: '2026-09-15' }];
+  const plan = genereerTrainingen({ reeks: reeks(), onderwijsgroep: 'geen', periodes });
+  assert.ok(!plan.nieuw.some((t) => t.datum === '2026-09-15'));
+  assert.equal(plan.nieuw.length, 4);
+});

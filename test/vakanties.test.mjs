@@ -7,8 +7,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { maakDb } from './d1.mjs';
-import { periodeUrl, naarPeriodes } from '../src/lib/vakanties.js';
-import { vakantiesSync, periodeAanmaken, periodeVerwijderen } from '../src/routes/admin/periodes.js';
+import { periodeUrl, naarPeriodes, feestdagUrl, naarFeestdagPeriodes } from '../src/lib/vakanties.js';
+import { vakantiesSync, feestdagenSync, periodeAanmaken, periodeVerwijderen } from '../src/routes/admin/periodes.js';
 
 const seizoen = { code: '2026-27', naam: '2026-2027' };
 const persoon = { id: 'p-admin' };
@@ -75,6 +75,17 @@ async function sync(db, antwoord, zoekstring = '') {
   globalThis.fetch = async () => antwoord();
   try {
     const res = await vakantiesSync({ db, persoon, seizoen, request: verzoek(`/x${zoekstring}`, null) });
+    return { status: res.status, body: await res.json() };
+  } finally {
+    globalThis.fetch = oude;
+  }
+}
+
+async function syncFeestdagen(db, antwoord, zoekstring = '') {
+  const oude = globalThis.fetch;
+  globalThis.fetch = async () => antwoord();
+  try {
+    const res = await feestdagenSync({ db, persoon, seizoen, request: verzoek(`/x${zoekstring}`, null) });
     return { status: res.status, body: await res.json() };
   } finally {
     globalThis.fetch = oude;
@@ -153,4 +164,78 @@ test('een opgehaalde periode wordt niet met de hand verwijderd', async () => {
   const rij = db._sqlite.prepare(`SELECT id FROM periodes`).get();
   const res = await periodeVerwijderen({ db, persoon, request: verzoek('/x', { id: rij.id }) });
   assert.equal(res.status, 400);
+});
+
+// --- Feestdagen (PublicHolidays), een aparte endpoint ----------------------
+
+test('feestdagUrl gebruikt PublicHolidays, geen subdivisie- of groepscode', () => {
+  const url = feestdagUrl('2026-08-01', '2027-06-30');
+  assert.match(url, /\/PublicHolidays\?/);
+  assert.match(url, /countryIsoCode=BE/);
+  assert.ok(!url.includes('subdivisionCode'));
+  assert.ok(!url.includes('groupCode'));
+});
+
+test('naarFeestdagPeriodes zet soort op feestdag, niet vakantie', () => {
+  const periodes = naarFeestdagPeriodes(NEP_ANTWOORD, '2026-27');
+  assert.equal(periodes[0].soort, 'feestdag');
+  assert.equal(periodes[0].doelgroep, 'iedereen');
+});
+
+test('naarFeestdagPeriodes en naarPeriodes gebruiken dezelfde omzetting voor naam en data', () => {
+  const feestdag = naarFeestdagPeriodes(NEP_ANTWOORD, '2026-27')[0];
+  const vakantie = naarPeriodes(NEP_ANTWOORD, '2026-27')[0];
+  assert.equal(feestdag.naam, vakantie.naam);
+  assert.equal(feestdag.van, vakantie.van);
+  assert.equal(feestdag.tot, vakantie.tot);
+});
+
+// --- feestdagenSync: een aparte route, eigen soort ---------------------
+
+test('feestdagenSync zet soort op feestdag bij uitvoeren', async () => {
+  const db = zetKlaar();
+  await syncFeestdagen(db, antwoordOk, '?uitvoeren=1');
+  const rij = db._sqlite.prepare(`SELECT * FROM periodes`).get();
+  assert.equal(rij.soort, 'feestdag');
+  assert.equal(rij.bron, 'openholidays');
+});
+
+test('feestdagenSync en vakantiesSync bemoeien zich niet met elkaars rijen', async () => {
+  const db = zetKlaar();
+  await sync(db, antwoordOk, '?uitvoeren=1'); // een vakantie met dezelfde 'van'-datum
+  await syncFeestdagen(db, antwoordOk, '?uitvoeren=1'); // een feestdag met dezelfde 'van'-datum
+
+  const aantal = db._sqlite.prepare(`SELECT count(*) AS n FROM periodes`).get().n;
+  assert.equal(aantal, 2, 'de vakantie en de feestdag zijn twee losse rijen, geen samenval op dezelfde datum');
+
+  const soorten = db._sqlite.prepare(`SELECT soort FROM periodes ORDER BY soort`).all().map((r) => r.soort);
+  assert.deepEqual(soorten, ['feestdag', 'vakantie']);
+});
+
+test('een tweede feestdagensynchronisatie maakt geen dubbels', async () => {
+  const db = zetKlaar();
+  await syncFeestdagen(db, antwoordOk, '?uitvoeren=1');
+  const uit = await syncFeestdagen(db, antwoordOk, '?uitvoeren=1');
+  assert.equal(uit.body.nieuw, 0);
+  assert.equal(uit.body.ongewijzigd, 1);
+});
+
+test('een storing bij het ophalen van feestdagen wordt apart gelogd', async () => {
+  const db = zetKlaar();
+  const stuk = () => new Response('nee', { status: 500 });
+  const uit = await syncFeestdagen(db, stuk);
+  assert.equal(uit.status, 502);
+  const regel = db._sqlite.prepare(`SELECT * FROM logboek WHERE soort = 'fout'`).get();
+  assert.match(regel.wat, /feestdagen ophalen mislukt/);
+});
+
+test('periodeAanmaken aanvaardt nu ook soort feestdag', async () => {
+  const db = zetKlaar();
+  const res = await periodeAanmaken({
+    db, persoon, seizoen,
+    request: verzoek('/x', { naam: '1 mei', van: '2027-05-01', tot: '2027-05-01', soort: 'feestdag' }),
+  });
+  assert.equal(res.status, 200);
+  const rij = db._sqlite.prepare(`SELECT soort FROM periodes WHERE naam = '1 mei'`).get();
+  assert.equal(rij.soort, 'feestdag');
 });

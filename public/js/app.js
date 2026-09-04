@@ -12,7 +12,7 @@ import { laadMijnOpgaven } from './schermen/mijn-opgaven.js';
 import { toonDiagnose } from './schermen/diagnose.js';
 import { pasHuisstijlToe } from './huisstijl.js';
 import {
-  laadZalen, maakZaal, maakBlok, maakSluiting, laadPeriodes, maakPeriode, synchroniseerVakanties, maakReeks,
+  laadZalen, maakZaal, maakBlok, maakSluiting, laadPeriodes, maakPeriode, synchroniseerVakanties, synchroniseerFeestdagen, maakReeks,
   synchroniseerWedstrijden, getHuidigWedstrijdenTeam,
   downloadZaalsjabloon, uploadZaalsjabloon, downloadReeksensjabloon, uploadReeksensjabloon,
 } from './schermen/trainingen.js';
@@ -90,6 +90,7 @@ async function start() {
 
   const config = await haalConfig();
   el('versieregel').textContent = `TeamAssist ${config.versie ?? ''}`;
+  el('topbalkversie').textContent = config.versie ? `v${config.versie}` : '';
 
   if (!config.supabase_url) {
     toonAanmelden();
@@ -181,6 +182,7 @@ el('zaalsjabloonupload').addEventListener('click', uploadZaalsjabloon);
 el('reeksensjabloondownload').addEventListener('click', downloadReeksensjabloon);
 el('reeksensjabloonupload').addEventListener('click', uploadReeksensjabloon);
 el('vakantiesync').addEventListener('click', synchroniseerVakanties);
+el('feestdagensync').addEventListener('click', synchroniseerFeestdagen);
 el('reeksmaken').addEventListener('click', maakReeks);
 el('wedstrijdensync').addEventListener('click', () => synchroniseerWedstrijden(getHuidigWedstrijdenTeam()));
 el('selectiebewaren').addEventListener('click', bewaarSelectie);

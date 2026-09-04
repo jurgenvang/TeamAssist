@@ -307,3 +307,30 @@ test('de sjabloondownloads gebruiken apiRuw, geen kale link', () => {
   assert.ok(downloadBlok.includes('apiRuw'));
   assert.ok(downloadBlok.includes('createObjectURL'));
 });
+
+test('het versienummer staat ook in de topbalk, niet enkel in de footer', () => {
+  assert.ok(html.includes('id="topbalkversie"'));
+  const app = lees('../public/js/app.js');
+  assert.ok(app.includes("el('topbalkversie')"));
+  assert.ok(app.includes('config.versie'));
+});
+
+test('feestdag is een keuzeoptie bij het handmatig toevoegen van een periode', () => {
+  assert.ok(html.includes('<option value="feestdag">feestdag</option>'));
+});
+
+test('feestdagen ophalen toont eerst een droogloop', () => {
+  const bron = lees('../public/js/schermen/trainingen.js');
+  assert.ok(bron.match(/synchroniseerFeestdagen[\s\S]*?confirm\(/));
+});
+
+test('open_op_feestdagen per zaal is een schakelaar die meteen bewaart', () => {
+  const bron = lees('../public/js/schermen/trainingen.js');
+  assert.ok(bron.includes('data-open-feestdagen'));
+  assert.ok(bron.includes("api('/api/admin/zalen/feestdagen'"));
+});
+
+test('een fout bij het zetten van open_op_feestdagen draait de schakelaar terug', () => {
+  const bron = lees('../public/js/schermen/trainingen.js');
+  assert.ok(bron.match(/data-open-feestdagen[\s\S]{0,400}invoer\.checked = !invoer\.checked/));
+});

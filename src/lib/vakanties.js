@@ -1,4 +1,4 @@
-// Schoolvakanties ophalen bij de OpenHolidays API.
+// Schoolvakanties en feestdagen ophalen bij de OpenHolidays API.
 //
 // Eén keer per seizoen, niet live bij het genereren van trainingen: een
 // externe dienst die wegvalt mag de agenda van de club niet platleggen. Wat
@@ -29,29 +29,64 @@ export function periodeUrl(van, tot, { subdivisieCode, groepscode } = {}) {
 }
 
 /**
+ * Feestdagen zijn een aparte endpoint, /PublicHolidays — bevestigd via de
+ * officiële OpenAPI-specificatie. Geen subdivisie- of groepscode nodig: een
+ * feestdag geldt landelijk. Rechtstreeks tegen de API getoetst: een aanroep
+ * met `countryIsoCode=BE` en toekomstige data (2026) gaf een 400-fout,
+ * zonder dat via de sandbox te kunnen verklaren — mogelijk het jaartal,
+ * mogelijk iets anders. Zie backlog voor de bevestiging vanaf de Worker.
+ */
+export function feestdagUrl(van, tot) {
+  const p = new URLSearchParams({
+    countryIsoCode: 'BE',
+    languageIsoCode: 'NL',
+    validFrom: van,
+    validTo: tot,
+  });
+  return `${BASIS}/PublicHolidays?${p}`;
+}
+
+/**
  * Zet een OpenHolidays-antwoord om naar rijen voor de tabel `periodes`.
  * Neemt de Nederlandstalige naam wanneer die er is, anders de eerste die er
  * staat — de API levert een lijst per taal, niet gegarandeerd met NL erbij.
+ * Gedeeld tussen schoolvakanties en feestdagen: beide antwoorden hebben
+ * dezelfde vorm (startDate, endDate, name[]).
  */
-export function naarPeriodes(antwoord, seizoen) {
+function naarPeriodesAlgemeen(antwoord, seizoen, soort, standaardnaam) {
   if (!Array.isArray(antwoord)) return [];
   return antwoord.map((v) => {
     const namen = Array.isArray(v.name) ? v.name : [];
     const nl = namen.find((n) => n.language === 'NL')?.text;
     return {
       seizoen,
-      naam: nl ?? namen[0]?.text ?? 'Schoolvakantie',
+      naam: nl ?? namen[0]?.text ?? standaardnaam,
       van: v.startDate,
       tot: v.endDate,
-      soort: 'vakantie',
+      soort,
       doelgroep: 'iedereen',
       bron: 'openholidays',
     };
   });
 }
 
+export function naarPeriodes(antwoord, seizoen) {
+  return naarPeriodesAlgemeen(antwoord, seizoen, 'vakantie', 'Schoolvakantie');
+}
+
+export function naarFeestdagPeriodes(antwoord, seizoen) {
+  return naarPeriodesAlgemeen(antwoord, seizoen, 'feestdag', 'Feestdag');
+}
+
 export async function haalVakanties(seizoenVan, seizoenTot, codes, fetcher = fetch) {
   const url = periodeUrl(seizoenVan, seizoenTot, codes);
+  const antwoord = await fetcher(url, { headers: { accept: 'application/json' } });
+  if (!antwoord.ok) throw new Error(`OpenHolidays gaf status ${antwoord.status}`);
+  return antwoord.json();
+}
+
+export async function haalFeestdagen(seizoenVan, seizoenTot, fetcher = fetch) {
+  const url = feestdagUrl(seizoenVan, seizoenTot);
   const antwoord = await fetcher(url, { headers: { accept: 'application/json' } });
   if (!antwoord.ok) throw new Error(`OpenHolidays gaf status ${antwoord.status}`);
   return antwoord.json();

@@ -14,6 +14,7 @@
       <div>
         <h1>TeamAssist</h1>
         <p id="clubnaam">AB InBev Leuven Bears</p>
+        <p class="klein" id="topbalkversie"></p>
       </div>
     </div>
     <div class="topbalk-ik" id="topbalkik" hidden>
@@ -242,7 +243,7 @@
 
       <h2>Zalen</h2>
       <table>
-        <thead><tr><th>Zaal</th><th>Blokken</th></tr></thead>
+        <thead><tr><th>Zaal</th><th>Blokken</th><th>Feestdagen</th></tr></thead>
         <tbody id="zalenlijf"></tbody>
       </table>
       <form>
@@ -318,6 +319,7 @@
       </table>
       <form>
         <button type="button" id="vakantiesync">Vakanties ophalen bij OpenHolidays</button>
+        <button type="button" class="stil" id="feestdagensync">Feestdagen ophalen bij OpenHolidays</button>
       </form>
       <div id="periodesplan" class="melding" hidden></div>
 
@@ -335,6 +337,7 @@
         <select id="periodesoort">
           <option value="vakantie">vakantie</option>
           <option value="examens">examens</option>
+          <option value="feestdag">feestdag</option>
         </select>
         <select id="periodedoelgroep">
           <option value="iedereen">iedereen</option>

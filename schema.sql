@@ -250,6 +250,12 @@ CREATE TABLE zalen (
   adres        TEXT,
   vbl_acc_guid TEXT,                              -- koppeling met accGUID bij VBL
   actief       INTEGER NOT NULL DEFAULT 1 CHECK (actief IN (0, 1)),
+  -- Standaard uit: een feestdag sluit een training van deze zaal uit, tenzij
+  -- de zaal zelf op feestdagen open is. Een keuze van de zaal, los van
+  -- trainingsreeksen.vakantie_doorlopen — dat laatste is een keuze van het
+  -- team voor een echte vakantieweek, dit is een fysieke beperking van de
+  -- locatie zelf.
+  open_op_feestdagen INTEGER NOT NULL DEFAULT 0 CHECK (open_op_feestdagen IN (0, 1)),
   aangemaakt   TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
@@ -300,7 +306,7 @@ CREATE TABLE periodes (
   naam      TEXT NOT NULL,
   van       TEXT NOT NULL,                        -- 'jjjj-mm-dd'
   tot       TEXT NOT NULL,
-  soort     TEXT NOT NULL CHECK (soort IN ('vakantie', 'examens')),
+  soort     TEXT NOT NULL CHECK (soort IN ('vakantie', 'examens', 'feestdag')),
   doelgroep TEXT NOT NULL DEFAULT 'iedereen'
             CHECK (doelgroep IN ('iedereen', 'secundair', 'hoger')),
   bron      TEXT NOT NULL DEFAULT 'club' CHECK (bron IN ('openholidays', 'club')),

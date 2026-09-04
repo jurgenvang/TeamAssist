@@ -24,12 +24,12 @@ import { teamLeden, personenZoeken } from './routes/admin/bekijken.js';
 import { persoonTonen, persoonBewaren, persoonActief } from './routes/admin/persoon.js';
 import { instellingenTonen, instellingBewaren, instellingLezen } from './routes/admin/instellingen.js';
 import {
-  zalenTonen, zaalAanmaken, blokAanmaken, blokVerwijderen, vrijeBlokken, sluitingAanmaken,
+  zalenTonen, zaalAanmaken, blokAanmaken, blokVerwijderen, vrijeBlokken, sluitingAanmaken, zetOpenOpFeestdagen,
 } from './routes/admin/zalen.js';
 import {
   reeksenTonen, reeksAanmaken, reeksStoppen, reeksGenereren, trainingenTonen,
 } from './routes/admin/trainingsreeksen.js';
-import { periodesTonen, periodeAanmaken, periodeVerwijderen, vakantiesSync } from './routes/admin/periodes.js';
+import { periodesTonen, periodeAanmaken, periodeVerwijderen, vakantiesSync, feestdagenSync } from './routes/admin/periodes.js';
 import { wedstrijdenSync, wedstrijdenTonen } from './routes/admin/wedstrijden.js';
 import { sjabloonExporteren, sjabloonImporteren } from './routes/admin/sjabloon.js';
 import { zaalsjabloonExporteren, zaalsjabloonImporteren } from './routes/admin/zaalsjabloon.js';
@@ -127,6 +127,7 @@ export const ROUTES = [
   { methode: 'GET', pad: '/api/admin/zalen/vrij', recht: 'systeem.beheren', doe: vrijeBlokken },
   // Sluitingen mag ook een coördinator melden.
   { methode: 'POST', pad: '/api/admin/zalen/sluiting', recht: 'team.configureren', doe: sluitingAanmaken },
+  { methode: 'POST', pad: '/api/admin/zalen/feestdagen', recht: 'systeem.beheren', doe: zetOpenOpFeestdagen },
 
   // Trainingsreeksen: bekijken op de eigen ploeg, aanmaken enkel op club- of
   // coördinatieniveau — anders ontstaat er een race om de goede zaaluren.
@@ -153,6 +154,7 @@ export const ROUTES = [
   { methode: 'POST', pad: '/api/admin/periodes', recht: 'systeem.beheren', doe: periodeAanmaken },
   { methode: 'POST', pad: '/api/admin/periodes/verwijderen', recht: 'systeem.beheren', doe: periodeVerwijderen },
   { methode: 'POST', pad: '/api/admin/periodes/sync', recht: 'systeem.beheren', doe: vakantiesSync },
+  { methode: 'POST', pad: '/api/admin/periodes/feestdagen-sync', recht: 'systeem.beheren', doe: feestdagenSync },
 
   // Wedstrijden: bekijken op de eigen ploeg, synchroniseren enkel voor wie het
   // systeem beheert.

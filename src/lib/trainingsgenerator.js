@@ -43,9 +43,13 @@ function periodesVoorPloeg(periodes, onderwijsgroep) {
 /**
  * @param {object} reeks             rij uit trainingsreeksen
  * @param {string} onderwijsgroep    van de ploeg, bepaalt welke examens gelden
- * @param {Array} periodes           vakanties en examens van het seizoen
+ * @param {Array} periodes           vakanties, examens en feestdagen van het seizoen
  * @param {Array} sluitingen         zaal_sluitingen van de zaal in deze reeks
  * @param {Array} bestaandeTrainingen  rijen die al bij reeks_id horen
+ * @param {boolean} zaalOpenOpFeestdagen  of de zaal van deze reeks op
+ *        feestdagen open is — een eigenschap van de zaal, los van
+ *        reeks.vakantie_doorlopen (dat is een keuze van het team, dit is een
+ *        fysieke beperking van de locatie)
  */
 export function genereerTrainingen({
   reeks,
@@ -53,12 +57,14 @@ export function genereerTrainingen({
   periodes = [],
   sluitingen = [],
   bestaandeTrainingen = [],
+  zaalOpenOpFeestdagen = false,
 }) {
   const relevantePeriodes = periodesVoorPloeg(periodes, onderwijsgroep);
   const bestaandOpDatum = new Map(bestaandeTrainingen.map((t) => [t.datum, t]));
 
   const nieuw = [];
   const overgeslagenVakantie = [];
+  const overgeslagenFeestdag = [];
   const overgeslagenSluiting = [];
   const ongewijzigd = [];
   const behouden = [];
@@ -71,6 +77,18 @@ export function genereerTrainingen({
       // Een beheerder heeft deze training zelf aangepast. Nooit overschrijven,
       // net zoals een correctie met bron 'club' bij personen blijft staan.
       behouden.push(bestaand);
+      continue;
+    }
+
+    // Een feestdag wordt vóór de vakantiecontrole getoetst: het is een
+    // fysieke beperking van de zaal, geen keuze van het team. Een reeks die
+    // vakanties doorloopt, doorloopt daarom een feestdag niet automatisch mee
+    // — dat vraagt een zaal die zelf open is op feestdagen.
+    const feestdag = relevantePeriodes.find(
+      (p) => p.soort === 'feestdag' && valtBinnen(datumTekst, p)
+    );
+    if (feestdag && !zaalOpenOpFeestdagen) {
+      if (bestaand) overgeslagenFeestdag.push({ datum: datumTekst, id: bestaand.id, reden: feestdag.naam });
       continue;
     }
 
@@ -112,6 +130,7 @@ export function genereerTrainingen({
     ongewijzigd,
     behouden,
     overgeslagen_vakantie: overgeslagenVakantie,
+    overgeslagen_feestdag: overgeslagenFeestdag,
     overgeslagen_sluiting: overgeslagenSluiting,
   };
 }

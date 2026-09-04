@@ -2,7 +2,7 @@
 
 import { json, fout, leesJson } from '../../lib/http.js';
 import { logSchrijf } from '../../lib/logboek.js';
-import { haalVakanties, naarPeriodes } from '../../lib/vakanties.js';
+import { haalVakanties, naarPeriodes, haalFeestdagen, naarFeestdagPeriodes } from '../../lib/vakanties.js';
 
 // Nog te bevestigen tegen de echte API welke subdivisiecode Vlaanderen precies
 // draagt (zie backlog, punt AA) — vandaar de diagnoseroute hieronder.
@@ -33,7 +33,7 @@ export async function periodeAanmaken(ctx) {
 
   if (!naam || !van || !tot) return fout(400, 'naam, van en tot zijn verplicht');
   if (tot < van) return fout(400, 'tot moet na van liggen');
-  if (soort && !['vakantie', 'examens'].includes(soort)) return fout(400, 'onbekend soort');
+  if (soort && !['vakantie', 'examens', 'feestdag'].includes(soort)) return fout(400, 'onbekend soort');
   if (doelgroep && !['iedereen', 'secundair', 'hoger'].includes(doelgroep)) {
     return fout(400, 'onbekende doelgroep');
   }
@@ -75,13 +75,13 @@ export async function periodeVerwijderen(ctx) {
 }
 
 /**
- * Haalt de schoolvakanties van het seizoen op en zet ze weg.
- *
- * Een periode met bron 'club' wordt nooit overschreven — dat is de plek waar
- * een club afwijkt (een facultatieve dag, een vakantie die voor de eigen leden
- * niet telt) en die keuze blijft staan.
+ * Gedeelde kern van de vakantie- en feestdagensynchronisatie: ophalen,
+ * vergelijken met wat er al staat (enkel binnen hetzelfde `soort`, zodat een
+ * feestdag nooit per ongeluk tegen een vakantie met dezelfde startdatum
+ * vergeleken wordt), en bij uitvoeren wegschrijven. Een periode met bron
+ * 'club' wordt nooit overschreven.
  */
-export async function vakantiesSync(ctx) {
+async function synchroniseerPeriodes(ctx, { soort, ophalen, omzetten, foutlabel }) {
   const { db, persoon, request, seizoen } = ctx;
   const url = new URL(request.url);
   const uitvoeren = url.searchParams.get('uitvoeren') === '1';
@@ -92,22 +92,22 @@ export async function vakantiesSync(ctx) {
 
   let antwoord;
   try {
-    antwoord = await haalVakanties(van, tot, { groepscode: GROEPSCODE_VLAANDEREN });
+    antwoord = await ophalen(van, tot);
   } catch (e) {
     await logSchrijf(db, {
       soort: 'fout',
       wie: persoon.id,
-      wat: 'vakanties ophalen mislukt',
+      wat: `${foutlabel} ophalen mislukt`,
       details: e.message,
       afgehandeld: 0,
     });
     return fout(502, `OpenHolidays antwoordde niet bruikbaar: ${e.message}`);
   }
 
-  const opgehaald = naarPeriodes(antwoord, seizoen.code);
+  const opgehaald = omzetten(antwoord, seizoen.code);
   const bestaand = await db
-    .prepare(`SELECT * FROM periodes WHERE seizoen = ? AND bron = 'openholidays'`)
-    .bind(seizoen.code)
+    .prepare(`SELECT * FROM periodes WHERE seizoen = ? AND bron = 'openholidays' AND soort = ?`)
+    .bind(seizoen.code, soort)
     .all();
   const bestaandOpVan = new Map((bestaand.results ?? []).map((p) => [p.van, p]));
 
@@ -134,9 +134,42 @@ export async function vakantiesSync(ctx) {
   await logSchrijf(db, {
     soort: 'sync',
     wie: persoon.id,
-    wat: 'vakanties opgehaald',
+    wat: `${foutlabel} opgehaald`,
     details: `${nieuw.length} nieuw, ${ongewijzigd.length} ongewijzigd van ${opgehaald.length} gevonden`,
   });
 
   return json({ droogloop: false, gevonden: opgehaald.length, nieuw: nieuw.length, ongewijzigd: ongewijzigd.length });
+}
+
+/**
+ * Haalt de schoolvakanties van het seizoen op en zet ze weg.
+ *
+ * Een periode met bron 'club' wordt nooit overschreven — dat is de plek waar
+ * een club afwijkt (een facultatieve dag, een vakantie die voor de eigen leden
+ * niet telt) en die keuze blijft staan.
+ */
+export async function vakantiesSync(ctx) {
+  return synchroniseerPeriodes(ctx, {
+    soort: 'vakantie',
+    ophalen: (van, tot) => haalVakanties(van, tot, { groepscode: GROEPSCODE_VLAANDEREN }),
+    omzetten: naarPeriodes,
+    foutlabel: 'vakanties',
+  });
+}
+
+/**
+ * Haalt de Belgische feestdagen van het seizoen op en zet ze weg. Zelfde
+ * bron-bescherming als bij vakanties: een feestdag die de club zelf al
+ * aanpaste (bijvoorbeeld een andere naam), blijft ongemoeid.
+ *
+ * Nog niet rechtstreeks bevestigd via de sandbox — zie feestdagUrl() in
+ * vakanties.js voor de details. Draai eerst een droogloop.
+ */
+export async function feestdagenSync(ctx) {
+  return synchroniseerPeriodes(ctx, {
+    soort: 'feestdag',
+    ophalen: (van, tot) => haalFeestdagen(van, tot),
+    omzetten: naarFeestdagPeriodes,
+    foutlabel: 'feestdagen',
+  });
 }

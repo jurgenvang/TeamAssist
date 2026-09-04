@@ -118,6 +118,10 @@ async function contextVoorReeks(db, reeks) {
         .all()
     : { results: [] };
 
+  const zaal = reeks.zaal_id
+    ? await db.prepare(`SELECT open_op_feestdagen FROM zalen WHERE id = ?`).bind(reeks.zaal_id).first()
+    : null;
+
   const bestaand = await db
     .prepare(`SELECT * FROM trainingen WHERE reeks_id = ?`)
     .bind(reeks.id)
@@ -128,6 +132,7 @@ async function contextVoorReeks(db, reeks) {
     periodes: periodes.results ?? [],
     sluitingen: sluitingen.results ?? [],
     bestaandeTrainingen: bestaand.results ?? [],
+    zaalOpenOpFeestdagen: Boolean(zaal?.open_op_feestdagen),
   };
 }
 

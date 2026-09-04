@@ -4,7 +4,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { maakDb } from './d1.mjs';
 import { ROUTES } from '../src/index.js';
-import { zalenTonen, zaalAanmaken, blokAanmaken, vrijeBlokken, sluitingAanmaken } from '../src/routes/admin/zalen.js';
+import { zalenTonen, zaalAanmaken, blokAanmaken, vrijeBlokken, sluitingAanmaken, zetOpenOpFeestdagen } from '../src/routes/admin/zalen.js';
 
 const seizoen = { code: '2026-27', naam: '2026-2027' };
 const persoon = { id: 'p-admin' };
@@ -119,4 +119,37 @@ test('een sluiting komt onafgehandeld in het logboek', async () => {
   });
   const regel = db._sqlite.prepare(`SELECT * FROM logboek ORDER BY id DESC LIMIT 1`).get();
   assert.equal(regel.afgehandeld, 0, 'iemand hoort te kijken of getroffen trainingen een alternatief nodig hebben');
+});
+
+test('open_op_feestdagen staat standaard uit bij een nieuwe zaal', async () => {
+  const db = zetKlaar();
+  const zaal = await (await zaalAanmaken({ db, persoon, request: verzoek('/x', { naam: 'A' }) })).json();
+  const rij = db._sqlite.prepare(`SELECT open_op_feestdagen FROM zalen WHERE id = ?`).get(zaal.id);
+  assert.equal(rij.open_op_feestdagen, 0);
+});
+
+test('een zaal open zetten op feestdagen wordt bewaard en gelogd', async () => {
+  const db = zetKlaar();
+  const zaal = await (await zaalAanmaken({ db, persoon, request: verzoek('/x', { naam: 'A' }) })).json();
+  const res = await zetOpenOpFeestdagen({ db, persoon, request: verzoek('/x', { zaal_id: zaal.id, open: true }) });
+  assert.equal(res.status, 200);
+  const rij = db._sqlite.prepare(`SELECT open_op_feestdagen FROM zalen WHERE id = ?`).get(zaal.id);
+  assert.equal(rij.open_op_feestdagen, 1);
+  const regel = db._sqlite.prepare(`SELECT * FROM logboek ORDER BY id DESC LIMIT 1`).get();
+  assert.match(regel.wat, /open op feestdagen/);
+});
+
+test('terugzetten naar dicht werkt ook', async () => {
+  const db = zetKlaar();
+  const zaal = await (await zaalAanmaken({ db, persoon, request: verzoek('/x', { naam: 'A' }) })).json();
+  await zetOpenOpFeestdagen({ db, persoon, request: verzoek('/x', { zaal_id: zaal.id, open: true }) });
+  await zetOpenOpFeestdagen({ db, persoon, request: verzoek('/x', { zaal_id: zaal.id, open: false }) });
+  const rij = db._sqlite.prepare(`SELECT open_op_feestdagen FROM zalen WHERE id = ?`).get(zaal.id);
+  assert.equal(rij.open_op_feestdagen, 0);
+});
+
+test('een onbestaande zaal geeft 404 bij het zetten van open_op_feestdagen', async () => {
+  const db = zetKlaar();
+  const res = await zetOpenOpFeestdagen({ db, persoon, request: verzoek('/x', { zaal_id: 'niet-bestaand', open: true }) });
+  assert.equal(res.status, 404);
 });

@@ -26,9 +26,28 @@ export async function laadZalen() {
                 .join(', ')
             : 'geen blokken'
         }</td>
+        <td>
+          <label class="veld">
+            <input type="checkbox" data-open-feestdagen="${veilig(z.id)}" ${z.open_op_feestdagen ? 'checked' : ''}>
+            open op feestdagen
+          </label>
+        </td>
       </tr>`
     )
     .join('');
+
+  for (const invoer of el('zalenlijf').querySelectorAll('[data-open-feestdagen]')) {
+    invoer.addEventListener('change', async () => {
+      const uit = await api('/api/admin/zalen/feestdagen', 'POST', {
+        zaal_id: invoer.dataset.openFeestdagen,
+        open: invoer.checked,
+      });
+      if (uit.status !== 200) {
+        invoer.checked = !invoer.checked; // terugdraaien bij een fout
+        toon('zalenmelding', `Dat lukte niet: ${uit.body?.fout}`, true);
+      }
+    });
+  }
 
   for (const knop of el('zalenlijf').querySelectorAll('[data-blok-verwijderen]')) {
     knop.addEventListener('click', async () => {
@@ -180,6 +199,26 @@ export async function synchroniseerVakanties() {
     return;
   }
   const echt = await api('/api/admin/periodes/sync?uitvoeren=1', 'POST');
+  vak.textContent = echt.status === 200 ? `Klaar. ${samenvatting}` : 'Uitvoeren lukte niet.';
+  await laadPeriodes();
+}
+
+export async function synchroniseerFeestdagen() {
+  const vak = el('periodesplan');
+  vak.hidden = false;
+  vak.textContent = 'Feestdagen ophalen bij OpenHolidays …';
+
+  const proef = await api('/api/admin/periodes/feestdagen-sync', 'POST');
+  if (proef.status !== 200) {
+    vak.textContent = `Dat lukte niet: ${proef.body?.fout ?? proef.status}`;
+    return;
+  }
+  const samenvatting = `${proef.body.gevonden} gevonden, ${proef.body.nieuw} nieuw, ${proef.body.ongewijzigd} ongewijzigd.`;
+  if (!confirm(`${samenvatting}\n\nUitvoeren?`)) {
+    vak.textContent = `Niets gewijzigd. ${samenvatting}`;
+    return;
+  }
+  const echt = await api('/api/admin/periodes/feestdagen-sync?uitvoeren=1', 'POST');
   vak.textContent = echt.status === 200 ? `Klaar. ${samenvatting}` : 'Uitvoeren lukte niet.';
   await laadPeriodes();
 }

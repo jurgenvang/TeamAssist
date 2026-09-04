@@ -143,3 +143,29 @@ export async function sluitingAanmaken(ctx) {
   });
   return json({ id: uit.meta.last_row_id });
 }
+
+/**
+ * Zet of een zaal op feestdagen open is. Standaard uit (schema.sql) — een
+ * fysieke eigenschap van de locatie, los van of een team door een vakantie
+ * heen wil trainen (trainingsreeksen.vakantie_doorlopen).
+ */
+export async function zetOpenOpFeestdagen(ctx) {
+  const { db, persoon, request } = ctx;
+  const body = await leesJson(request);
+  const { zaal_id, open } = body ?? {};
+  if (!zaal_id) return fout(400, 'zaal_id ontbreekt');
+
+  const zaal = await db.prepare(`SELECT id, naam FROM zalen WHERE id = ?`).bind(zaal_id).first();
+  if (!zaal) return fout(404, 'die zaal bestaat niet');
+
+  const waarde = open ? 1 : 0;
+  await db.prepare(`UPDATE zalen SET open_op_feestdagen = ? WHERE id = ?`).bind(waarde, zaal_id).run();
+
+  await logSchrijf(db, {
+    soort: 'beheer',
+    wie: persoon.id,
+    wat: waarde ? 'zaal open op feestdagen gezet' : 'zaal dicht op feestdagen gezet',
+    details: zaal.naam,
+  });
+  return json({ zaal_id, open_op_feestdagen: Boolean(waarde) });
+}
