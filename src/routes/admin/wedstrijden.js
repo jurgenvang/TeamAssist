@@ -6,9 +6,50 @@
 
 import { json, fout } from '../../lib/http.js';
 import { logSchrijf } from '../../lib/logboek.js';
+import { verwittig } from '../../lib/verwittigen.js';
 import { haalVbl, teamMatchesUrl, leesWedstrijden } from '../../lib/vbl.js';
 import { maakWedstrijdplan } from '../../lib/wedstrijdsync.js';
 import { instellingLezen } from './instellingen.js';
+
+const DAGNAMEN = ['', 'maandag', 'dinsdag', 'woensdag', 'donderdag', 'vrijdag', 'zaterdag', 'zondag'];
+
+/**
+ * COORD, COACH en PLOEGV van een team — wie een wijziging hoort te weten.
+ * De filter op rol is hier defensief/zelfdocumenterend: het schema garandeert
+ * al dat een rollen-rij met een team_guid nooit iets anders dan COORD, COACH
+ * of PLOEGV kan zijn (ADMIN/FINADM vragen een lege team_guid, zie de CHECK op
+ * de tabel), dus dit filtert in de praktijk niets extra weg.
+ */
+async function begeleidingVan(db, teamGuid, seizoen) {
+  const rijen = await db
+    .prepare(
+      `SELECT DISTINCT p.id, p.voornaam, p.achternaam
+         FROM rollen r
+         JOIN personen p ON p.id = r.persoon_id
+        WHERE r.team_guid = ? AND r.seizoen = ? AND r.rol IN ('COORD', 'COACH', 'PLOEGV') AND p.actief = 1`
+    )
+    .bind(teamGuid, seizoen)
+    .all();
+  return rijen.results ?? [];
+}
+
+function wedstrijdBeschrijving(w) {
+  const dag = new Date(`${w.datum}T00:00:00Z`).getUTCDay();
+  return `${DAGNAMEN[dag === 0 ? 7 : dag]} ${w.datum} om ${w.begin}${w.locatie_tekst ? ` in ${w.locatie_tekst}` : ''}${w.tegenstander ? ` tegen ${w.tegenstander}` : ''}`;
+}
+
+async function meldWijziging(ctx, ploeg, seizoen, w) {
+  const begeleiding = await begeleidingVan(ctx.db, ploeg.guid, seizoen);
+  const onderwerp = `Wedstrijdwijziging — ${ploeg.naam}`;
+  const inhoud =
+    `De wedstrijd van ${ploeg.naam} is gewijzigd.\n\n` +
+    `Was: ${wedstrijdBeschrijving(w.was)}\n` +
+    `Wordt: ${wedstrijdBeschrijving(w)}`;
+  for (const persoon of begeleiding) {
+    await verwittig(ctx, { persoon_id: persoon.id, onderwerp, inhoud });
+  }
+  return begeleiding.length;
+}
 
 async function gevolgdePloegen(db, seizoen, alleen) {
   if (alleen) {
@@ -35,7 +76,8 @@ async function stillePeriodes(db) {
   }
 }
 
-async function verwerkPloeg(db, ploeg, seizoen, uitvoeren, periodes) {
+async function verwerkPloeg(ctx, ploeg, seizoen, uitvoeren, periodes) {
+  const { db } = ctx;
   const data = await haalVbl(teamMatchesUrl(ploeg.guid));
   const gevonden = leesWedstrijden(data, ploeg.guid);
 
@@ -77,14 +119,12 @@ async function verwerkPloeg(db, ploeg, seizoen, uitvoeren, periodes) {
       .run();
 
     if (w.meldbaar) {
-      // Er is nog geen berichtsysteem voor deze wijzigingen (dat komt bij
-      // fase 5, communicatie); het logboek is nu de plek waar dit zichtbaar
-      // wordt, onafgehandeld zodat een beheerder het opmerkt.
+      const aantal = await meldWijziging(ctx, ploeg, seizoen, w);
       await logSchrijf(db, {
         soort: 'sync',
         wat: `wedstrijd gewijzigd: ${w.wedstrijd_guid}`,
-        details: `${ploeg.naam}: was ${w.was.datum} ${w.was.begin}, wordt ${w.datum} ${w.begin}`,
-        afgehandeld: 0,
+        details: `${ploeg.naam}: was ${w.was.datum} ${w.was.begin}, wordt ${w.datum} ${w.begin} — ${aantal} verwittigd`,
+        afgehandeld: aantal > 0 ? 1 : 0,
       });
     }
   }
@@ -123,7 +163,7 @@ export async function wedstrijdenSync(ctx) {
   const uitslagen = [];
   for (const ploeg of ploegen) {
     try {
-      uitslagen.push(await verwerkPloeg(db, ploeg, seizoen.code, uitvoeren, periodes));
+      uitslagen.push(await verwerkPloeg(ctx, ploeg, seizoen.code, uitvoeren, periodes));
     } catch (e) {
       uitslagen.push({ ploeg: ploeg.guid, naam: ploeg.naam, status: 'fout', melding: e.message });
       await logSchrijf(db, {

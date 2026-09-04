@@ -211,142 +211,162 @@
 
     <!-- Beheer -->
     <section id="tab-configuratie" hidden>
-      <h2>Huisstijl</h2>
-      <p class="klein">
-        De accentkleur wordt gecontroleerd op leesbaarheid; een te lichte kleur wordt geweigerd,
-        nooit stilzwijgend aangepast. Het logo kan een voorstel zijn van Basketbal Vlaanderen —
-        dat patroon staat niet in de officiële documentatie en kan dus ooit wijzigen.
-      </p>
-      <form>
-        <button type="button" class="stil" id="brandingvoorstelknop">Voorstel ophalen bij de bond</button>
-      </form>
-      <div id="brandingvoorstel" class="melding" hidden></div>
+      <details>
+        <summary>Huisstijl</summary>
+        <p class="klein">
+          De accentkleur wordt gecontroleerd op leesbaarheid; een te lichte kleur wordt geweigerd,
+          nooit stilzwijgend aangepast. Het logo kan een voorstel zijn van Basketbal Vlaanderen —
+          dat patroon staat niet in de officiële documentatie en kan dus ooit wijzigen.
+        </p>
+        <form>
+          <button type="button" class="stil" id="brandingvoorstelknop">Voorstel ophalen bij de bond</button>
+        </form>
+        <div id="brandingvoorstel" class="melding" hidden></div>
+      </details>
 
-      <h2>Instellingen</h2>
-      <table>
-        <thead><tr><th>Instelling</th><th>Waarde</th></tr></thead>
-        <tbody id="instellingenlijf"></tbody>
-      </table>
-      <p id="instellingmelding" class="klein"></p>
+      <details open>
+        <summary>Instellingen</summary>
+        <table>
+          <thead><tr><th>Instelling</th><th>Waarde</th></tr></thead>
+          <tbody id="instellingenlijf"></tbody>
+        </table>
+        <p id="instellingmelding" class="klein"></p>
+      </details>
 
-      <h2>Kijken met een andere rol</h2>
-      <p class="klein">
-        Werkt enkel wanneer de instelling <code>testrol_toegelaten</code> aanstaat. Je rechten
-        worden dan versmald tot die rol; meer dan wat je zelf mag, krijg je nooit.
-      </p>
-      <form>
-        <select id="testrolrol"></select>
-        <span id="testrolteamveld" hidden><select id="testrolteam"></select></span>
-        <button type="button" id="testrolstart">Zo kijken</button>
-      </form>
-      <p id="testrolmelding" class="klein"></p>
+      <details>
+        <summary>Kijken met een andere rol</summary>
+        <p class="klein">
+          Werkt enkel wanneer de instelling <code>testrol_toegelaten</code> aanstaat. Je rechten
+          worden dan versmald tot die rol; meer dan wat je zelf mag, krijg je nooit.
+        </p>
+        <form>
+          <select id="testrolrol"></select>
+          <span id="testrolteamveld" hidden><select id="testrolteam"></select></span>
+          <button type="button" id="testrolstart">Zo kijken</button>
+        </form>
+        <p id="testrolmelding" class="klein"></p>
+      </details>
+    </section>
 
-      <h2>Zalen</h2>
-      <table>
-        <thead><tr><th>Zaal</th><th>Blokken</th><th>Feestdagen</th></tr></thead>
-        <tbody id="zalenlijf"></tbody>
-      </table>
-      <form>
-        <input type="text" id="nieuwezaalnaam" placeholder="naam van de zaal">
-        <button type="button" id="zaalmaken">Zaal aanmaken</button>
-      </form>
-      <form>
-        <select id="zaalkeuze"></select>
-        <select id="blokweekdag">
-          <option value="1">maandag</option><option value="2">dinsdag</option>
-          <option value="3">woensdag</option><option value="4">donderdag</option>
-          <option value="5">vrijdag</option><option value="6">zaterdag</option>
-          <option value="7">zondag</option>
-        </select>
-        <input type="time" id="blokbegin">
-        <input type="time" id="blokeinde">
-        <button type="button" id="blokmaken">Blok toevoegen</button>
-      </form>
-      <div id="zalenmelding" class="melding" hidden></div>
+    <section id="tab-zaalbeheer" hidden>
+      <details open>
+        <summary>Zalen</summary>
+        <table>
+          <thead><tr><th>Zaal</th><th>Blokken</th><th>Feestdagen</th></tr></thead>
+          <tbody id="zalenlijf"></tbody>
+        </table>
+        <form>
+          <input type="text" id="nieuwezaalnaam" placeholder="naam van de zaal">
+          <button type="button" id="zaalmaken">Zaal aanmaken</button>
+        </form>
+        <form>
+          <select id="zaalkeuze"></select>
+          <select id="blokweekdag">
+            <option value="1">maandag</option><option value="2">dinsdag</option>
+            <option value="3">woensdag</option><option value="4">donderdag</option>
+            <option value="5">vrijdag</option><option value="6">zaterdag</option>
+            <option value="7">zondag</option>
+          </select>
+          <input type="time" id="blokbegin">
+          <input type="time" id="blokeinde">
+          <button type="button" id="blokmaken">Blok toevoegen</button>
+        </form>
+        <div id="zalenmelding" class="melding" hidden></div>
+      </details>
 
-      <h3>Een zaal tijdelijk sluiten</h3>
-      <p class="klein">
-        Raakt elke training die in dat venster op die zaal gepland staat — die krijgt de
-        status 'zaal niet beschikbaar' in plaats van stil te verdwijnen.
-      </p>
-      <form>
-        <select id="sluitingzaal"></select>
-        <label class="veld">Van <input type="date" id="sluitingvan"></label>
-        <label class="veld">Tot <input type="date" id="sluitingtot"></label>
-        <input type="text" id="sluitingreden" placeholder="reden (optioneel)">
-        <button type="button" id="sluitingmaken">Melden</button>
-      </form>
-      <table>
-        <thead><tr><th>Zaal</th><th>Periode</th><th>Reden</th></tr></thead>
-        <tbody id="sluitingenlijf"></tbody>
-      </table>
+      <details>
+        <summary>Een zaal tijdelijk sluiten</summary>
+        <p class="klein">
+          Raakt elke training die in dat venster op die zaal gepland staat — die krijgt de
+          status 'zaal niet beschikbaar' in plaats van stil te verdwijnen.
+        </p>
+        <form>
+          <select id="sluitingzaal"></select>
+          <label class="veld">Van <input type="date" id="sluitingvan"></label>
+          <label class="veld">Tot <input type="date" id="sluitingtot"></label>
+          <input type="text" id="sluitingreden" placeholder="reden (optioneel)">
+          <button type="button" id="sluitingmaken">Melden</button>
+        </form>
+        <table>
+          <thead><tr><th>Zaal</th><th>Periode</th><th>Reden</th></tr></thead>
+          <tbody id="sluitingenlijf"></tbody>
+        </table>
+      </details>
 
-      <h3>Zaaluren-sjabloon</h3>
-      <p class="klein">
-        Eén rij per blok: zaal, weekdag, begin, einde, seizoen. Een onbekende zaalnaam wordt
-        als nieuwe zaal aangemaakt bij het uitvoeren.
-      </p>
-      <form>
-        <button type="button" class="stil" id="zaalsjabloondownload">Sjabloon downloaden</button>
-      </form>
-      <form>
-        <input type="file" id="zaalsjabloonbestand" accept=".csv,text/csv">
-        <button type="button" id="zaalsjabloonupload">Inlezen</button>
-      </form>
-      <div id="zaalsjabloonplan" class="melding" hidden></div>
+      <details>
+        <summary>Zaaluren-sjabloon</summary>
+        <p class="klein">
+          Eén rij per blok: zaal, weekdag, begin, einde, seizoen. Een onbekende zaalnaam wordt
+          als nieuwe zaal aangemaakt bij het uitvoeren.
+        </p>
+        <form>
+          <button type="button" class="stil" id="zaalsjabloondownload">Sjabloon downloaden</button>
+        </form>
+        <form>
+          <input type="file" id="zaalsjabloonbestand" accept=".csv,text/csv">
+          <button type="button" id="zaalsjabloonupload">Inlezen</button>
+        </form>
+        <div id="zaalsjabloonplan" class="melding" hidden></div>
+      </details>
 
-      <h3>Trainingsuren-sjabloon</h3>
-      <p class="klein">
-        Eén rij per team per tijdslot: team_naam, zaal, weekdag, begin, einde, seizoen, en
-        optioneel van/tot. Een team dat de bond nog niet kent (bijvoorbeeld een recreatieve
-        reeks) wordt gerapporteerd en overgeslagen, niet als fout behandeld.
-      </p>
-      <form>
-        <button type="button" class="stil" id="reeksensjabloondownload">Sjabloon downloaden</button>
-      </form>
-      <form>
-        <input type="file" id="reeksensjabloonbestand" accept=".csv,text/csv">
-        <button type="button" id="reeksensjabloonupload">Inlezen</button>
-      </form>
-      <div id="reeksensjabloonplan" class="melding" hidden></div>
+      <details>
+        <summary>Trainingsuren-sjabloon</summary>
+        <p class="klein">
+          Eén rij per team per tijdslot: team_naam, zaal, weekdag, begin, einde, seizoen, en
+          optioneel van/tot. Een team dat de bond nog niet kent (bijvoorbeeld een recreatieve
+          reeks) wordt gerapporteerd en overgeslagen, niet als fout behandeld.
+        </p>
+        <form>
+          <button type="button" class="stil" id="reeksensjabloondownload">Sjabloon downloaden</button>
+        </form>
+        <form>
+          <input type="file" id="reeksensjabloonbestand" accept=".csv,text/csv">
+          <button type="button" id="reeksensjabloonupload">Inlezen</button>
+        </form>
+        <div id="reeksensjabloonplan" class="melding" hidden></div>
+      </details>
+
+      <details open>
+        <summary>Schoolvakanties en examens</summary>
+        <table>
+          <thead><tr><th>Naam</th><th>Periode</th><th>Soort</th><th>Doelgroep</th><th>Bron</th><th></th></tr></thead>
+          <tbody id="periodeslijf"></tbody>
+        </table>
+        <form>
+          <button type="button" id="vakantiesync">Vakanties ophalen bij OpenHolidays</button>
+          <button type="button" class="stil" id="feestdagensync">Feestdagen ophalen bij OpenHolidays</button>
+        </form>
+        <div id="periodesplan" class="melding" hidden></div>
+      </details>
+
+      <details>
+        <summary>Handmatig een periode toevoegen</summary>
+        <p class="klein">
+          Voor examenperiodes, of een correctie op een opgehaalde vakantie. Vakanties komen
+          automatisch binnen via de knop hierboven; examens moet je hier zelf ingeven.
+        </p>
+        <form>
+          <input type="text" id="periodenaam" placeholder="naam, bv. Examens januari">
+          <label class="veld">Van <input type="date" id="periodevan"></label>
+          <label class="veld">Tot <input type="date" id="periodetot"></label>
+        </form>
+        <form>
+          <select id="periodesoort">
+            <option value="vakantie">vakantie</option>
+            <option value="examens">examens</option>
+            <option value="feestdag">feestdag</option>
+          </select>
+          <select id="periodedoelgroep">
+            <option value="iedereen">iedereen</option>
+            <option value="secundair">secundair</option>
+            <option value="hoger">hoger onderwijs</option>
+          </select>
+          <button type="button" id="periodemaken">Toevoegen</button>
+        </form>
+      </details>
     </section>
 
     <section id="tab-dagelijksbeheer" hidden>
-      <h2>Schoolvakanties en examens</h2>
-      <table>
-        <thead><tr><th>Naam</th><th>Periode</th><th>Soort</th><th>Doelgroep</th><th>Bron</th><th></th></tr></thead>
-        <tbody id="periodeslijf"></tbody>
-      </table>
-      <form>
-        <button type="button" id="vakantiesync">Vakanties ophalen bij OpenHolidays</button>
-        <button type="button" class="stil" id="feestdagensync">Feestdagen ophalen bij OpenHolidays</button>
-      </form>
-      <div id="periodesplan" class="melding" hidden></div>
-
-      <h3>Handmatig een periode toevoegen</h3>
-      <p class="klein">
-        Voor examenperiodes, of een correctie op een opgehaalde vakantie. Vakanties komen
-        automatisch binnen via de knop hierboven; examens moet je hier zelf ingeven.
-      </p>
-      <form>
-        <input type="text" id="periodenaam" placeholder="naam, bv. Examens januari">
-        <label class="veld">Van <input type="date" id="periodevan"></label>
-        <label class="veld">Tot <input type="date" id="periodetot"></label>
-      </form>
-      <form>
-        <select id="periodesoort">
-          <option value="vakantie">vakantie</option>
-          <option value="examens">examens</option>
-          <option value="feestdag">feestdag</option>
-        </select>
-        <select id="periodedoelgroep">
-          <option value="iedereen">iedereen</option>
-          <option value="secundair">secundair</option>
-          <option value="hoger">hoger onderwijs</option>
-        </select>
-        <button type="button" id="periodemaken">Toevoegen</button>
-      </form>
-
       <h2>Gegevens van de bond bekijken</h2>
       <p class="klein">
         Laat leeg voor de ploegenlijst van de club, of vul een ploeg-GUID in zoals
@@ -366,6 +386,16 @@
       <h2 id="persoonkop"></h2>
       <p class="klein" id="persoonherkomst"></p>
       <div id="persoonvelden"></div>
+
+      <h3>Ploegen</h3>
+      <table>
+        <thead><tr><th>Ploeg</th><th>Herkomst</th><th></th></tr></thead>
+        <tbody id="persoonploegenlijf"></tbody>
+      </table>
+      <form>
+        <select id="persoonteamkeuze"></select>
+        <button type="button" class="stil" id="persoonteamkoppelen">Koppelen</button>
+      </form>
       <form>
         <button type="button" id="persoonbewaren">Bewaren</button>
         <button type="button" class="stil" id="persoonverwijderen">Op te verwijderen zetten</button>

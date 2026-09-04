@@ -21,7 +21,7 @@ import { vblDiagnose } from './routes/admin/vbl-diagnose.js';
 import { teamsLijst, teamsSync, teamGevolgd } from './routes/admin/teams.js';
 import { ledenSync } from './routes/admin/leden.js';
 import { teamLeden, personenZoeken } from './routes/admin/bekijken.js';
-import { persoonTonen, persoonBewaren, persoonActief } from './routes/admin/persoon.js';
+import { persoonTonen, persoonBewaren, persoonActief, teamKoppelen, teamOntkoppelen } from './routes/admin/persoon.js';
 import { instellingenTonen, instellingBewaren, instellingLezen } from './routes/admin/instellingen.js';
 import {
   zalenTonen, zaalAanmaken, blokAanmaken, blokVerwijderen, vrijeBlokken, sluitingAanmaken, zetOpenOpFeestdagen,
@@ -115,6 +115,8 @@ export const ROUTES = [
   { methode: 'GET', pad: '/api/admin/persoon', recht: 'personen.beheren', doe: persoonTonen },
   { methode: 'POST', pad: '/api/admin/persoon', recht: 'personen.beheren', doe: persoonBewaren },
   { methode: 'POST', pad: '/api/admin/persoon/actief', recht: 'personen.beheren', doe: persoonActief },
+  { methode: 'POST', pad: '/api/admin/persoon/team-koppelen', recht: 'personen.beheren', doe: teamKoppelen },
+  { methode: 'POST', pad: '/api/admin/persoon/team-ontkoppelen', recht: 'personen.beheren', doe: teamOntkoppelen },
 
   { methode: 'GET', pad: '/api/admin/instellingen', recht: 'systeem.beheren', doe: instellingenTonen },
   { methode: 'POST', pad: '/api/admin/instellingen', recht: 'systeem.beheren', doe: instellingBewaren },

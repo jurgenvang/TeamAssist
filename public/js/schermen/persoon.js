@@ -42,11 +42,52 @@ export async function toonPersoon(id) {
       <input type="text" data-veld="${veld}" value="${veilig(p[veld] ?? '')}"></label>`
   ).join('');
 
+  toonPloegen(p.ploegen ?? []);
+  await vulTeamkeuze();
+
   el('persoonverwijderen').textContent = p.actief
     ? 'Op te verwijderen zetten'
     : 'Toch niet verwijderen';
   el('persoonmelding').hidden = true;
   el('persoon').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function toonPloegen(ploegen) {
+  el('persoonploegenlijf').innerHTML = ploegen
+    .map((pl) => {
+      const herkomst = pl.bron === 'club' ? 'handmatig gekoppeld' : pl.bij_bond ? 'bij de bond' : 'niet meer bij de bond';
+      return `<tr>
+        <td>${veilig(pl.naam)}</td>
+        <td class="ploegen">${herkomst}</td>
+        <td>${
+          pl.bron === 'club'
+            ? `<button type="button" class="alslink" data-team-ontkoppelen="${veilig(pl.guid)}">Ontkoppelen</button>`
+            : ''
+        }</td>
+      </tr>`;
+    })
+    .join('');
+
+  for (const knop of el('persoonploegenlijf').querySelectorAll('[data-team-ontkoppelen]')) {
+    knop.addEventListener('click', async () => {
+      if (!huidige) return;
+      if (!confirm('Deze handmatige koppeling verwijderen?')) return;
+      const uit = await api('/api/admin/persoon/team-ontkoppelen', 'POST', {
+        persoon_id: huidige.id,
+        team_guid: knop.dataset.teamOntkoppelen,
+      });
+      if (uit.status === 200) await toonPersoon(huidige.id);
+      else toon('persoonmelding', uit.body?.fout ?? `Fout ${uit.status}`, true);
+    });
+  }
+}
+
+async function vulTeamkeuze() {
+  const uit = await api('/api/admin/teams');
+  if (uit.status !== 200) return;
+  el('persoonteamkeuze').innerHTML = (uit.body.teams ?? [])
+    .map((t) => `<option value="${veilig(t.guid)}">${veilig(t.naam_kort ?? t.naam)}</option>`)
+    .join('');
 }
 
 async function bewaar() {
@@ -73,6 +114,14 @@ async function bewaar() {
 
 export function koppelPersoonscherm() {
   el('persoonbewaren').addEventListener('click', bewaar);
+  el('persoonteamkoppelen').addEventListener('click', async () => {
+    if (!huidige) return;
+    const team_guid = el('persoonteamkeuze').value;
+    if (!team_guid) return;
+    const uit = await api('/api/admin/persoon/team-koppelen', 'POST', { persoon_id: huidige.id, team_guid });
+    if (uit.status === 200) await toonPersoon(huidige.id);
+    else toon('persoonmelding', uit.body?.fout ?? `Fout ${uit.status}`, true);
+  });
   el('persoonsluiten').addEventListener('click', () => {
     el('persoon').hidden = true;
     huidige = null;

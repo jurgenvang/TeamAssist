@@ -13,6 +13,7 @@ export const INSTELBAAR = {
   club_guid: { soort: 'tekst' },
   bericht_modus: { soort: 'keuze', keuzes: ['uit', 'omleiden', 'normaal'] },
   bericht_omleidadres: { soort: 'tekst' },
+  mail_afzender: { soort: 'tekst' },
   // Laat een beheerder kiezen met welke rol hij wil werken. Staat uit bij een
   // verse installatie en hoort uit te staan zodra de club er echt mee werkt.
   testrol_toegelaten: { soort: 'vlag' },

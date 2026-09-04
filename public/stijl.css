@@ -59,6 +59,19 @@
   h2 { font-size: 1rem; margin: 2rem 0 .6rem; }
   h3 { font-size: .92rem; margin: 1.5rem 0 .4rem; color: var(--gedempt); }
 
+  details { margin: 1.5rem 0; border-top: 1px solid var(--lijn); padding-top: .75rem; }
+  details:first-of-type { border-top: none; padding-top: 0; }
+  summary {
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    padding: .2rem 0;
+    list-style-position: outside;
+  }
+  summary:hover { color: var(--accent); }
+  details > *:not(summary) { margin-top: .8rem; }
+  details[open] > summary { margin-bottom: .2rem; }
+
   .adres { color: var(--gedempt); margin: 0 0 .1rem; }
 
   .rollen { display: flex; flex-wrap: wrap; gap: .4rem; margin: 0 0 .5rem; padding: 0; list-style: none; }

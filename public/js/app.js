@@ -75,9 +75,9 @@ function toonApp(gegevens) {
     if (tab === 'configuratie') {
       laadInstellingen();
       vulTestrolkeuze();
-      laadZalen();
     }
-    if (tab === 'dagelijksbeheer') {
+    if (tab === 'zaalbeheer') {
+      laadZalen();
       laadPeriodes();
     }
   });

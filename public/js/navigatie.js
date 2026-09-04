@@ -13,10 +13,15 @@ export const TABBLADEN = [
   { id: 'mij', naam: 'Overzicht', recht: null },
   { id: 'ploegen', naam: 'Ploegen', recht: 'team.bekijken' },
   { id: 'personen', naam: 'Personen', recht: 'personen.beheren' },
-  // Zoals bij YOAssist: twee menu-items in plaats van één, zodat wat je vaak
-  // doet (vakanties verversen, de bond bekijken) niet tussen wat je zelden
-  // wijzigt (instellingen, zalen) staat te zoeken.
+  // Drie menu-items in plaats van twee: zalen, periodes en de sjablonen
+  // stonden verspreid over Configuratie en Dagelijks beheer terwijl ze
+  // inhoudelijk hetzelfde geheel vormen — vakanties, examens en feestdagen
+  // sturen rechtstreeks wat een zaal-gebonden trainingsreeks genereert. Nu
+  // samen onder Zaalbeheer; Dagelijks beheer blijft over voor wat je vaak
+  // even wil checken (de bond bekijken), Configuratie voor wat zelden wijzigt
+  // (huisstijl, instellingen, de testrol).
   { id: 'dagelijksbeheer', naam: 'Dagelijks beheer', recht: 'systeem.beheren' },
+  { id: 'zaalbeheer', naam: 'Zaalbeheer', recht: 'systeem.beheren' },
   { id: 'configuratie', naam: 'Configuratie', recht: 'systeem.beheren' },
 ];
 

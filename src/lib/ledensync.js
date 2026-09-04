@@ -143,10 +143,13 @@ export function maakLedenplan({ spelers = [], staf = [], personen = [], inPloeg 
   for (const s of staf) verwerk(s, 'staf');
 
   // Wie in de ploeg staat maar niet meer in de lijst van de bond. Enkel spelers:
-  // een coach die uit tvlijst verdwijnt, wordt apart behandeld.
+  // een coach die uit tvlijst verdwijnt, wordt apart behandeld. En enkel bron
+  // 'vbl': een handmatig gekoppelde speler (bron 'club') wordt nooit
+  // weggesynchroniseerd, net zoals een handmatig toegevoegde coach dat niet
+  // wordt — zie rollenWeg hieronder.
   const guidsVanSpelers = new Set(spelers.map((s) => s.relGuid).filter(Boolean));
   const uitPloeg = inPloeg.filter(
-    (r) => r.bij_bond !== 0 && !guidsVanSpelers.has(r.rel_guid) && !gezienePersonen.has(r.persoon_id)
+    (r) => r.bron === 'vbl' && r.bij_bond !== 0 && !guidsVanSpelers.has(r.rel_guid) && !gezienePersonen.has(r.persoon_id)
   );
 
   const teVeelWeg =

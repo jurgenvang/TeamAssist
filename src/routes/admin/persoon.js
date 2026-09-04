@@ -21,7 +21,7 @@ export async function persoonTonen(ctx) {
 
   const ploegen = await db
     .prepare(
-      `SELECT t.guid, t.naam, t.categorie, ts.bij_bond
+      `SELECT t.guid, t.naam, t.categorie, ts.bij_bond, ts.bron
          FROM team_spelers ts
          JOIN teams t ON t.guid = ts.team_guid AND t.seizoen = ts.seizoen
         WHERE ts.persoon_id = ? AND ts.seizoen = ?
@@ -119,4 +119,83 @@ export async function persoonActief(ctx) {
   });
 
   return json({ id, actief: Boolean(actief) });
+}
+
+/**
+ * Koppelt een bestaande persoon handmatig aan een team als speler, met
+ * bron 'club'. Bedoeld voor wie de bond nog niet kent (een recreatieve
+ * groep, iemand die net is toegetreden) én voor de testrol: er bestond tot
+ * nu toe geen manier om zelf als speler in een ploeg te staan zonder erop te
+ * wachten dat de bond het doorgeeft (backlog, punt Y).
+ *
+ * ledensync.js beschermt een bron-'club'-koppeling expliciet tegen de
+ * eerstvolgende VBL-synchronisatie — die zet ze nooit stil op bij_bond = 0.
+ */
+export async function teamKoppelen(ctx) {
+  const { db, persoon: beheerder, request, seizoen } = ctx;
+  const body = await leesJson(request);
+  const { persoon_id, team_guid } = body ?? {};
+  if (!persoon_id || !team_guid) return fout(400, 'persoon_id en team_guid zijn verplicht');
+
+  const persoon = await db.prepare(`SELECT id FROM personen WHERE id = ?`).bind(persoon_id).first();
+  if (!persoon) return fout(404, 'die persoon bestaat niet');
+
+  const team = await db
+    .prepare(`SELECT guid, naam FROM teams WHERE guid = ? AND seizoen = ?`)
+    .bind(team_guid, seizoen.code)
+    .first();
+  if (!team) return fout(404, 'dat team bestaat niet in dit seizoen');
+
+  await db
+    .prepare(
+      `INSERT INTO team_spelers (persoon_id, team_guid, seizoen, bron, bij_bond)
+            VALUES (?, ?, ?, 'club', 0)
+       ON CONFLICT (persoon_id, team_guid, seizoen) DO NOTHING`
+    )
+    .bind(persoon_id, team_guid, seizoen.code)
+    .run();
+
+  await logSchrijf(db, {
+    soort: 'beheer',
+    wie: beheerder.id,
+    wat: 'persoon handmatig aan team gekoppeld',
+    details: `${persoon_id} → ${team.naam}`,
+  });
+
+  return json({ persoon_id, team_guid, seizoen: seizoen.code });
+}
+
+/**
+ * Ontkoppelt een handmatige teamkoppeling. Enkel bron 'club' — een
+ * VBL-gesynchroniseerde koppeling verwijder je hier niet, die loopt via de
+ * synchronisatie zelf (bij_bond = 0 wanneer de bond iemand niet meer geeft).
+ */
+export async function teamOntkoppelen(ctx) {
+  const { db, persoon: beheerder, request, seizoen } = ctx;
+  const body = await leesJson(request);
+  const { persoon_id, team_guid } = body ?? {};
+  if (!persoon_id || !team_guid) return fout(400, 'persoon_id en team_guid zijn verplicht');
+
+  const rij = await db
+    .prepare(`SELECT bron FROM team_spelers WHERE persoon_id = ? AND team_guid = ? AND seizoen = ?`)
+    .bind(persoon_id, team_guid, seizoen.code)
+    .first();
+  if (!rij) return fout(404, 'die koppeling bestaat niet');
+  if (rij.bron !== 'club') {
+    return fout(400, 'een koppeling van de bond ontkoppel je hier niet — dat loopt via de synchronisatie');
+  }
+
+  await db
+    .prepare(`DELETE FROM team_spelers WHERE persoon_id = ? AND team_guid = ? AND seizoen = ?`)
+    .bind(persoon_id, team_guid, seizoen.code)
+    .run();
+
+  await logSchrijf(db, {
+    soort: 'beheer',
+    wie: beheerder.id,
+    wat: 'handmatige teamkoppeling verwijderd',
+    details: `${persoon_id} van team ${team_guid}`,
+  });
+
+  return json({ persoon_id, team_guid });
 }

@@ -49,7 +49,7 @@ async function contextVoorPloeg(db, guid, seizoen) {
 
   const inPloeg = await db
     .prepare(
-      `SELECT ts.persoon_id, ts.bij_bond, p.rel_guid
+      `SELECT ts.persoon_id, ts.bij_bond, ts.bron, p.rel_guid
          FROM team_spelers ts
          JOIN personen p ON p.id = ts.persoon_id
         WHERE ts.team_guid = ? AND ts.seizoen = ?`
