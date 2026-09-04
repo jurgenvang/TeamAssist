@@ -16,6 +16,7 @@ DROP TABLE IF EXISTS periodes;
 DROP TABLE IF EXISTS zaal_sluitingen;
 DROP TABLE IF EXISTS zaal_blokken;
 DROP TABLE IF EXISTS zalen;
+DROP TABLE IF EXISTS berichten;
 DROP TABLE IF EXISTS instellingen;
 DROP TABLE IF EXISTS logboek;
 DROP TABLE IF EXISTS ouder_kind;
@@ -241,6 +242,29 @@ CREATE TABLE logboek (
 CREATE INDEX idx_logboek_tijdstip ON logboek (tijdstip);
 
 -- ---------------------------------------------------------------------------
+-- Berichten
+-- ---------------------------------------------------------------------------
+-- Wat een persoon zelf ontving — enkel bij succes. Een mislukte poging hoort
+-- in het logboek, niet hier: deze tabel is de bron voor 'Mijn berichten', en
+-- iemand daar iets tonen dat nooit aankwam zou verwarrend zijn.
+--
+-- Bewaard als samenvatting (onderwerp + inhoud), geen kopie of verwijzing
+-- naar de wedstrijd/training zelf: die kan intussen verplaatst of gewijzigd
+-- zijn, en dit bericht moet correct blijven staan voor wat er destijds echt
+-- verstuurd is.
+CREATE TABLE berichten (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  persoon_id TEXT NOT NULL,
+  kanaal     TEXT NOT NULL CHECK (kanaal IN ('mail', 'push')),
+  onderwerp  TEXT NOT NULL,
+  inhoud     TEXT,
+  verzonden  TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (persoon_id) REFERENCES personen (id)
+);
+
+CREATE INDEX idx_berichten_persoon ON berichten (persoon_id, verzonden);
+
+-- ---------------------------------------------------------------------------
 -- Instellingen
 -- ---------------------------------------------------------------------------
 -- Clubbrede instellingen als sleutel/waarde. 'bericht_modus' bepaalt wat er met
@@ -255,6 +279,7 @@ CREATE TABLE instellingen (
 INSERT INTO instellingen (sleutel, waarde) VALUES
   ('bericht_modus', 'omleiden'),
   ('bericht_omleidadres', ''),
+  ('mail_afzender', 'TeamAssist <noreply@teamassist.org>'),
   ('clubnaam', 'AB InBev Leuven Bears'),
   ('club_guid', 'BVBL1125'),
   -- Laat een beheerder kiezen met welke rol hij wil werken, om te zien wat een

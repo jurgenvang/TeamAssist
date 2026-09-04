@@ -143,12 +143,32 @@ test('de topbalk toont clubnaam en logo, geen hardcoded clubnaam meer in JS', ()
   assert.ok(html.includes('id="topbalkrollen"'), 'rol(len) hoort onder de naam te staan, zoals bij YOAssist');
 });
 
-test('het beheermenu is gesplitst zoals bij YOAssist', () => {
+test('het beheermenu is gesplitst in drie tabbladen, waaronder zaalbeheer', () => {
   const nav = lees('../public/js/navigatie.js');
   assert.ok(nav.includes("id: 'dagelijksbeheer'"));
+  assert.ok(nav.includes("id: 'zaalbeheer'"));
   assert.ok(nav.includes("id: 'configuratie'"));
   assert.ok(html.includes('id="tab-dagelijksbeheer"'));
+  assert.ok(html.includes('id="tab-zaalbeheer"'));
   assert.ok(html.includes('id="tab-configuratie"'));
+});
+
+test('zalen, periodes en de sjablonen staan samen onder zaalbeheer, niet meer verspreid', () => {
+  const start = html.indexOf('id="tab-zaalbeheer"');
+  const eind = html.indexOf('id="tab-dagelijksbeheer"');
+  assert.ok(start !== -1 && eind !== -1 && start < eind, 'zaalbeheer moet vóór dagelijksbeheer in de HTML staan');
+  const zaalbeheerBlok = html.slice(start, eind);
+  for (const id of ['zalenlijf', 'sluitingzaal', 'zaalsjabloondownload', 'reeksensjabloondownload', 'periodeslijf', 'periodesoort']) {
+    assert.ok(zaalbeheerBlok.includes(`id="${id}"`), `${id} hoort binnen tab-zaalbeheer te staan`);
+  }
+});
+
+test('dagelijks beheer bevat enkel nog de VBL-diagnose, geen periodes meer', () => {
+  const start = html.indexOf('id="tab-dagelijksbeheer"');
+  const eind = html.indexOf('<script', start);
+  const blok = html.slice(start, eind === -1 ? undefined : eind);
+  assert.ok(blok.includes('id="diagnoseteam"'));
+  assert.ok(!blok.includes('id="periodeslijf"'), 'periodes zijn verhuisd naar zaalbeheer');
 });
 
 test('de huisstijl-fetch loopt via api.js, net als de aanmeldlink', () => {
@@ -333,4 +353,54 @@ test('open_op_feestdagen per zaal is een schakelaar die meteen bewaart', () => {
 test('een fout bij het zetten van open_op_feestdagen draait de schakelaar terug', () => {
   const bron = lees('../public/js/schermen/trainingen.js');
   assert.ok(bron.match(/data-open-feestdagen[\s\S]{0,400}invoer\.checked = !invoer\.checked/));
+});
+
+test('de dichtstbevolkte secties zijn samenvouwbaar met <details>, geen kale <h2>/<h3> meer in die twee tabbladen', () => {
+  const configStart = html.indexOf('id="tab-configuratie"');
+  const configEind = html.indexOf('id="tab-zaalbeheer"');
+  const configBlok = html.slice(configStart, configEind);
+  assert.ok(!configBlok.includes('<h2>'), 'Configuratie hoort geen kale h2 meer te hebben, enkel <summary>');
+  assert.match(configBlok, /<summary>Instellingen<\/summary>/);
+
+  const zaalStart = html.indexOf('id="tab-zaalbeheer"');
+  const zaalEind = html.indexOf('id="tab-dagelijksbeheer"');
+  const zaalBlok = html.slice(zaalStart, zaalEind);
+  assert.ok(!zaalBlok.includes('<h2>') && !zaalBlok.includes('<h3>'), 'Zaalbeheer hoort geen kale koppen meer te hebben');
+  assert.match(zaalBlok, /<summary>Zalen<\/summary>/);
+  assert.match(zaalBlok, /<summary>Schoolvakanties en examens<\/summary>/);
+});
+
+test('de kleine, veelgebruikte secties staan standaard open, de rest dicht', () => {
+  const html2 = html;
+  // Instellingen en Zalen/Schoolvakanties zijn de kern van hun tabblad en
+  // staan open; iets als het sjabloon of de testrol staat standaard dicht.
+  assert.match(html2, /<details open>\s*<summary>Instellingen<\/summary>/);
+  assert.match(html2, /<details open>\s*<summary>Zalen<\/summary>/);
+  assert.match(html2, /<details>\s*<summary>Zaaluren-sjabloon<\/summary>/);
+  assert.match(html2, /<details>\s*<summary>Kijken met een andere rol<\/summary>/);
+});
+
+test('het persoonsscherm toont de ploegen van iemand, met een koppel- en ontkoppelmogelijkheid', () => {
+  assert.ok(html.includes('id="persoonploegenlijf"'));
+  assert.ok(html.includes('id="persoonteamkeuze"'));
+  assert.ok(html.includes('id="persoonteamkoppelen"'));
+  const bron = lees('../public/js/schermen/persoon.js');
+  assert.ok(bron.includes('data-team-ontkoppelen'));
+  assert.ok(bron.includes("api('/api/admin/persoon/team-koppelen'"));
+  assert.ok(bron.includes("api('/api/admin/persoon/team-ontkoppelen'"));
+});
+
+test('ontkoppelen is enkel zichtbaar bij een handmatige koppeling, niet bij een VBL-koppeling', () => {
+  const bron = lees('../public/js/schermen/persoon.js');
+  assert.ok(bron.match(/pl\.bron === 'club'[\s\S]{0,150}data-team-ontkoppelen/), 'de ontkoppelknop hoort enkel bij bron club te tonen');
+});
+
+test('ontkoppelen vraagt bevestiging vóór het echt gebeurt', () => {
+  const bron = lees('../public/js/schermen/persoon.js');
+  assert.ok(bron.match(/data-team-ontkoppelen[\s\S]*?confirm\(/));
+});
+
+test('de teamkeuze bij een persoon gebruikt de verkorte naam wanneer die er is', () => {
+  const bron = lees('../public/js/schermen/persoon.js');
+  assert.ok(bron.includes('t.naam_kort ?? t.naam'));
 });

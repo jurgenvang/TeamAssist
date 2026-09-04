@@ -8,7 +8,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { maakDb } from './d1.mjs';
 import { ROUTES } from '../src/index.js';
-import { persoonTonen, persoonBewaren, persoonActief, controleer } from '../src/routes/admin/persoon.js';
+import { persoonTonen, persoonBewaren, persoonActief, controleer, teamKoppelen, teamOntkoppelen } from '../src/routes/admin/persoon.js';
 
 const seizoen = { code: '2026-27', naam: '2026-2027' };
 const beheerder = { id: 'p-admin' };
@@ -205,4 +205,104 @@ test('een beheerder kan zichzelf niet op te verwijderen zetten', async () => {
   const uit = await zetActief(db, 'p-admin', false);
   assert.equal(uit.status, 400);
   assert.equal(lees(db, 'p-admin').actief, 1);
+});
+
+// --- Handmatig een persoon aan een team koppelen (punt Y) -------------------
+
+function verzoek(body) {
+  return new Request('https://x', { method: 'POST', body: JSON.stringify(body) });
+}
+
+test('de routes vragen personen.beheren', () => {
+  const koppel = ROUTES.find((r) => r.pad === '/api/admin/persoon/team-koppelen');
+  const ontkoppel = ROUTES.find((r) => r.pad === '/api/admin/persoon/team-ontkoppelen');
+  assert.equal(koppel.recht, 'personen.beheren');
+  assert.equal(ontkoppel.recht, 'personen.beheren');
+});
+
+test('een beheerder koppelen aan een team lukt, met bron club', async () => {
+  const db = zetKlaar();
+  const res = await teamKoppelen({
+    db, persoon: beheerder, seizoen,
+    request: verzoek({ persoon_id: 'p-admin', team_guid: 'BVBL1125J16  2' }),
+  });
+  assert.equal(res.status, 200);
+  const rij = db._sqlite.prepare(`SELECT * FROM team_spelers WHERE persoon_id = 'p-admin'`).get();
+  assert.equal(rij.bron, 'club');
+  assert.equal(rij.bij_bond, 0, 'de bond weet hier niets van');
+});
+
+test('koppelen met een onbestaand team geeft 404', async () => {
+  const db = zetKlaar();
+  const res = await teamKoppelen({
+    db, persoon: beheerder, seizoen,
+    request: verzoek({ persoon_id: 'p-admin', team_guid: 'BVBL9999ZZZ  1' }),
+  });
+  assert.equal(res.status, 404);
+});
+
+test('koppelen met een onbestaande persoon geeft 404', async () => {
+  const db = zetKlaar();
+  const res = await teamKoppelen({
+    db, persoon: beheerder, seizoen,
+    request: verzoek({ persoon_id: 'niet-bestaand', team_guid: 'BVBL1125J16  2' }),
+  });
+  assert.equal(res.status, 404);
+});
+
+test('een tweede keer koppelen maakt geen dubbele rij en geen fout', async () => {
+  const db = zetKlaar();
+  await teamKoppelen({ db, persoon: beheerder, seizoen, request: verzoek({ persoon_id: 'p-admin', team_guid: 'BVBL1125J16  2' }) });
+  const res = await teamKoppelen({ db, persoon: beheerder, seizoen, request: verzoek({ persoon_id: 'p-admin', team_guid: 'BVBL1125J16  2' }) });
+  assert.equal(res.status, 200);
+  const aantal = db._sqlite.prepare(`SELECT count(*) AS n FROM team_spelers WHERE persoon_id = 'p-admin'`).get().n;
+  assert.equal(aantal, 1);
+});
+
+test('ontkoppelen van een handmatige koppeling lukt', async () => {
+  const db = zetKlaar();
+  await teamKoppelen({ db, persoon: beheerder, seizoen, request: verzoek({ persoon_id: 'p-admin', team_guid: 'BVBL1125J16  2' }) });
+  const res = await teamOntkoppelen({
+    db, persoon: beheerder, seizoen,
+    request: verzoek({ persoon_id: 'p-admin', team_guid: 'BVBL1125J16  2' }),
+  });
+  assert.equal(res.status, 200);
+  const rij = db._sqlite.prepare(`SELECT * FROM team_spelers WHERE persoon_id = 'p-admin'`).get();
+  assert.equal(rij, undefined);
+});
+
+test('een VBL-koppeling (bron vbl) wordt geweigerd bij ontkoppelen', async () => {
+  const db = zetKlaar();
+  const res = await teamOntkoppelen({
+    db, persoon: beheerder, seizoen,
+    request: verzoek({ persoon_id: 'p1', team_guid: 'BVBL1125J16  2' }),
+  });
+  assert.equal(res.status, 400);
+  const rij = db._sqlite.prepare(`SELECT * FROM team_spelers WHERE persoon_id = 'p1'`).get();
+  assert.ok(rij, 'de vbl-koppeling blijft gewoon bestaan');
+});
+
+test('ontkoppelen van een onbestaande koppeling geeft 404', async () => {
+  const db = zetKlaar();
+  const res = await teamOntkoppelen({
+    db, persoon: beheerder, seizoen,
+    request: verzoek({ persoon_id: 'p-admin', team_guid: 'BVBL1125J16  2' }),
+  });
+  assert.equal(res.status, 404);
+});
+
+test('koppelen en ontkoppelen komen allebei in het logboek', async () => {
+  const db = zetKlaar();
+  await teamKoppelen({ db, persoon: beheerder, seizoen, request: verzoek({ persoon_id: 'p-admin', team_guid: 'BVBL1125J16  2' }) });
+  await teamOntkoppelen({ db, persoon: beheerder, seizoen, request: verzoek({ persoon_id: 'p-admin', team_guid: 'BVBL1125J16  2' }) });
+  const regels = db._sqlite.prepare(`SELECT wat FROM logboek ORDER BY id`).all().map((r) => r.wat);
+  assert.ok(regels.includes('persoon handmatig aan team gekoppeld'));
+  assert.ok(regels.includes('handmatige teamkoppeling verwijderd'));
+});
+
+test('persoonTonen geeft nu ook de bron van elke teamkoppeling mee', async () => {
+  const db = zetKlaar();
+  const res = await persoonTonen({ db, seizoen, request: new Request('https://x/api/admin/persoon?id=p1') });
+  const body = await res.json();
+  assert.equal(body.ploegen[0].bron, 'vbl');
 });

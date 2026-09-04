@@ -8,6 +8,7 @@ DROP TABLE IF EXISTS periodes;
 DROP TABLE IF EXISTS zaal_sluitingen;
 DROP TABLE IF EXISTS zaal_blokken;
 DROP TABLE IF EXISTS zalen;
+DROP TABLE IF EXISTS berichten;
 DROP TABLE IF EXISTS instellingen;
 DROP TABLE IF EXISTS logboek;
 DROP TABLE IF EXISTS ouder_kind;
@@ -159,6 +160,18 @@ CREATE TABLE logboek (
 
 CREATE INDEX idx_logboek_tijdstip ON logboek (tijdstip);
 
+CREATE TABLE berichten (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  persoon_id TEXT NOT NULL,
+  kanaal     TEXT NOT NULL CHECK (kanaal IN ('mail', 'push')),
+  onderwerp  TEXT NOT NULL,
+  inhoud     TEXT,
+  verzonden  TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (persoon_id) REFERENCES personen (id)
+);
+
+CREATE INDEX idx_berichten_persoon ON berichten (persoon_id, verzonden);
+
 CREATE TABLE instellingen (
   sleutel   TEXT PRIMARY KEY,
   waarde    TEXT,
@@ -168,6 +181,7 @@ CREATE TABLE instellingen (
 INSERT INTO instellingen (sleutel, waarde) VALUES
   ('bericht_modus', 'omleiden'),
   ('bericht_omleidadres', ''),
+  ('mail_afzender', 'TeamAssist <noreply@teamassist.org>'),
   ('clubnaam', 'AB InBev Leuven Bears'),
   ('club_guid', 'BVBL1125'),
 

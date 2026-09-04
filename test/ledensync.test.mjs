@@ -135,8 +135,8 @@ test('een lege spelerslijst haalt niemand uit de ploeg', () => {
   const plan = maakLedenplan({
     spelers: [],
     inPloeg: [
-      { persoon_id: 'p1', rel_guid: 'REL-1', bij_bond: 1 },
-      { persoon_id: 'p2', rel_guid: 'REL-2', bij_bond: 1 },
+      { persoon_id: 'p1', rel_guid: 'REL-1', bij_bond: 1, bron: 'vbl' },
+      { persoon_id: 'p2', rel_guid: 'REL-2', bij_bond: 1, bron: 'vbl' },
     ],
   });
   assert.equal(plan.uit_ploeg.length, 0);
@@ -150,6 +150,7 @@ test('meer dan een derde weg wordt genegeerd', () => {
     persoon_id: `p${i}`,
     rel_guid: `REL-${i}`,
     bij_bond: 1,
+    bron: 'vbl',
   }));
   const spelers = inPloeg.slice(0, 5).map((r, i) => speler({ relGuid: r.rel_guid, naam: `Speler ${i}` }));
   const plan = maakLedenplan({ spelers, inPloeg });
@@ -162,6 +163,7 @@ test('één speler minder wordt wel doorgevoerd', () => {
     persoon_id: `p${i}`,
     rel_guid: `REL-${i}`,
     bij_bond: 1,
+    bron: 'vbl',
   }));
   const spelers = inPloeg.slice(0, 8).map((r, i) => speler({ relGuid: r.rel_guid, naam: `Speler ${i}` }));
   const plan = maakLedenplan({ spelers, inPloeg });
@@ -206,4 +208,26 @@ test('twijfelgevallen zetten de ronde op deels', () => {
   assert.equal(plan.status, 'deels');
   assert.equal(plan.twijfel.length, 1);
   assert.equal(plan.nieuw.length, 0, 'bij twijfel wordt er niemand aangemaakt');
+});
+
+test('een handmatig gekoppelde speler (bron club) wordt nooit weggesynchroniseerd', () => {
+  // Precies dezelfde bescherming als een handmatig toegevoegde coach al had
+  // (zie rollenWeg hierboven) — ontbrak tot nu toe bij spelers. Een speler
+  // met bron 'club' die niet in het antwoord van de bond staat, hoort niet
+  // in uit_ploeg te belanden.
+  const plan = maakLedenplan({
+    spelers: [],
+    inPloeg: [{ persoon_id: 'p-handmatig', rel_guid: null, bij_bond: 1, bron: 'club' }],
+  });
+  assert.equal(plan.uit_ploeg.length, 0);
+});
+
+test('een handmatig gekoppelde speler blokkeert de veiligheidsrem niet voor de anderen', () => {
+  const inPloegVbl = Array.from({ length: 5 }, (_, i) => ({
+    persoon_id: `p${i}`, rel_guid: `REL-${i}`, bij_bond: 1, bron: 'vbl',
+  }));
+  const inPloeg = [...inPloegVbl, { persoon_id: 'p-handmatig', rel_guid: null, bij_bond: 1, bron: 'club' }];
+  const plan = maakLedenplan({ spelers: [], inPloeg });
+  assert.equal(plan.uit_ploeg.length, 0, 'club-rij nooit weg, en 5 vbl-rijen op 6 is boven de derde-grens dus ook genegeerd');
+  assert.equal(plan.genegeerd_uit_ploeg.length, 5, 'enkel de vbl-rijen tellen mee voor de rem');
 });

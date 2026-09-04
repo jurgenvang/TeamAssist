@@ -155,3 +155,115 @@ test('zonder gevolgde ploeg volgt een duidelijke fout', async () => {
   const uit = await sync(db);
   assert.equal(uit.status, 400);
 });
+
+// --- Fase 5: de begeleiding wordt echt verwittigd bij een wijziging --------
+
+test('enkel COORD/COACH/PLOEGV worden verwittigd, geen andere rollen of andere teams', async () => {
+  const db = zetKlaar();
+  db._sqlite.exec(`
+    INSERT INTO teams (guid, seizoen, naam, categorie, gevolgd) VALUES ('BVBL1125J18  1', '2026-27', 'J18 A', 'J18', 1);
+    INSERT INTO personen (id, voornaam, achternaam, email) VALUES
+      ('p-coach', 'Co', 'Ach', 'coach@example.org'),
+      ('p-admin-rol', 'Ad', 'Min', 'admin@example.org'),
+      ('p-ander-team', 'An', 'Der', 'ander@example.org');
+    INSERT INTO rollen (persoon_id, rol, team_guid, seizoen) VALUES
+      ('p-coach', 'COACH', '${T1}', '2026-27'),
+      ('p-admin-rol', 'ADMIN', NULL, NULL),
+      ('p-ander-team', 'COACH', 'BVBL1125J18  1', '2026-27');
+    UPDATE instellingen SET waarde = 'normaal' WHERE sleutel = 'bericht_modus';
+  `);
+
+  const opgevangenMails = [];
+  const vblOfResend = async (url, opties) => {
+    if (String(url).includes('resend.com')) {
+      opgevangenMails.push(JSON.parse(opties.body));
+      return new Response(JSON.stringify({ id: 'x' }), { status: 200 });
+    }
+    return new Response(JSON.stringify(VBL_ANTWOORD), { status: 200 });
+  };
+
+  const oude = globalThis.fetch;
+  globalThis.fetch = vblOfResend;
+  try {
+    await wedstrijdenSync({ db, persoon, seizoen, env: { RESEND_API_KEY: 'x' }, request: verzoek(`/x?team=${encodeURIComponent(T1)}&uitvoeren=1`) });
+    globalThis.fetch = async (url, opties) => {
+      if (String(url).includes('resend.com')) {
+        opgevangenMails.push(JSON.parse(opties.body));
+        return new Response(JSON.stringify({ id: 'x' }), { status: 200 });
+      }
+      return new Response(JSON.stringify([{ ...VBL_ANTWOORD[0], beginTijd: '15.00' }]), { status: 200 });
+    };
+    await wedstrijdenSync({ db, persoon, seizoen, env: { RESEND_API_KEY: 'x' }, request: verzoek(`/x?team=${encodeURIComponent(T1)}&uitvoeren=1`) });
+  } finally {
+    globalThis.fetch = oude;
+  }
+
+  assert.equal(opgevangenMails.length, 1, 'enkel de coach van dít team, niet ADMIN en niet de coach van het andere team');
+  assert.equal(opgevangenMails[0].to, 'coach@example.org');
+});
+
+test('een wijziging verwittigt COORD/COACH/PLOEGV van de ploeg, en dat wordt afgehandeld', async () => {
+  const db = zetKlaar();
+  db._sqlite.exec(`
+    INSERT INTO personen (id, voornaam, achternaam, email) VALUES ('p-coach', 'Co', 'Ach', 'coach@example.org');
+    INSERT INTO rollen (persoon_id, rol, team_guid, seizoen) VALUES ('p-coach', 'COACH', '${T1}', '2026-27');
+    UPDATE instellingen SET waarde = 'normaal' WHERE sleutel = 'bericht_modus';
+  `);
+
+  const opgevangenMails = [];
+  const gemockteFetch = async (url, opties) => {
+    if (String(url).includes('vblcb.wisseq.eu') || String(url).includes('wisseq')) {
+      return new Response(JSON.stringify(VBL_ANTWOORD), { status: 200 });
+    }
+    if (String(url).includes('resend.com')) {
+      opgevangenMails.push(JSON.parse(opties.body));
+      return new Response(JSON.stringify({ id: 'msg-1' }), { status: 200 });
+    }
+    return new Response('onverwachte url', { status: 500 });
+  };
+
+  const oude = globalThis.fetch;
+  globalThis.fetch = gemockteFetch;
+  try {
+    await wedstrijdenSync({
+      db, persoon, seizoen, env: { RESEND_API_KEY: 'x' },
+      request: verzoek('/x?uitvoeren=1'),
+    });
+    const gewijzigd = () =>
+      new Response(JSON.stringify([{ ...VBL_ANTWOORD[0], beginTijd: '14.00' }]), { status: 200 });
+    globalThis.fetch = async (url, opties) => {
+      if (String(url).includes('resend.com')) {
+        opgevangenMails.push(JSON.parse(opties.body));
+        return new Response(JSON.stringify({ id: 'msg-2' }), { status: 200 });
+      }
+      return gewijzigd();
+    };
+    await wedstrijdenSync({
+      db, persoon, seizoen, env: { RESEND_API_KEY: 'x' },
+      request: verzoek('/x?uitvoeren=1'),
+    });
+  } finally {
+    globalThis.fetch = oude;
+  }
+
+  assert.equal(opgevangenMails.length, 1, 'precies één mail, naar de enige coach van de ploeg');
+  assert.equal(opgevangenMails[0].to, 'coach@example.org');
+  assert.match(opgevangenMails[0].subject, /Wedstrijdwijziging/);
+
+  const regel = db._sqlite.prepare(`SELECT * FROM logboek WHERE wat LIKE 'wedstrijd gewijzigd%'`).get();
+  assert.equal(regel.afgehandeld, 1, 'er was iemand om te verwittigen, dus behandeld');
+
+  const bericht = db._sqlite.prepare(`SELECT * FROM berichten WHERE persoon_id = 'p-coach'`).get();
+  assert.ok(bericht, 'modus normaal bewaart het bericht ook in de persoonlijke lijst');
+});
+
+test('zonder begeleiding op de ploeg blijft de melding onafgehandeld, zoals voorheen', async () => {
+  const db = zetKlaar();
+  await sync(db, '?uitvoeren=1');
+  const gewijzigd = () =>
+    new Response(JSON.stringify([{ ...VBL_ANTWOORD[0], beginTijd: '14.00' }]), { status: 200 });
+  await sync(db, '?uitvoeren=1', gewijzigd);
+
+  const regel = db._sqlite.prepare(`SELECT * FROM logboek WHERE wat LIKE 'wedstrijd gewijzigd%'`).get();
+  assert.equal(regel.afgehandeld, 0, 'niemand om te verwittigen — dat hoort zichtbaar te blijven');
+});
