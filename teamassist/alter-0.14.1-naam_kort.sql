@@ -1,1 +1,0 @@
-ALTER TABLE teams ADD COLUMN naam_kort TEXT;
