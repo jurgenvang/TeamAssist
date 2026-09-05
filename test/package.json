@@ -1,0 +1,8 @@
+{
+  "name": "teamassist-tests",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --no-warnings --test ./*.test.mjs"
+  }
+}
