@@ -53,6 +53,12 @@ CREATE TABLE personen (
   inactief_sinds     TEXT,
 
   laatste_aanmeldlink TEXT,
+
+  donkere_modus      TEXT NOT NULL DEFAULT 'systeem'
+                     CHECK (donkere_modus IN ('systeem', 'licht', 'donker')),
+
+  kanaal_voorkeur    TEXT NOT NULL DEFAULT 'mail'
+                     CHECK (kanaal_voorkeur IN ('mail', 'push', 'beide')),
   aangemaakt         TEXT NOT NULL DEFAULT (datetime('now')),
   gewijzigd          TEXT NOT NULL DEFAULT (datetime('now'))
 );

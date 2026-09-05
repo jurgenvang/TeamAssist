@@ -86,6 +86,18 @@ CREATE TABLE personen (
   -- Wanneer er voor het laatst een aanmeldlink gevraagd werd. Houdt tegen dat
   -- iemand herhaaldelijk mails naar een bekend adres laat sturen.
   laatste_aanmeldlink TEXT,
+  -- Mijn voorkeuren (T6). Een voorkeur van de persoon zelf, geen instelling
+  -- van de club — vandaar hier, niet in `instellingen`. 'systeem' volgt de
+  -- OS-voorkeur van het toestel; enkel bij een expliciete keuze wijkt iemand
+  -- daarvan af.
+  donkere_modus      TEXT NOT NULL DEFAULT 'systeem'
+                     CHECK (donkere_modus IN ('systeem', 'licht', 'donker')),
+  -- Kanaal_voorkeur ligt hier al klaar sinds fase 5 werd uitgeklaard, ook al
+  -- bestaat er nog geen push-kanaal: verwittigen.js gebruikt vandaag hoe dan
+  -- ook enkel mail. Vroeg opslaan voorkomt een latere migratie enkel voor dit
+  -- veld zodra push er wel is.
+  kanaal_voorkeur    TEXT NOT NULL DEFAULT 'mail'
+                     CHECK (kanaal_voorkeur IN ('mail', 'push', 'beide')),
   aangemaakt         TEXT NOT NULL DEFAULT (datetime('now')),
   gewijzigd          TEXT NOT NULL DEFAULT (datetime('now'))
 );
