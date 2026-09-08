@@ -138,12 +138,28 @@ test('een persoon zonder e-mailadres krijgt nooit een verzendpoging', async () =
   assert.match(regel.wat, /geen e-mailadres/);
 });
 
-test('een onbekend kanaal wordt geweigerd in plaats van stilzwijgend als mail behandeld', async () => {
+test('een persoon met kanaal_voorkeur push krijgt vandaag toch mail, met een aparte logregel', async () => {
   const db = zetKlaar('normaal');
-  await assert.rejects(
-    () => verwittig({ db, env: { RESEND_API_KEY: 'x' } }, bericht({ kanaal: 'push' })),
-    /push/
-  );
+  db._sqlite.exec(`UPDATE personen SET kanaal_voorkeur = 'push' WHERE id = 'p1'`);
+
+  let bestemming;
+  globalThis.fetch = async (url, opties) => {
+    bestemming = JSON.parse(opties.body).to;
+    return new Response('{}', { status: 200 });
+  };
+  try {
+    const uit = await verwittig({ db, env: { RESEND_API_KEY: 'x' } }, bericht());
+    assert.equal(uit.verstuurd, true, 'push bestaat nog niet, dus mail als terugval — niet niets versturen');
+    assert.equal(bestemming, 'anna@example.org');
+  } finally {
+    delete globalThis.fetch;
+  }
+
+  const rij = db._sqlite.prepare(`SELECT * FROM berichten WHERE persoon_id = 'p1'`).get();
+  assert.equal(rij.kanaal, 'mail', 'het kanaal dat echt gebruikt werd, niet de voorkeur die niet gehaald werd');
+
+  const logregel = db._sqlite.prepare(`SELECT * FROM logboek WHERE wat LIKE '%push%'`).get();
+  assert.ok(logregel, 'zichtbaar dat deze persoon eigenlijk iets anders koos');
 });
 
 test('geen bericht_modus-instelling valt terug op omleiden, niet op normaal', async () => {
@@ -165,3 +181,18 @@ test('geen bericht_modus-instelling valt terug op omleiden, niet op normaal', as
   }
   assert.equal(bestemming, 'test@voorbeeld.org', 'de veilige standaard, niet rechtstreeks naar een echt adres');
 });
+
+test('kanaal_voorkeur mail of beide geeft gewoon mail, zonder de extra push-logregel', async () => {
+  const db = zetKlaar('normaal');
+  db._sqlite.exec(`UPDATE personen SET kanaal_voorkeur = 'beide' WHERE id = 'p1'`);
+  globalThis.fetch = async () => new Response('{}', { status: 200 });
+  try {
+    await verwittig({ db, env: { RESEND_API_KEY: 'x' } }, bericht());
+  } finally {
+    delete globalThis.fetch;
+  }
+  const logregel = db._sqlite.prepare(`SELECT * FROM logboek WHERE wat LIKE '%push%'`).get();
+  assert.equal(logregel, undefined, "'beide' krijgt effectief mail, dus geen niet-gehaalde-voorkeur om te melden");
+});
+
+

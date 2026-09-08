@@ -6,6 +6,7 @@
 --
 -- De volgorde van de DROP's is omgekeerd aan die van de foreign keys.
 
+DROP TABLE IF EXISTS wedstrijdtaken;
 DROP TABLE IF EXISTS taak_runs;
 DROP TABLE IF EXISTS wedstrijdselecties;
 DROP TABLE IF EXISTS aanwezigheden;
@@ -519,12 +520,24 @@ CREATE TABLE aanwezigheden (
   activiteit_id       INTEGER NOT NULL,
   team_guid           TEXT NOT NULL,
   seizoen             TEXT NOT NULL,
-  persoon_id          TEXT NOT NULL,
+  -- Nullable sinds T15 (opruiming): een persoon die 180 dagen inactief is,
+  -- wordt definitief verwijderd — team_spelers/rollen/wedstrijdselecties gaan
+  -- dan volledig mee weg, maar een aanwezigheidsrij blijft bestaan met enkel
+  -- persoon_id (en de drie _door-kolommen hieronder) losgekoppeld. Nuttig voor
+  -- clubstatistieken (aanwezigheidsgraad per team/seizoen) zonder de
+  -- identiteit te bewaren. Kon niet met een gewone ALTER TABLE: SQLite laat
+  -- een NOT NULL-beperking niet los zonder tabel-heropbouw.
+  persoon_id          TEXT,
   hoedanigheid        TEXT NOT NULL CHECK (hoedanigheid IN ('SPELER', 'OUVO')),
 
   opgave_status       TEXT CHECK (opgave_status IN ('aanwezig', 'afwezig')),
   opgave_reden        TEXT CHECK (opgave_reden IN ('ziek', 'gekwetst', 'ander')),
   opgave_toelichting  TEXT,
+  -- opgave_door, uitgesloten_door en vaststelling_door bevatten ook een
+  -- persoon_id (de speler zelf, een ouder namens, of een beheerder) zonder
+  -- eigen FK-afdwinging. Bij het verwijderen van een inactieve persoon worden
+  -- ook deze drie losgekoppeld waar ze naar hem verwijzen — anders zou zijn
+  -- identiteit hier alsnog blijven staan, ook op ándermans aanwezigheidsrij.
   opgave_door         TEXT,                          -- persoon_id: de speler zelf, of een ouder namens
   opgave_tijdstip     TEXT,
 
@@ -565,6 +578,46 @@ CREATE TABLE wedstrijdselecties (
   FOREIGN KEY (wedstrijd_id) REFERENCES wedstrijden (id),
   FOREIGN KEY (persoon_id) REFERENCES personen (id)
 );
+
+-- ---------------------------------------------------------------------------
+-- Wedstrijdtaken (T1)
+-- ---------------------------------------------------------------------------
+-- Tafeltaken bij een wedstrijd: klok, 24 seconden, tablet, ploegafgevaardigde.
+-- Welke taken een wedstrijd nodig heeft, hangt af van categorie en thuis/uit
+-- (zie src/lib/wedstrijdtaken.js) — de rijen ontstaan automatisch bij de
+-- synchronisatie, als open slots (persoon_id NULL) die een beheerder vult.
+-- Eerst de behoefte, dan de invulling, hetzelfde patroon als aanduidingen bij
+-- YOAssist.
+--
+-- Kandidaten: om het even welk actief clublid, geen beperking tot ouders van
+-- spelers in dat team (bevestigd bij het uitklaren van dit punt). Toewijzen
+-- mag wie de selectie mag beheren (team.selectie.beheren) — geen apart recht.
+--
+-- Eerlijke verdeling/rotatie over het seizoen is bewust buiten scope: enkel
+-- handmatige toewijzing, zoals bij YOAssist vóór de latere automatische
+-- aanvulling er kwam.
+CREATE TABLE wedstrijdtaken (
+  id                   INTEGER PRIMARY KEY AUTOINCREMENT,
+  wedstrijd_id         INTEGER NOT NULL,
+  taak                 TEXT NOT NULL CHECK (taak IN ('klok', '24seconden', 'tablet', 'ploegafgevaardigde')),
+  persoon_id           TEXT,
+  toegewezen_door      TEXT,
+  toegewezen_tijdstip  TEXT,
+  -- Een toegewezen persoon kan zijn taak niet zelf wijzigen, wel een probleem
+  -- melden — hetzelfde patroon als aanwezigheid uitsluiten/opgeven.
+  probleem_gemeld      INTEGER NOT NULL DEFAULT 0 CHECK (probleem_gemeld IN (0, 1)),
+  probleem_reden       TEXT,
+  probleem_tijdstip    TEXT,
+  aangemaakt           TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (wedstrijd_id) REFERENCES wedstrijden (id),
+  FOREIGN KEY (persoon_id) REFERENCES personen (id),
+  CHECK (probleem_gemeld = 0 OR probleem_reden IS NOT NULL)
+);
+
+-- Eén rij per taaksoort per wedstrijd — nooit twee keer 'klok' op dezelfde
+-- wedstrijd.
+CREATE UNIQUE INDEX idx_wedstrijdtaken_uniek ON wedstrijdtaken (wedstrijd_id, taak);
+CREATE INDEX idx_wedstrijdtaken_persoon ON wedstrijdtaken (persoon_id);
 
 -- ---------------------------------------------------------------------------
 -- Taken

@@ -4,6 +4,46 @@
 
 import { json, fout, leesJson } from '../../lib/http.js';
 import { logSchrijf } from '../../lib/logboek.js';
+import { verwittig } from '../../lib/verwittigen.js';
+
+const DAGNAMEN = ['', 'maandag', 'dinsdag', 'woensdag', 'donderdag', 'vrijdag', 'zaterdag', 'zondag'];
+
+function wedstrijdBeschrijving(w) {
+  const dag = new Date(`${w.datum}T00:00:00Z`).getUTCDay();
+  return `${DAGNAMEN[dag === 0 ? 7 : dag]} ${w.datum} om ${w.begin}${w.tegenstander ? ` tegen ${w.tegenstander}` : ''}`;
+}
+
+/**
+ * Verwittigt de hele ploeg dat een selectie gepubliceerd is — elk lid apart,
+ * met een boodschap die verschilt naargelang hij wel of niet op de selectie
+ * staat. Enkel spelers (team_spelers), geen begeleiding: die stelde de
+ * selectie net zelf op en weet al wat erin staat.
+ */
+async function meldSelectiePublicatie(ctx, wed) {
+  const { db } = ctx;
+  const roster = await db
+    .prepare(`SELECT persoon_id FROM team_spelers WHERE team_guid = ? AND seizoen = ?`)
+    .bind(wed.team_guid, wed.seizoen)
+    .all();
+  const geselecteerd = await db
+    .prepare(`SELECT persoon_id FROM wedstrijdselecties WHERE wedstrijd_id = ?`)
+    .bind(wed.id)
+    .all();
+  const geselecteerdeIds = new Set((geselecteerd.results ?? []).map((r) => r.persoon_id));
+
+  const beschrijving = wedstrijdBeschrijving(wed);
+  const onderwerp = `Selectie bekend — ${beschrijving}`;
+
+  let aantal = 0;
+  for (const speler of roster.results ?? []) {
+    const inhoud = geselecteerdeIds.has(speler.persoon_id)
+      ? `Je staat op de selectie voor de wedstrijd van ${beschrijving}.`
+      : `De selectie voor de wedstrijd van ${beschrijving} is bekend. Je staat er deze keer niet bij.`;
+    await verwittig(ctx, { persoon_id: speler.persoon_id, onderwerp, inhoud });
+    aantal += 1;
+  }
+  return aantal;
+}
 
 async function haalActiviteit(db, soort, id) {
   const tabel = soort === 'training' ? 'trainingen' : 'wedstrijden';
@@ -247,7 +287,10 @@ export async function selectiePubliceren(ctx) {
   const wedstrijdId = body?.wedstrijd_id;
   if (!wedstrijdId) return fout(400, 'wedstrijd_id ontbreekt');
 
-  const wed = await db.prepare(`SELECT team_guid FROM wedstrijden WHERE id = ?`).bind(wedstrijdId).first();
+  const wed = await db
+    .prepare(`SELECT id, team_guid, seizoen, datum, begin, tegenstander FROM wedstrijden WHERE id = ?`)
+    .bind(wedstrijdId)
+    .first();
   if (!wed) return fout(404, 'die wedstrijd bestaat niet');
   if (!rechten.mag('team.selectie.beheren', wed.team_guid)) return fout(403, 'geen recht op deze ploeg');
 
@@ -256,14 +299,14 @@ export async function selectiePubliceren(ctx) {
     .bind(wedstrijdId)
     .run();
 
+  const aantal = await meldSelectiePublicatie(ctx, wed);
+
   await logSchrijf(db, {
     soort: 'beheer',
     wie: beheerder.id,
     wat: 'selectie gepubliceerd',
-    details: `wedstrijd ${wedstrijdId}`,
+    details: `wedstrijd ${wedstrijdId}: ${aantal} spelers verwittigd`,
   });
 
-  // Er is nog geen verstuurkanaal (fase 5); de publicatie zelf gebeurt al wel,
-  // en de melding aan de ploeg volgt zodra dat kanaal bestaat.
   return json({ wedstrijd_id: wedstrijdId, gepubliceerd: true });
 }

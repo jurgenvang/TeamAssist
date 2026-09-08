@@ -207,3 +207,94 @@ test('aanwezigheidTonen toont de klad-selectie enkel via het selectie-veld, en d
   assert.equal(body.selectie.gepubliceerd, false);
   assert.deepEqual(body.selectie.geselecteerd, ['p1']);
 });
+
+// --- Fase 5: de ploeg wordt echt verwittigd bij een publicatie -------------
+
+test('publiceren verwittigt elke speler, met een andere boodschap voor wie wel of niet geselecteerd is', async () => {
+  const db = zetKlaar();
+  db._sqlite.exec(`
+    UPDATE personen SET email = 'dries@example.org' WHERE id = 'p1';
+    UPDATE personen SET email = 'otto@example.org' WHERE id = 'p2';
+    UPDATE instellingen SET waarde = 'normaal' WHERE sleutel = 'bericht_modus';
+  `);
+  const wed = db._sqlite.prepare(`SELECT id FROM wedstrijden`).get();
+  await selectieZetten({
+    db, persoon: { id: 'p-coach' }, rechten: coachRechten,
+    request: verzoek('/x', { wedstrijd_id: wed.id, persoon_ids: ['p1'] }), // enkel p1 geselecteerd
+  });
+
+  const opgevangenMails = [];
+  const oude = globalThis.fetch;
+  globalThis.fetch = async (url, opties) => {
+    if (String(url).includes('resend.com')) {
+      opgevangenMails.push(JSON.parse(opties.body));
+      return new Response(JSON.stringify({ id: 'x' }), { status: 200 });
+    }
+    return new Response('onverwacht', { status: 500 });
+  };
+  try {
+    await selectiePubliceren({
+      db, persoon: { id: 'p-coach' }, rechten: coachRechten, env: { RESEND_API_KEY: 'x' },
+      request: verzoek('/x', { wedstrijd_id: wed.id }),
+    });
+  } finally {
+    globalThis.fetch = oude;
+  }
+
+  assert.equal(opgevangenMails.length, 2, 'beide spelers krijgen een mail, geselecteerd of niet');
+  const voorDries = opgevangenMails.find((m) => m.to === 'dries@example.org');
+  const voorOtto = opgevangenMails.find((m) => m.to === 'otto@example.org');
+  assert.match(voorDries.text, /Je staat op de selectie/);
+  assert.match(voorOtto.text, /niet bij/);
+
+  const bericht = db._sqlite.prepare(`SELECT * FROM berichten WHERE persoon_id = 'p1'`).get();
+  assert.ok(bericht, 'modus normaal bewaart het bericht ook in de persoonlijke lijst');
+});
+
+test('publiceren verwittigt enkel spelers van de eigen ploeg, geen begeleiding', async () => {
+  const db = zetKlaar();
+  db._sqlite.exec(`
+    UPDATE personen SET email = 'dries@example.org' WHERE id = 'p1';
+    UPDATE personen SET email = 'otto@example.org' WHERE id = 'p2';
+    UPDATE personen SET email = 'coach@example.org' WHERE id = 'p-coach';
+    INSERT INTO rollen (persoon_id, rol, team_guid, seizoen) VALUES ('p-coach', 'COACH', '${T1}', '2026-27');
+    UPDATE instellingen SET waarde = 'normaal' WHERE sleutel = 'bericht_modus';
+  `);
+  const wed = db._sqlite.prepare(`SELECT id FROM wedstrijden`).get();
+
+  const opgevangenMails = [];
+  const oude = globalThis.fetch;
+  globalThis.fetch = async (url, opties) => {
+    if (String(url).includes('resend.com')) opgevangenMails.push(JSON.parse(opties.body).to);
+    return new Response(JSON.stringify({ id: 'x' }), { status: 200 });
+  };
+  try {
+    await selectiePubliceren({
+      db, persoon: { id: 'p-coach' }, rechten: coachRechten, env: { RESEND_API_KEY: 'x' },
+      request: verzoek('/x', { wedstrijd_id: wed.id }),
+    });
+  } finally {
+    globalThis.fetch = oude;
+  }
+
+  assert.equal(opgevangenMails.length, 2, 'enkel de twee spelers, niet de coach zelf');
+  assert.ok(!opgevangenMails.includes('coach@example.org'));
+});
+
+test('publiceren zonder team_spelers verwittigt niemand, maar mislukt niet', async () => {
+  const db = maakDb();
+  db._sqlite.exec(`
+    INSERT INTO seizoenen (code, naam, actief) VALUES ('2026-27', '2026-2027', 1);
+    INSERT INTO teams (guid, seizoen, naam) VALUES ('${T1}', '2026-27', 'J16 B');
+    INSERT INTO wedstrijden (wedstrijd_guid, team_guid, seizoen, datum, begin, thuis)
+         VALUES ('W2', '${T1}', '2026-27', '2026-09-12', '10:30', 1);
+  `);
+  const wed = db._sqlite.prepare(`SELECT id FROM wedstrijden`).get();
+  const res = await selectiePubliceren({
+    db, persoon: { id: 'p-coach' }, rechten: coachRechten,
+    request: verzoek('/x', { wedstrijd_id: wed.id }),
+  });
+  assert.equal(res.status, 200);
+  const regel = db._sqlite.prepare(`SELECT * FROM logboek WHERE wat = 'selectie gepubliceerd'`).get();
+  assert.match(regel.details, /0 spelers verwittigd/);
+});

@@ -61,6 +61,9 @@ test('een route die geen recht vraagt, doet dat bewust', () => {
       '/api/admin/aanwezigheid/uitsluiten',
       '/api/admin/selectie',
       '/api/admin/selectie/publiceren',
+      '/api/admin/wedstrijdtaken',
+      '/api/admin/wedstrijdtaken/toewijzen',
+      '/api/admin/wedstrijdtaken/probleem',
       '/api/admin/trainingen',
     ].sort()
   );

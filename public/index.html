@@ -251,6 +251,19 @@
       </details>
 
       <details>
+        <summary>Backup</summary>
+        <p class="klein">
+          Eén JSON-bestand met alle tabellen, op het moment van downloaden. Er is
+          geen knop om een backup terug te zetten — dat gebeurt handmatig via de
+          D1-console.
+        </p>
+        <form>
+          <button type="button" class="stil" id="backupdownload">Backup downloaden</button>
+        </form>
+        <div id="backupmelding" class="melding" hidden></div>
+      </details>
+
+      <details>
         <summary>Kijken met een andere rol</summary>
         <p class="klein">
           Werkt enkel wanneer de instelling <code>testrol_toegelaten</code> aanstaat. Je rechten
@@ -443,6 +456,24 @@
         <select id="persoonteamkeuze"></select>
         <button type="button" class="stil" id="persoonteamkoppelen">Koppelen</button>
       </form>
+
+      <h3>Rollen</h3>
+      <table>
+        <thead><tr><th>Rol</th><th>Ploeg</th><th>Herkomst</th><th></th></tr></thead>
+        <tbody id="persoonrollenlijf"></tbody>
+      </table>
+      <form>
+        <select id="persoonrolkeuze">
+          <option value="ADMIN">ADMIN</option>
+          <option value="FINADM">FINADM</option>
+          <option value="COORD">COORD</option>
+          <option value="COACH">COACH</option>
+          <option value="PLOEGV">PLOEGV</option>
+        </select>
+        <select id="persoonrolteam" hidden></select>
+        <button type="button" class="stil" id="persoonrolkoppelen">Koppelen</button>
+      </form>
+
       <form>
         <button type="button" id="persoonbewaren">Bewaren</button>
         <button type="button" class="stil" id="persoonverwijderen">Op te verwijderen zetten</button>

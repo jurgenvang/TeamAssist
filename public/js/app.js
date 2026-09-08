@@ -7,7 +7,7 @@ import { laadPloegen, synchroniseerPloegen, synchroniseerLeden, downloadSjabloon
 import { bewaarSelectie, publiceerSelectie } from './schermen/aanwezigheid-beheer.js';
 import { zoekPersonen } from './schermen/personen.js';
 import { koppelPersoonscherm } from './schermen/persoon.js';
-import { laadInstellingen, haalBrandingvoorstel } from './schermen/instellingen.js';
+import { laadInstellingen, haalBrandingvoorstel, downloadBackup } from './schermen/instellingen.js';
 import { toonVoorkeuren, bewaarVoorkeuren, pasDonkereModusToe } from './schermen/voorkeuren.js';
 import { laadMijnOpgaven } from './schermen/mijn-opgaven.js';
 import { toonDiagnose } from './schermen/diagnose.js';
@@ -249,6 +249,8 @@ el('voorkeurenbewaren').addEventListener('click', bewaarVoorkeuren);
 el('voorkeurensluiten').addEventListener('click', () => {
   el('voorkeuren').hidden = true;
 });
+
+el('backupdownload').addEventListener('click', downloadBackup);
 
 el('ploegenladen').addEventListener('click', laadPloegen);
 el('ploegensync').addEventListener('click', synchroniseerPloegen);

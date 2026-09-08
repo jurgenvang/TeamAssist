@@ -267,3 +267,34 @@ test('zonder begeleiding op de ploeg blijft de melding onafgehandeld, zoals voor
   const regel = db._sqlite.prepare(`SELECT * FROM logboek WHERE wat LIKE 'wedstrijd gewijzigd%'`).get();
   assert.equal(regel.afgehandeld, 0, 'niemand om te verwittigen — dat hoort zichtbaar te blijven');
 });
+
+// --- T1: wedstrijdtaken ontstaan automatisch bij een nieuwe wedstrijd ------
+
+test('een nieuwe thuiswedstrijd (J16) krijgt klok + 24seconden + ploegafgevaardigde', async () => {
+  const db = zetKlaar();
+  await sync(db, '?uitvoeren=1');
+  const taken = db._sqlite.prepare(`SELECT taak FROM wedstrijdtaken ORDER BY taak`).all().map((r) => r.taak);
+  assert.deepEqual(taken, ['24seconden', 'klok', 'ploegafgevaardigde']);
+});
+
+test('elk taakslot start onbezet (persoon_id NULL)', async () => {
+  const db = zetKlaar();
+  await sync(db, '?uitvoeren=1');
+  const rijen = db._sqlite.prepare(`SELECT persoon_id FROM wedstrijdtaken`).all();
+  assert.ok(rijen.every((r) => r.persoon_id === null));
+});
+
+test('een uitwedstrijd krijgt tablet + ploegafgevaardigde, geen klok', async () => {
+  const db = zetKlaar();
+  const uitAntwoord = () =>
+    new Response(JSON.stringify([{ ...VBL_ANTWOORD[0], tTGUID: 'ANDER', uTGUID: T1 }]), { status: 200 });
+  await sync(db, '?uitvoeren=1', uitAntwoord);
+  const taken = db._sqlite.prepare(`SELECT taak FROM wedstrijdtaken ORDER BY taak`).all().map((r) => r.taak);
+  assert.deepEqual(taken, ['ploegafgevaardigde', 'tablet']);
+});
+
+test('een droogloop maakt geen wedstrijdtaken aan', async () => {
+  const db = zetKlaar();
+  await sync(db); // geen ?uitvoeren=1
+  assert.equal(db._sqlite.prepare(`SELECT count(*) AS n FROM wedstrijdtaken`).get().n, 0);
+});

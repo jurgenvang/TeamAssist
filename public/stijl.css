@@ -185,6 +185,23 @@
     }
   }
 
+  /* Blokken bij Zaalbeheer (T17): per weekdag gegroepeerd, elk blok een los
+     blokje in plaats van één regel doorlopende, komma-gescheiden tekst.
+     Bewust neutrale kleuren, geen accentkleur — dit is roosterinformatie,
+     geen rolbadge, en --vlak/--lijn zijn al zonder extra werk donker-veilig. */
+  .dagblokken { display: flex; align-items: baseline; gap: .5rem; margin: .3rem 0; flex-wrap: wrap; }
+  .dagblokken-label { font-size: .82rem; color: var(--gedempt); min-width: 5.5rem; }
+  .blokjes { display: flex; flex-wrap: wrap; gap: .35rem; margin: 0; padding: 0; list-style: none; }
+  .blokjes li {
+    background: var(--vlak);
+    border: 1px solid var(--lijn);
+    border-radius: var(--radius);
+    padding: .1rem .5rem;
+    font-size: .82rem;
+    white-space: nowrap;
+  }
+  .blokjes li button { margin-left: .3rem; }
+
   table { width: 100%; border-collapse: collapse; font-size: .92rem; }
   th, td { text-align: left; padding: .45rem .5rem; border-bottom: 1px solid var(--lijn); }
   th { font-weight: 600; color: var(--gedempt); font-size: .82rem; }

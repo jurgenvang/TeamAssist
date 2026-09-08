@@ -1,6 +1,6 @@
 // Instellingen, waaronder de schakelaar voor de testrol en de huisstijl.
 
-import { api } from '../api.js';
+import { api, apiRuw } from '../api.js';
 import { el, toon, veilig } from '../hulp.js';
 import { pasHuisstijlToe } from '../huisstijl.js';
 
@@ -159,4 +159,29 @@ function maakKleurknop(tekst, sleutel, waarde, klasse) {
     }
   });
   return knop;
+}
+
+export async function downloadBackup() {
+  const melding = el('backupmelding');
+  melding.hidden = false;
+  melding.textContent = 'Bezig …';
+
+  const uit = await apiRuw('/api/admin/backup', 'GET');
+  if (uit.status !== 200) {
+    melding.textContent = `Downloaden lukte niet (${uit.status}).`;
+    return;
+  }
+
+  const blob = new Blob([uit.tekst], { type: 'application/json;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const datum = new Date().toISOString().slice(0, 10);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `teamassist-backup-${datum}.json`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+
+  melding.textContent = 'Backup gedownload.';
 }

@@ -11,8 +11,10 @@ import { identiteitVoor } from './lib/identiteit.js';
 import { rechtenVoor } from './lib/rechten-db.js';
 import { beperkTot, magTestrolGebruiken } from './lib/rechten.js';
 import { seizoenUitVerzoek } from './lib/seizoen.js';
-import { brusselUur } from './lib/klok.js';
 import { voerPingUit } from './lib/ping.js';
+import { brusselUur, brusselWeekdag } from './lib/klok.js';
+import { takenVoorUur } from './lib/planner.js';
+import { voerGeplandeTakenUit } from './lib/geplandetaken.js';
 import { logSchrijf } from './lib/logboek.js';
 import { mij } from './routes/mij.js';
 import { voorkeurenBewaren } from './routes/voorkeuren.js';
@@ -22,8 +24,9 @@ import { vblDiagnose } from './routes/admin/vbl-diagnose.js';
 import { teamsLijst, teamsSync, teamGevolgd } from './routes/admin/teams.js';
 import { ledenSync } from './routes/admin/leden.js';
 import { teamLeden, personenZoeken } from './routes/admin/bekijken.js';
-import { persoonTonen, persoonBewaren, persoonActief, teamKoppelen, teamOntkoppelen } from './routes/admin/persoon.js';
+import { persoonTonen, persoonBewaren, persoonActief, teamKoppelen, teamOntkoppelen, rolKoppelen, rolOntkoppelen } from './routes/admin/persoon.js';
 import { instellingenTonen, instellingBewaren, instellingLezen } from './routes/admin/instellingen.js';
+import { backupExporteren } from './routes/admin/backup.js';
 import {
   zalenTonen, zaalAanmaken, blokAanmaken, blokVerwijderen, vrijeBlokken, sluitingAanmaken, zetOpenOpFeestdagen,
 } from './routes/admin/zalen.js';
@@ -38,6 +41,7 @@ import { reeksensjabloonExporteren, reeksensjabloonImporteren } from './routes/a
 import {
   aanwezigheidTonen, vaststellen, uitsluiten, selectieZetten, selectiePubliceren,
 } from './routes/admin/aanwezigheid-beheer.js';
+import { wedstrijdtakenTonen, wedstrijdtaakToewijzen, wedstrijdtaakProbleemMelden } from './routes/admin/wedstrijdtaken.js';
 import { brandingVoorstel, brandingTonen } from './routes/admin/branding.js';
 import { VERSIE } from './versie.js';
 
@@ -119,9 +123,12 @@ export const ROUTES = [
   { methode: 'POST', pad: '/api/admin/persoon/actief', recht: 'personen.beheren', doe: persoonActief },
   { methode: 'POST', pad: '/api/admin/persoon/team-koppelen', recht: 'personen.beheren', doe: teamKoppelen },
   { methode: 'POST', pad: '/api/admin/persoon/team-ontkoppelen', recht: 'personen.beheren', doe: teamOntkoppelen },
+  { methode: 'POST', pad: '/api/admin/persoon/rol-koppelen', recht: 'personen.beheren', doe: rolKoppelen },
+  { methode: 'POST', pad: '/api/admin/persoon/rol-ontkoppelen', recht: 'personen.beheren', doe: rolOntkoppelen },
 
   { methode: 'GET', pad: '/api/admin/instellingen', recht: 'systeem.beheren', doe: instellingenTonen },
   { methode: 'POST', pad: '/api/admin/instellingen', recht: 'systeem.beheren', doe: instellingBewaren },
+  { methode: 'GET', pad: '/api/admin/backup', recht: 'systeem.beheren', doe: backupExporteren },
 
   // Zalen: clubbrede infrastructuur, dus enkel wie het systeem beheert.
   { methode: 'GET', pad: '/api/admin/zalen', recht: 'systeem.beheren', doe: zalenTonen },
@@ -194,6 +201,9 @@ export const ROUTES = [
   { methode: 'POST', pad: '/api/admin/aanwezigheid/uitsluiten', doe: uitsluiten },
   { methode: 'POST', pad: '/api/admin/selectie', doe: selectieZetten },
   { methode: 'POST', pad: '/api/admin/selectie/publiceren', doe: selectiePubliceren },
+  { methode: 'GET', pad: '/api/admin/wedstrijdtaken', doe: wedstrijdtakenTonen },
+  { methode: 'POST', pad: '/api/admin/wedstrijdtaken/toewijzen', doe: wedstrijdtaakToewijzen },
+  { methode: 'POST', pad: '/api/admin/wedstrijdtaken/probleem', doe: wedstrijdtaakProbleemMelden },
 
   // Clubkleur en logo: enkel een voorstel, nooit rechtstreeks bewaard.
   { methode: 'GET', pad: '/api/admin/branding-voorstel', recht: 'systeem.beheren', doe: brandingVoorstel },
@@ -284,10 +294,17 @@ export default {
   // Eén cron per uur; de planner beslist wat er op dit Brusselse uur moet
   // gebeuren. Zie klok.js voor waarom het zo en niet met zeven cron-expressies.
   async scheduled(event, env, ctx) {
-    const uur = brusselUur(new Date(event.scheduledTime));
+    const nu = new Date(event.scheduledTime);
+    const uur = brusselUur(nu);
+    const dag = brusselWeekdag(nu);
+    const taken = takenVoorUur(uur, dag);
 
-    if (uur === 4) {
+    if (taken.includes('ping')) {
       ctx.waitUntil(voerPingUit(env.DB, env));
+    }
+    const overige = taken.filter((t) => t !== 'ping');
+    if (overige.length) {
+      ctx.waitUntil(voerGeplandeTakenUit(overige, env.DB, env));
     }
   },
 };

@@ -1,3 +1,4 @@
+DROP TABLE IF EXISTS wedstrijdtaken;
 DROP TABLE IF EXISTS taak_runs;
 DROP TABLE IF EXISTS wedstrijdselecties;
 DROP TABLE IF EXISTS aanwezigheden;
@@ -329,12 +330,14 @@ CREATE TABLE aanwezigheden (
   activiteit_id       INTEGER NOT NULL,
   team_guid           TEXT NOT NULL,
   seizoen             TEXT NOT NULL,
-  persoon_id          TEXT NOT NULL,
+
+  persoon_id          TEXT,
   hoedanigheid        TEXT NOT NULL CHECK (hoedanigheid IN ('SPELER', 'OUVO')),
 
   opgave_status       TEXT CHECK (opgave_status IN ('aanwezig', 'afwezig')),
   opgave_reden        TEXT CHECK (opgave_reden IN ('ziek', 'gekwetst', 'ander')),
   opgave_toelichting  TEXT,
+
   opgave_door         TEXT,
   opgave_tijdstip     TEXT,
 
@@ -365,6 +368,26 @@ CREATE TABLE wedstrijdselecties (
   FOREIGN KEY (wedstrijd_id) REFERENCES wedstrijden (id),
   FOREIGN KEY (persoon_id) REFERENCES personen (id)
 );
+
+CREATE TABLE wedstrijdtaken (
+  id                   INTEGER PRIMARY KEY AUTOINCREMENT,
+  wedstrijd_id         INTEGER NOT NULL,
+  taak                 TEXT NOT NULL CHECK (taak IN ('klok', '24seconden', 'tablet', 'ploegafgevaardigde')),
+  persoon_id           TEXT,
+  toegewezen_door      TEXT,
+  toegewezen_tijdstip  TEXT,
+
+  probleem_gemeld      INTEGER NOT NULL DEFAULT 0 CHECK (probleem_gemeld IN (0, 1)),
+  probleem_reden       TEXT,
+  probleem_tijdstip    TEXT,
+  aangemaakt           TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (wedstrijd_id) REFERENCES wedstrijden (id),
+  FOREIGN KEY (persoon_id) REFERENCES personen (id),
+  CHECK (probleem_gemeld = 0 OR probleem_reden IS NOT NULL)
+);
+
+CREATE UNIQUE INDEX idx_wedstrijdtaken_uniek ON wedstrijdtaken (wedstrijd_id, taak);
+CREATE INDEX idx_wedstrijdtaken_persoon ON wedstrijdtaken (persoon_id);
 
 CREATE TABLE taak_runs (
   id        INTEGER PRIMARY KEY AUTOINCREMENT,

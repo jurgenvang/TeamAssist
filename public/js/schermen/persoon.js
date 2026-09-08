@@ -43,6 +43,7 @@ export async function toonPersoon(id) {
   ).join('');
 
   toonPloegen(p.ploegen ?? []);
+  toonRollen(p.rollen ?? []);
   await vulTeamkeuze();
 
   el('persoonverwijderen').textContent = p.actief
@@ -82,12 +83,48 @@ function toonPloegen(ploegen) {
   }
 }
 
+const CLUBBREDE_ROLLEN = ['ADMIN', 'FINADM'];
+
+function toonRollen(rollen) {
+  el('persoonrollenlijf').innerHTML = rollen
+    .map((r) => {
+      const herkomst = r.bron === 'club' ? 'handmatig gekoppeld' : 'bij de bond';
+      return `<tr>
+        <td>${veilig(r.rol)}</td>
+        <td class="ploegen">${veilig(r.team_naam ?? '—')}</td>
+        <td class="ploegen">${herkomst}</td>
+        <td>${
+          r.bron === 'club'
+            ? `<button type="button" class="alslink" data-rol-ontkoppelen="${veilig(r.rol)}" data-rol-team="${veilig(r.team_guid ?? '')}">Ontkoppelen</button>`
+            : ''
+        }</td>
+      </tr>`;
+    })
+    .join('');
+
+  for (const knop of el('persoonrollenlijf').querySelectorAll('[data-rol-ontkoppelen]')) {
+    knop.addEventListener('click', async () => {
+      if (!huidige) return;
+      if (!confirm('Deze rol verwijderen?')) return;
+      const uit = await api('/api/admin/persoon/rol-ontkoppelen', 'POST', {
+        persoon_id: huidige.id,
+        rol: knop.dataset.rolOntkoppelen,
+        team_guid: knop.dataset.rolTeam || undefined,
+      });
+      if (uit.status === 200) await toonPersoon(huidige.id);
+      else toon('persoonmelding', uit.body?.fout ?? `Fout ${uit.status}`, true);
+    });
+  }
+}
+
 async function vulTeamkeuze() {
   const uit = await api('/api/admin/teams');
   if (uit.status !== 200) return;
-  el('persoonteamkeuze').innerHTML = (uit.body.teams ?? [])
+  const opties = (uit.body.teams ?? [])
     .map((t) => `<option value="${veilig(t.guid)}">${veilig(t.naam_kort ?? t.naam)}</option>`)
     .join('');
+  el('persoonteamkeuze').innerHTML = opties;
+  el('persoonrolteam').innerHTML = opties;
 }
 
 async function bewaar() {
@@ -119,6 +156,25 @@ export function koppelPersoonscherm() {
     const team_guid = el('persoonteamkeuze').value;
     if (!team_guid) return;
     const uit = await api('/api/admin/persoon/team-koppelen', 'POST', { persoon_id: huidige.id, team_guid });
+    if (uit.status === 200) await toonPersoon(huidige.id);
+    else toon('persoonmelding', uit.body?.fout ?? `Fout ${uit.status}`, true);
+  });
+
+  // Een clubbrede rol (ADMIN/FINADM) vraagt geen team — het keuzeveld
+  // verbergen voorkomt dat iemand denkt dat het wel nodig is.
+  const toonRolteamveld = () => {
+    el('persoonrolteam').hidden = CLUBBREDE_ROLLEN.includes(el('persoonrolkeuze').value);
+  };
+  el('persoonrolkeuze').addEventListener('change', toonRolteamveld);
+  toonRolteamveld();
+
+  el('persoonrolkoppelen').addEventListener('click', async () => {
+    if (!huidige) return;
+    const rol = el('persoonrolkeuze').value;
+    const clubbreed = CLUBBREDE_ROLLEN.includes(rol);
+    const team_guid = clubbreed ? undefined : el('persoonrolteam').value;
+    if (!clubbreed && !team_guid) return;
+    const uit = await api('/api/admin/persoon/rol-koppelen', 'POST', { persoon_id: huidige.id, rol, team_guid });
     if (uit.status === 200) await toonPersoon(huidige.id);
     else toon('persoonmelding', uit.body?.fout ?? `Fout ${uit.status}`, true);
   });

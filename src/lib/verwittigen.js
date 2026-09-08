@@ -6,6 +6,15 @@
 // bericht_modus toepast en bepaalt wat er in het logboek en in `berichten`
 // terechtkomt.
 //
+// Welk kanaal gebruikt wordt, is sinds T16 geen keuze van de aanroeper meer.
+// De aanroeper zegt enkel wie iets moet weten en wat — deze functie zelf
+// bepaalt hoe, aan de hand van `personen.kanaal_voorkeur` (mail/push/beide,
+// ingesteld bij Mijn voorkeuren, T6). Vóór T16 werd die kolom nergens
+// gelezen: iedereen kreeg mail, ongeacht wat hij instelde. Zolang er geen
+// push-kanaal bestaat, blijft mail het enige werkelijke kanaal — wie 'push'
+// koos, krijgt voorlopig toch mail, met een aparte, niet-alarmerende
+// logregel zodat dat zichtbaar blijft tot push er is.
+//
 // bericht_modus bepaalt wat er met een bericht gebeurt:
 //
 //  'uit'      — niets versturen. Wel volledig opbouwen en loggen, zodat
@@ -33,16 +42,23 @@ async function instelling(db, sleutel) {
  * @param {string} bericht.persoon_id
  * @param {string} bericht.onderwerp
  * @param {string} bericht.inhoud
- * @param {string} bericht.kanaal   enkel 'mail' bestaat vandaag
+ *
+ * Geen kanaal-parameter meer: de aanroeper schrijft niet voor via welk kanaal
+ * er verstuurd wordt, dat bepaalt deze functie zelf aan de hand van
+ * `personen.kanaal_voorkeur` (mail/push/beide, ingesteld bij Mijn
+ * voorkeuren). Zolang er geen push-kanaal bestaat, is mail het enige
+ * werkelijke kanaal — wie 'push' koos, krijgt voorlopig toch mail in plaats
+ * van niets, maar dat wordt apart gelogd. Zo blijft zichtbaar wie een keuze
+ * maakte die nog niet gehonoreerd kan worden, in plaats van dat stilzwijgend
+ * te negeren tot push ooit gebouwd wordt.
  */
-export async function verwittig(ctx, { persoon_id, onderwerp, inhoud, kanaal = 'mail' }) {
+export async function verwittig(ctx, { persoon_id, onderwerp, inhoud }) {
   const { db, env } = ctx;
 
-  if (kanaal !== 'mail') {
-    throw new Error(`kanaal '${kanaal}' bestaat nog niet — enkel mail is gebouwd`);
-  }
-
-  const persoon = await db.prepare(`SELECT email FROM personen WHERE id = ?`).bind(persoon_id).first();
+  const persoon = await db
+    .prepare(`SELECT email, kanaal_voorkeur FROM personen WHERE id = ?`)
+    .bind(persoon_id)
+    .first();
   if (!persoon?.email) {
     await logSchrijf(db, {
       soort: 'fout',
@@ -52,6 +68,17 @@ export async function verwittig(ctx, { persoon_id, onderwerp, inhoud, kanaal = '
     });
     return { verstuurd: false, reden: 'geen e-mailadres' };
   }
+
+  // Het enige kanaal dat vandaag echt bestaat. Bij 'push' is dit een
+  // terugval, geen vervulde voorkeur — vandaar de aparte logregel hieronder,
+  // pas ná een geslaagde verzending (een voorkeur die niet gehaald wordt, is
+  // geen fout op zich, enkel het scherp maken van wat nog ontbreekt).
+  const kanaal = 'mail';
+  // De terugval op 'mail' hier is defensief: personen.kanaal_voorkeur is
+  // NOT NULL DEFAULT 'mail' in het schema, dus dit pad kan via een normale
+  // UPDATE niet bereikt worden. Blijft staan voor de zeldzame situatie waarin
+  // een rij ooit buiten de app om is aangepast.
+  const voorkeur = persoon.kanaal_voorkeur || 'mail';
 
   const modus = (await instelling(db, 'bericht_modus')) || 'omleiden';
 
@@ -107,6 +134,16 @@ export async function verwittig(ctx, { persoon_id, onderwerp, inhoud, kanaal = '
     .prepare(`INSERT INTO berichten (persoon_id, kanaal, onderwerp, inhoud) VALUES (?, ?, ?, ?)`)
     .bind(persoon_id, kanaal, onderwerp, inhoud)
     .run();
+
+  if (voorkeur === 'push') {
+    // Geen fout, geen mislukking — enkel zichtbaar maken dat deze persoon
+    // eigenlijk iets anders koos, zodra dat kanaal bestaat.
+    await logSchrijf(db, {
+      soort: 'beheer',
+      wat: 'bericht via mail, terwijl de voorkeur push is',
+      details: `${persoon_id}: ${onderwerp} — push bestaat nog niet`,
+    });
+  }
 
   return { verstuurd: true, omgeleid: false };
 }

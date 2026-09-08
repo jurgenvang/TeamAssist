@@ -8,7 +8,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { maakDb } from './d1.mjs';
 import { ROUTES } from '../src/index.js';
-import { persoonTonen, persoonBewaren, persoonActief, controleer, teamKoppelen, teamOntkoppelen } from '../src/routes/admin/persoon.js';
+import { persoonTonen, persoonBewaren, persoonActief, controleer, teamKoppelen, teamOntkoppelen, rolKoppelen, rolOntkoppelen } from '../src/routes/admin/persoon.js';
 
 const seizoen = { code: '2026-27', naam: '2026-2027' };
 const beheerder = { id: 'p-admin' };
@@ -305,4 +305,167 @@ test('persoonTonen geeft nu ook de bron van elke teamkoppeling mee', async () =>
   const res = await persoonTonen({ db, seizoen, request: new Request('https://x/api/admin/persoon?id=p1') });
   const body = await res.json();
   assert.equal(body.ploegen[0].bron, 'vbl');
+});
+
+// --- Handmatig een rol koppelen (punt T11) ---------------------------------
+
+test('de rol-routes vragen personen.beheren', () => {
+  const koppel = ROUTES.find((r) => r.pad === '/api/admin/persoon/rol-koppelen');
+  const ontkoppel = ROUTES.find((r) => r.pad === '/api/admin/persoon/rol-ontkoppelen');
+  assert.equal(koppel.recht, 'personen.beheren');
+  assert.equal(ontkoppel.recht, 'personen.beheren');
+});
+
+test('COORD koppelen aan een team lukt, met bron club', async () => {
+  const db = zetKlaar();
+  const res = await rolKoppelen({
+    db, persoon: beheerder, seizoen,
+    request: verzoek({ persoon_id: 'p1', rol: 'COORD', team_guid: 'BVBL1125J16  2' }),
+  });
+  assert.equal(res.status, 200);
+  const rij = db._sqlite.prepare(`SELECT * FROM rollen WHERE persoon_id = 'p1' AND rol = 'COORD'`).get();
+  assert.equal(rij.bron, 'club');
+  assert.equal(rij.team_guid, 'BVBL1125J16  2');
+});
+
+test('ADMIN koppelen vraagt geen team_guid en slaat het als NULL op', async () => {
+  const db = zetKlaar();
+  const res = await rolKoppelen({ db, persoon: beheerder, seizoen, request: verzoek({ persoon_id: 'p1', rol: 'ADMIN' }) });
+  assert.equal(res.status, 200);
+  const rij = db._sqlite.prepare(`SELECT * FROM rollen WHERE persoon_id = 'p1' AND rol = 'ADMIN'`).get();
+  assert.equal(rij.team_guid, null);
+  assert.equal(rij.seizoen, null);
+});
+
+test('ADMIN koppelen mét een team_guid wordt geweigerd', async () => {
+  const db = zetKlaar();
+  const res = await rolKoppelen({
+    db, persoon: beheerder, seizoen,
+    request: verzoek({ persoon_id: 'p1', rol: 'ADMIN', team_guid: 'BVBL1125J16  2' }),
+  });
+  assert.equal(res.status, 400);
+});
+
+test('COORD koppelen zonder team_guid wordt geweigerd', async () => {
+  const db = zetKlaar();
+  const res = await rolKoppelen({ db, persoon: beheerder, seizoen, request: verzoek({ persoon_id: 'p1', rol: 'COORD' }) });
+  assert.equal(res.status, 400);
+});
+
+test('een onbekende rol wordt geweigerd', async () => {
+  const db = zetKlaar();
+  const res = await rolKoppelen({ db, persoon: beheerder, seizoen, request: verzoek({ persoon_id: 'p1', rol: 'SUPERADMIN' }) });
+  assert.equal(res.status, 400);
+});
+
+test('koppelen aan een onbestaand team geeft 404', async () => {
+  const db = zetKlaar();
+  const res = await rolKoppelen({
+    db, persoon: beheerder, seizoen,
+    request: verzoek({ persoon_id: 'p1', rol: 'COORD', team_guid: 'BVBL9999ZZZ  1' }),
+  });
+  assert.equal(res.status, 404);
+});
+
+test('koppelen bij een onbestaande persoon geeft 404', async () => {
+  const db = zetKlaar();
+  const res = await rolKoppelen({
+    db, persoon: beheerder, seizoen,
+    request: verzoek({ persoon_id: 'niet-bestaand', rol: 'COORD', team_guid: 'BVBL1125J16  2' }),
+  });
+  assert.equal(res.status, 404);
+});
+
+test('een tweede keer koppelen maakt geen dubbele rij en geen fout', async () => {
+  const db = zetKlaar();
+  const doe = () => rolKoppelen({
+    db, persoon: beheerder, seizoen,
+    request: verzoek({ persoon_id: 'p1', rol: 'COORD', team_guid: 'BVBL1125J16  2' }),
+  });
+  await doe();
+  const res = await doe();
+  assert.equal(res.status, 200);
+  const aantal = db._sqlite.prepare(`SELECT count(*) AS n FROM rollen WHERE persoon_id = 'p1' AND rol = 'COORD'`).get().n;
+  assert.equal(aantal, 1);
+});
+
+test('ontkoppelen van een handmatige rol lukt', async () => {
+  const db = zetKlaar();
+  await rolKoppelen({ db, persoon: beheerder, seizoen, request: verzoek({ persoon_id: 'p1', rol: 'COORD', team_guid: 'BVBL1125J16  2' }) });
+  const res = await rolOntkoppelen({
+    db, persoon: beheerder, seizoen,
+    request: verzoek({ persoon_id: 'p1', rol: 'COORD', team_guid: 'BVBL1125J16  2' }),
+  });
+  assert.equal(res.status, 200);
+  const rij = db._sqlite.prepare(`SELECT * FROM rollen WHERE persoon_id = 'p1' AND rol = 'COORD'`).get();
+  assert.equal(rij, undefined);
+});
+
+test('een VBL-rol (COACH) kan hier niet ontkoppeld worden', async () => {
+  const db = zetKlaar();
+  db._sqlite.exec(
+    `INSERT INTO rollen (persoon_id, rol, team_guid, seizoen, bron) VALUES ('p1', 'COACH', 'BVBL1125J16  2', '2026-27', 'vbl')`
+  );
+  const res = await rolOntkoppelen({
+    db, persoon: beheerder, seizoen,
+    request: verzoek({ persoon_id: 'p1', rol: 'COACH', team_guid: 'BVBL1125J16  2' }),
+  });
+  assert.equal(res.status, 400);
+  const rij = db._sqlite.prepare(`SELECT * FROM rollen WHERE persoon_id = 'p1' AND rol = 'COACH'`).get();
+  assert.ok(rij, 'de vbl-rol blijft gewoon bestaan');
+});
+
+test('een ADMIN kan zijn eigen ADMIN-rol niet verwijderen', async () => {
+  const db = zetKlaar();
+  db._sqlite.exec(`INSERT INTO rollen (persoon_id, rol, bron) VALUES ('p-admin', 'ADMIN', 'club')`);
+  const res = await rolOntkoppelen({
+    db, persoon: beheerder, seizoen,
+    request: verzoek({ persoon_id: 'p-admin', rol: 'ADMIN' }),
+  });
+  assert.equal(res.status, 400);
+  const rij = db._sqlite.prepare(`SELECT * FROM rollen WHERE persoon_id = 'p-admin' AND rol = 'ADMIN'`).get();
+  assert.ok(rij, 'de eigen ADMIN-rol blijft bestaan');
+});
+
+test('een ADMIN kan wél iemand anders zijn ADMIN-rol verwijderen', async () => {
+  const db = zetKlaar();
+  db._sqlite.exec(`INSERT INTO rollen (persoon_id, rol, bron) VALUES ('p1', 'ADMIN', 'club')`);
+  const res = await rolOntkoppelen({ db, persoon: beheerder, seizoen, request: verzoek({ persoon_id: 'p1', rol: 'ADMIN' }) });
+  assert.equal(res.status, 200);
+});
+
+test('ontkoppelen van een onbestaande rol geeft 404', async () => {
+  const db = zetKlaar();
+  const res = await rolOntkoppelen({
+    db, persoon: beheerder, seizoen,
+    request: verzoek({ persoon_id: 'p1', rol: 'COORD', team_guid: 'BVBL1125J16  2' }),
+  });
+  assert.equal(res.status, 404);
+});
+
+test('rol koppelen en ontkoppelen komen allebei in het logboek', async () => {
+  const db = zetKlaar();
+  await rolKoppelen({ db, persoon: beheerder, seizoen, request: verzoek({ persoon_id: 'p1', rol: 'COORD', team_guid: 'BVBL1125J16  2' }) });
+  await rolOntkoppelen({ db, persoon: beheerder, seizoen, request: verzoek({ persoon_id: 'p1', rol: 'COORD', team_guid: 'BVBL1125J16  2' }) });
+  const regels = db._sqlite.prepare(`SELECT wat FROM logboek ORDER BY id`).all().map((r) => r.wat);
+  assert.ok(regels.includes('rol handmatig gekoppeld'));
+  assert.ok(regels.includes('handmatige rol verwijderd'));
+});
+
+test('persoonTonen geeft ook de teamnaam mee bij een rol met een team', async () => {
+  const db = zetKlaar();
+  await rolKoppelen({ db, persoon: beheerder, seizoen, request: verzoek({ persoon_id: 'p1', rol: 'COORD', team_guid: 'BVBL1125J16  2' }) });
+  const res = await persoonTonen({ db, seizoen, request: new Request('https://x/api/admin/persoon?id=p1') });
+  const body = await res.json();
+  const rol = body.rollen.find((r) => r.rol === 'COORD');
+  assert.equal(rol.team_naam, 'J16 B');
+});
+
+test('een clubbrede rol (ADMIN) heeft geen team_naam', async () => {
+  const db = zetKlaar();
+  await rolKoppelen({ db, persoon: beheerder, seizoen, request: verzoek({ persoon_id: 'p1', rol: 'ADMIN' }) });
+  const res = await persoonTonen({ db, seizoen, request: new Request('https://x/api/admin/persoon?id=p1') });
+  const body = await res.json();
+  const rol = body.rollen.find((r) => r.rol === 'ADMIN');
+  assert.equal(rol.team_naam, null);
 });

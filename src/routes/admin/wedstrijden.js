@@ -9,6 +9,7 @@ import { logSchrijf } from '../../lib/logboek.js';
 import { verwittig } from '../../lib/verwittigen.js';
 import { haalVbl, teamMatchesUrl, leesWedstrijden } from '../../lib/vbl.js';
 import { maakWedstrijdplan } from '../../lib/wedstrijdsync.js';
+import { takenVoorWedstrijd } from '../../lib/wedstrijdtaken.js';
 import { instellingLezen } from './instellingen.js';
 
 const DAGNAMEN = ['', 'maandag', 'dinsdag', 'woensdag', 'donderdag', 'vrijdag', 'zaterdag', 'zondag'];
@@ -54,13 +55,13 @@ async function meldWijziging(ctx, ploeg, seizoen, w) {
 async function gevolgdePloegen(db, seizoen, alleen) {
   if (alleen) {
     const rij = await db
-      .prepare(`SELECT guid, naam FROM teams WHERE guid = ? AND seizoen = ? AND gevolgd = 1`)
+      .prepare(`SELECT guid, naam, categorie FROM teams WHERE guid = ? AND seizoen = ? AND gevolgd = 1`)
       .bind(alleen, seizoen)
       .first();
     return rij ? [rij] : [];
   }
   const rijen = await db
-    .prepare(`SELECT guid, naam FROM teams WHERE seizoen = ? AND gevolgd = 1 AND bij_bond = 1 ORDER BY categorie`)
+    .prepare(`SELECT guid, naam, categorie FROM teams WHERE seizoen = ? AND gevolgd = 1 AND bij_bond = 1 ORDER BY categorie`)
     .bind(seizoen)
     .all();
   return rijen.results ?? [];
@@ -92,7 +93,7 @@ async function verwerkPloeg(ctx, ploeg, seizoen, uitvoeren, periodes) {
 
   for (const w of plan.nieuw) {
     if (!w.datum || !w.begin) continue; // een onleesbare datum/uur wordt niet blind weggeschreven
-    await db
+    const uit = await db
       .prepare(
         `INSERT INTO wedstrijden
                (wedstrijd_guid, team_guid, seizoen, datum, begin, thuis, tegenstander,
@@ -104,6 +105,20 @@ async function verwerkPloeg(ctx, ploeg, seizoen, uitvoeren, periodes) {
         w.tegenstander, w.locatie_tekst, w.vbl_acc_guid, w.uitslag, w.hash
       )
       .run();
+
+    // De open taakslots (T1) ontstaan hier meteen mee — eerst de behoefte,
+    // dan de invulling. Geen taken bij een onbekende categorie: liever niets
+    // dan verkeerd gokken (zie wedstrijdtaken.js).
+    const wedstrijdId = uit.meta?.last_row_id;
+    if (wedstrijdId) {
+      const taken = takenVoorWedstrijd({ categorie: ploeg.categorie, thuis: w.thuis });
+      for (const taak of taken) {
+        await db
+          .prepare(`INSERT INTO wedstrijdtaken (wedstrijd_id, taak) VALUES (?, ?)`)
+          .bind(wedstrijdId, taak)
+          .run();
+      }
+    }
   }
 
   for (const w of plan.gewijzigd) {

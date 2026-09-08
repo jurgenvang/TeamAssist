@@ -1,4 +1,4 @@
--- TeamAssist — controle op de databankstructuur (versie 0.19.0)
+-- TeamAssist — controle op de databankstructuur (versie 0.25.0)
 --
 -- Plak dit in de D1-console na het uitvoeren van een schemawijziging. Het wijzigt
 -- niets; het vergelijkt wat er staat met wat er hoort te staan.
@@ -29,6 +29,8 @@ WITH verwacht_object(soort, naam) AS (VALUES
   ('index', 'idx_trainingen_team'),
   ('index', 'idx_trainingsreeksen_team'),
   ('index', 'idx_wedstrijden_team'),
+  ('index', 'idx_wedstrijdtaken_persoon'),
+  ('index', 'idx_wedstrijdtaken_uniek'),
   ('index', 'idx_zaal_blokken_zaal'),
   ('index', 'idx_zaal_sluitingen_zaal'),
   ('table', 'aanmeldingen_wachtrij'),
@@ -49,6 +51,7 @@ WITH verwacht_object(soort, naam) AS (VALUES
   ('table', 'trainingsreeksen'),
   ('table', 'wedstrijden'),
   ('table', 'wedstrijdselecties'),
+  ('table', 'wedstrijdtaken'),
   ('table', 'zaal_blokken'),
   ('table', 'zaal_sluitingen'),
   ('table', 'zalen')
@@ -221,6 +224,16 @@ verwacht_kolom(tabel, kolom) AS (VALUES
   ('wedstrijdselecties', 'wedstrijd_id'),
   ('wedstrijdselecties', 'persoon_id'),
   ('wedstrijdselecties', 'aangemaakt'),
+  ('wedstrijdtaken', 'id'),
+  ('wedstrijdtaken', 'wedstrijd_id'),
+  ('wedstrijdtaken', 'taak'),
+  ('wedstrijdtaken', 'persoon_id'),
+  ('wedstrijdtaken', 'toegewezen_door'),
+  ('wedstrijdtaken', 'toegewezen_tijdstip'),
+  ('wedstrijdtaken', 'probleem_gemeld'),
+  ('wedstrijdtaken', 'probleem_reden'),
+  ('wedstrijdtaken', 'probleem_tijdstip'),
+  ('wedstrijdtaken', 'aangemaakt'),
   ('zaal_blokken', 'id'),
   ('zaal_blokken', 'zaal_id'),
   ('zaal_blokken', 'seizoen'),
@@ -262,7 +275,7 @@ SELECT 0 AS volgorde,
             THEN 'ALLES OK'
             ELSE (SELECT count(*) FROM problemen) || ' PROBLEEM/PROBLEMEN'
        END AS soort,
-       'structuur versie 0.19.0' AS naam
+       'structuur versie 0.25.0' AS naam
 UNION ALL
 SELECT 1, soort, naam FROM problemen
 ORDER BY volgorde, soort, naam;

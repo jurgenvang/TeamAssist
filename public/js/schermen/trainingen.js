@@ -5,6 +5,46 @@ import { el, toon, veilig } from '../hulp.js';
 
 const DAGNAMEN = ['', 'maandag', 'dinsdag', 'woensdag', 'donderdag', 'vrijdag', 'zaterdag', 'zondag'];
 
+/**
+ * Groepeert de blokken van een zaal per weekdag, en toont elk blok als een
+ * los, afgebakend blokje in plaats van één regel doorlopende, komma-
+ * gescheiden tekst (T17). Bij een zaal met meerdere terreinen — waar per dag
+ * tot drie teams op hetzelfde tijdslot staan — werd die regel anders lang en
+ * moeilijk in één oogopslag te lezen.
+ *
+ * Hergebruikt het bestaande .rollen li-patroon (public/stijl.css) in plaats
+ * van een nieuwe stijl te verzinnen.
+ */
+function blokkenPerDag(blokken) {
+  if (!blokken.length) return '<span class="klein">geen blokken</span>';
+
+  const perDag = new Map();
+  for (const b of blokken) {
+    if (!perDag.has(b.weekdag)) perDag.set(b.weekdag, []);
+    perDag.get(b.weekdag).push(b);
+  }
+
+  return [...perDag.entries()]
+    .sort(([a], [b]) => a - b)
+    .map(
+      ([weekdag, dagBlokken]) => `
+        <div class="dagblokken">
+          <span class="dagblokken-label">${DAGNAMEN[weekdag]}</span>
+          <ul class="blokjes">
+            ${dagBlokken
+              .map(
+                (b) => `<li>
+                  ${veilig(b.begin)}-${veilig(b.einde)}
+                  <button type="button" class="alslink" data-blok-verwijderen="${b.id}">×</button>
+                </li>`
+              )
+              .join('')}
+          </ul>
+        </div>`
+    )
+    .join('');
+}
+
 export async function laadZalen() {
   const uitkomst = await api('/api/admin/zalen');
   if (uitkomst.status !== 200) return;
@@ -15,17 +55,7 @@ export async function laadZalen() {
     .map(
       (z) => `<tr>
         <td>${veilig(z.naam)}</td>
-        <td class="ploegen">${
-          z.blokken.length
-            ? z.blokken
-                .map(
-                  (b) =>
-                    `${DAGNAMEN[b.weekdag]} ${veilig(b.begin)}-${veilig(b.einde)} ` +
-                    `<button type="button" class="alslink" data-blok-verwijderen="${b.id}">×</button>`
-                )
-                .join(', ')
-            : 'geen blokken'
-        }</td>
+        <td class="ploegen">${blokkenPerDag(z.blokken)}</td>
         <td>
           <label class="veld">
             <input type="checkbox" data-open-feestdagen="${veilig(z.id)}" ${z.open_op_feestdagen ? 'checked' : ''}>

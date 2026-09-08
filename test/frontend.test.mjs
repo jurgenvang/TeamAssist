@@ -503,3 +503,67 @@ test('de topbalk centreert de twee kanten in plaats van bovenaan uit te lijnen',
   const blok = css.slice(css.indexOf('.topbalk {'), css.indexOf('.topbalk {') + 400);
   assert.match(blok, /align-items:\s*center/);
 });
+
+test('het persoonsscherm toont rollen, met een koppel- en ontkoppelmogelijkheid (T11)', () => {
+  assert.ok(html.includes('id="persoonrollenlijf"'));
+  assert.ok(html.includes('id="persoonrolkeuze"'));
+  assert.ok(html.includes('id="persoonrolteam"'));
+  assert.ok(html.includes('id="persoonrolkoppelen"'));
+  const bron = lees('../public/js/schermen/persoon.js');
+  assert.ok(bron.includes('data-rol-ontkoppelen'));
+  assert.ok(bron.includes("api('/api/admin/persoon/rol-koppelen'"));
+  assert.ok(bron.includes("api('/api/admin/persoon/rol-ontkoppelen'"));
+});
+
+test('een clubbrede rol verbergt het teamveld bij het koppelen van een rol', () => {
+  const bron = lees('../public/js/schermen/persoon.js');
+  assert.ok(bron.includes("const CLUBBREDE_ROLLEN = ['ADMIN', 'FINADM']"));
+  assert.ok(bron.includes('toonRolteamveld'));
+});
+
+test('ontkoppelen van een rol is enkel zichtbaar bij een handmatige koppeling, en vraagt bevestiging', () => {
+  const bron = lees('../public/js/schermen/persoon.js');
+  assert.ok(bron.match(/r\.bron === 'club'[\s\S]{0,150}data-rol-ontkoppelen/));
+  assert.ok(bron.match(/data-rol-ontkoppelen[\s\S]*?confirm\(/));
+});
+
+test('COACH is een keuzeoptie bij het handmatig koppelen van een rol', () => {
+  assert.ok(html.includes('<option value="COACH">COACH</option>'));
+});
+
+test('een backup kan gedownload worden bij Configuratie (T14)', () => {
+  assert.ok(html.includes('id="backupdownload"'));
+  assert.ok(html.includes('id="backupmelding"'));
+  const bron = lees('../public/js/schermen/instellingen.js');
+  assert.ok(bron.includes('export async function downloadBackup'));
+  assert.ok(bron.includes("apiRuw('/api/admin/backup'"));
+});
+
+test('de backup gebruikt apiRuw en createObjectURL, geen kale link naar de route', () => {
+  const bron = lees('../public/js/schermen/instellingen.js');
+  const start = bron.indexOf('export async function downloadBackup');
+  const functie = bron.slice(start);
+  assert.ok(functie.includes('createObjectURL'));
+});
+
+test('blokken bij Zaalbeheer staan gegroepeerd per weekdag, als losse blokjes (T17)', () => {
+  const bron = lees('../public/js/schermen/trainingen.js');
+  assert.ok(bron.includes('function blokkenPerDag'));
+  assert.ok(bron.includes('dagblokken'));
+  assert.ok(bron.includes('class="blokjes"'));
+  // Geen komma-gescheiden join meer voor de weergave van blokken.
+  const functie = bron.slice(bron.indexOf('function blokkenPerDag'), bron.indexOf('export async function laadZalen'));
+  assert.ok(!functie.includes("join(', ')"), 'niet langer één regel doorlopende, komma-gescheiden tekst');
+});
+
+test('elk blokje behoudt het bestaande verwijderkruisje', () => {
+  const bron = lees('../public/js/schermen/trainingen.js');
+  assert.ok(bron.includes('data-blok-verwijderen'));
+});
+
+test('de blokjes-CSS gebruikt neutrale kleuren, geen accentkleur — geen rolbadge', () => {
+  const css = lees('../public/stijl.css');
+  const blok = css.slice(css.indexOf('.blokjes li {'), css.indexOf('.blokjes li {') + 300);
+  assert.ok(!blok.includes('var(--accent)'), 'roosterinformatie, geen rolbadge');
+  assert.ok(blok.includes('var(--vlak)') || blok.includes('var(--lijn)'));
+});

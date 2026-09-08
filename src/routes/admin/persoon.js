@@ -32,8 +32,10 @@ export async function persoonTonen(ctx) {
 
   const rollen = await db
     .prepare(
-      `SELECT rol, team_guid, bron FROM rollen
-        WHERE persoon_id = ? AND (seizoen IS NULL OR seizoen = ?)`
+      `SELECT r.rol, r.team_guid, r.bron, t.naam AS team_naam
+         FROM rollen r
+         LEFT JOIN teams t ON t.guid = r.team_guid AND t.seizoen = r.seizoen
+        WHERE r.persoon_id = ? AND (r.seizoen IS NULL OR r.seizoen = ?)`
     )
     .bind(id, seizoen.code)
     .all();
@@ -198,4 +200,121 @@ export async function teamOntkoppelen(ctx) {
   });
 
   return json({ persoon_id, team_guid });
+}
+
+const GELDIGE_ROLLEN = ['ADMIN', 'FINADM', 'COORD', 'COACH', 'PLOEGV'];
+const CLUBBREDE_ROLLEN = ['ADMIN', 'FINADM'];
+
+/**
+ * Koppelt een bestaande persoon handmatig aan een rol, met bron 'club'.
+ *
+ * Enige weg vandaag om iemand COORD, PLOEGV, een tweede ADMIN of FINADM te
+ * maken — geen daarvan komt automatisch mee via de VBL-synchronisatie (die
+ * maakt enkel de rol COACH aan, uit tvlijst). Ook de allereerste ADMIN is zo
+ * ontstaan: met een losse INSERT bij de opstart, niet via een scherm.
+ *
+ * ledensync.js beschermt een bron-'club'-rol al expliciet tegen de
+ * eerstvolgende synchronisatie (rollenWeg filtert op bron === 'vbl') —
+ * dezelfde bescherming die een handmatig gekoppelde speler in team_spelers
+ * al had sinds 0.17.0.
+ */
+export async function rolKoppelen(ctx) {
+  const { db, persoon: beheerder, request, seizoen } = ctx;
+  const body = await leesJson(request);
+  const { persoon_id, rol, team_guid } = body ?? {};
+
+  if (!persoon_id || !rol) return fout(400, 'persoon_id en rol zijn verplicht');
+  if (!GELDIGE_ROLLEN.includes(rol)) return fout(400, `rol moet een van ${GELDIGE_ROLLEN.join(', ')} zijn`);
+
+  const clubbreed = CLUBBREDE_ROLLEN.includes(rol);
+  if (clubbreed && team_guid) return fout(400, `${rol} is een clubbrede rol, geen team_guid nodig`);
+  if (!clubbreed && !team_guid) return fout(400, `${rol} vraagt een team_guid`);
+
+  const persoonRij = await db.prepare(`SELECT id FROM personen WHERE id = ?`).bind(persoon_id).first();
+  if (!persoonRij) return fout(404, 'die persoon bestaat niet');
+
+  let teamNaam = null;
+  if (!clubbreed) {
+    const team = await db
+      .prepare(`SELECT guid, naam FROM teams WHERE guid = ? AND seizoen = ?`)
+      .bind(team_guid, seizoen.code)
+      .first();
+    if (!team) return fout(404, 'dat team bestaat niet in dit seizoen');
+    teamNaam = team.naam;
+  }
+
+  await db
+    .prepare(
+      `INSERT INTO rollen (persoon_id, rol, team_guid, seizoen, bron)
+            VALUES (?, ?, ?, ?, 'club')
+       ON CONFLICT (persoon_id, rol, ifnull(team_guid, ''), ifnull(seizoen, '')) DO NOTHING`
+    )
+    .bind(persoon_id, rol, clubbreed ? null : team_guid, clubbreed ? null : seizoen.code)
+    .run();
+
+  await logSchrijf(db, {
+    soort: 'beheer',
+    wie: beheerder.id,
+    wat: 'rol handmatig gekoppeld',
+    details: `${persoon_id} → ${rol}${teamNaam ? ` (${teamNaam})` : ''}`,
+  });
+
+  return json({ persoon_id, rol, team_guid: clubbreed ? null : team_guid });
+}
+
+/**
+ * Ontkoppelt een handmatige rol. Enkel bron 'club' — een
+ * VBL-gesynchroniseerde rol (vandaag enkel COACH) verwijder je hier niet, die
+ * loopt via de synchronisatie zelf.
+ *
+ * Een ADMIN kan zijn eigen ADMIN-rol niet verwijderen — dat zou de club
+ * zonder beheerder kunnen achterlaten, dezelfde soort bescherming als bij
+ * persoonActief (een beheerder kan zichzelf ook niet op te verwijderen
+ * zetten).
+ */
+export async function rolOntkoppelen(ctx) {
+  const { db, persoon: beheerder, request, seizoen } = ctx;
+  const body = await leesJson(request);
+  const { persoon_id, rol, team_guid } = body ?? {};
+
+  if (!persoon_id || !rol) return fout(400, 'persoon_id en rol zijn verplicht');
+
+  if (rol === 'ADMIN' && persoon_id === beheerder.id) {
+    return fout(400, 'je kan je eigen ADMIN-rol niet verwijderen');
+  }
+
+  const clubbreed = CLUBBREDE_ROLLEN.includes(rol);
+  const rij = await db
+    .prepare(
+      `SELECT bron FROM rollen
+        WHERE persoon_id = ? AND rol = ?
+          AND ifnull(team_guid, '') = ifnull(?, '')
+          AND ifnull(seizoen, '') = ifnull(?, '')`
+    )
+    .bind(persoon_id, rol, clubbreed ? null : team_guid, clubbreed ? null : seizoen.code)
+    .first();
+
+  if (!rij) return fout(404, 'die rol bestaat niet bij deze persoon');
+  if (rij.bron !== 'club') {
+    return fout(400, 'een rol van de bond ontkoppel je hier niet — dat loopt via de synchronisatie');
+  }
+
+  await db
+    .prepare(
+      `DELETE FROM rollen
+        WHERE persoon_id = ? AND rol = ?
+          AND ifnull(team_guid, '') = ifnull(?, '')
+          AND ifnull(seizoen, '') = ifnull(?, '')`
+    )
+    .bind(persoon_id, rol, clubbreed ? null : team_guid, clubbreed ? null : seizoen.code)
+    .run();
+
+  await logSchrijf(db, {
+    soort: 'beheer',
+    wie: beheerder.id,
+    wat: 'handmatige rol verwijderd',
+    details: `${persoon_id}: ${rol}${team_guid ? ` (${team_guid})` : ''}`,
+  });
+
+  return json({ persoon_id, rol });
 }
