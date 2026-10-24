@@ -38,6 +38,22 @@ Stand: YOAssist **v1.17.0**, TeamAssist **0.25.0**
   dus vrij gedropt en herbouwd worden; enkel de YOAssist-gegevens moeten
   gemigreerd worden.
 - **Eén backlog** — dit bestand.
+- **Wat een module is.** Geen aparte app, maar een afgebakend onderwerp
+  binnen de ene app, met eigen tabellen, code (bv. `src/officials/`),
+  rechten (bv. `officials.aanduiden`) en schermen. Wat iedereen deelt —
+  aanmelding, kopbalk, `personen`, `wedstrijden`, logboek — zit in geen
+  enkele module. TeamAssist heeft er al: ploegen en personen, trainingen en
+  zalen, aanwezigheden, wedstrijdtaken, communicatie. YOAssist wordt er één
+  bij. Zo ziet een speler of ouder niets van de officials (volgt uit de
+  rechten), raakt een wijziging aan de aanwezigheden de woensdagregel niet,
+  en kan YOAssist stuk voor stuk overgezet worden.
+  Niet te verwarren met de JavaScript-modules van TeamAssist 0.7.0: dat is
+  het opsplitsen van de frontend in bestanden, geen onderwerp.
+- **De module heeft geen naam in de app.** Een gebruiker ziet enkel
+  tabbladen, en die houden hun YOAssist-namen: *Aanduidingen*,
+  *Cluboverzicht*, *Regio*, *Vergoedingen club*. Enkel in de code heet ze
+  `officials`. Een naam is pas nodig als er ooit een schakelaar komt om het
+  hele onderdeel uit te zetten (een club zonder Youth Officials).
 
 ### Domein
 
@@ -99,7 +115,6 @@ Tot de overstap blijft YOAssist live en krijgt het enkel bugfixes.
 ### Nog te bepalen
 
 - Of `teamassist.org` lukt; zo niet, welk domein.
-- Of de module in de app *Officials* of *YOAssist* heet.
 
 ---
 
