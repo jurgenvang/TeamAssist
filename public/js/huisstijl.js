@@ -39,12 +39,20 @@ export async function pasHuisstijlToe() {
   // clubroranje) faalt vaak als accentkleur maar leest goed als achtergrond
   // met de juiste tekstkleur erop. De backend bepaalt die tekstkleur al
   // (kleur_topbalk_tekst); hier wordt ze enkel toegepast, niet herberekend.
+  //
+  // Zonder topbalkkleur blijft de donkere strook van YOAssist (stijl.css), met
+  // het amber accent. Met een clubkleur krijgt het accent de tekstkleur van
+  // de strook: amber is op een willekeurige clubkleur niet gegarandeerd
+  // leesbaar, en die tekstkleur heeft de backend al goedgekeurd.
   if (gegevens.kleur_topbalk) {
+    const tekst = gegevens.kleur_topbalk_tekst || '#000000';
     root.setProperty('--topbalk-achtergrond', gegevens.kleur_topbalk);
-    root.setProperty('--topbalk-tekst', gegevens.kleur_topbalk_tekst || '#000000');
+    root.setProperty('--topbalk-tekst', tekst);
+    root.setProperty('--merk-accent', tekst);
   } else {
     root.removeProperty('--topbalk-achtergrond');
     root.removeProperty('--topbalk-tekst');
+    root.removeProperty('--merk-accent');
   }
 
   const clubnaamEl = el('clubnaam');

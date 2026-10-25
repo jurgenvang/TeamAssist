@@ -2,7 +2,7 @@
 
 import { api, haalConfig, sessie, bewaarSessie, leesTokensUitUrl, vraagAanmeldlink, verifieerCode, testrol } from './api.js';
 import { el, toon, veilig } from './hulp.js';
-import { bouwNavigatie } from './navigatie.js';
+import { bouwNavigatie, menuTabbladen } from './navigatie.js';
 import { laadPloegen, synchroniseerPloegen, synchroniseerLeden, downloadSjabloon, uploadSjabloon } from './schermen/ploegen.js';
 import { bewaarSelectie, publiceerSelectie } from './schermen/aanwezigheid-beheer.js';
 import { zoekPersonen } from './schermen/personen.js';
@@ -85,7 +85,6 @@ function toonApp(gegevens) {
     }
     if (tab === 'configuratie') {
       laadInstellingen();
-      vulTestrolkeuze();
     }
     if (tab === 'zaalbeheer') {
       laadZalen();
@@ -93,14 +92,42 @@ function toonApp(gegevens) {
     }
   });
 
-  // 'Algemeen' in het naammenu: enkel zichtbaar voor wie systeem.beheren
-  // heeft. Gemak, geen beveiliging — elke route achter deze snelkoppelingen
-  // controleert het recht zelf sowieso opnieuw.
-  const isAdmin = 'systeem.beheren' in rechten;
-  el('naammenu-algemeen-kop').hidden = !isAdmin;
-  el('naammenu-zaalbeheer').hidden = !isAdmin;
-  el('naammenu-configuratie').hidden = !isAdmin;
-  el('naammenu-dagelijksbeheer').hidden = !isAdmin;
+  bouwBeheermenu(rechten, gegevens.testrol_mogelijk === true);
+}
+
+/**
+ * Het deel Beheer bovenaan het naammenu.
+ *
+ * Welke schermen erin staan, volgt uit dezelfde rechten als de tabbalk
+ * (navigatie.js) — geen eigen lijst hier. Gemak, geen beveiliging: elke route
+ * achter deze schermen controleert het recht zelf opnieuw.
+ */
+function bouwBeheermenu(rechten, testrolMogelijk) {
+  const schermen = menuTabbladen(rechten);
+  const vak = el('naammenu-beheer');
+  vak.innerHTML = schermen
+    .map((t) => `<button type="button" role="menuitem" data-scherm="${t.id}">${veilig(t.naam)}</button>`)
+    .join('');
+  for (const knop of vak.querySelectorAll('button[data-scherm]')) {
+    knop.addEventListener('click', () => {
+      sluitNaammenu();
+      if (huidigeKies) huidigeKies(knop.dataset.scherm);
+    });
+  }
+
+  el('naammenu-testrol').hidden = !testrolMogelijk;
+  const iets = schermen.length > 0 || testrolMogelijk;
+  el('naammenu-beheer-kop').hidden = !iets;
+  el('naammenu-scheiding').hidden = !iets;
+  // De rol in de kopbalk in de accentkleur van de strook, zoals in YOAssist:
+  // een beheerder ziet in één oogopslag dat hij meer mag dan een gewone
+  // official — en een beheerder die als coach kijkt, ziet dat het niet zo is.
+  el('topbalkrollen').classList.toggle('beheer', schermen.length > 0);
+}
+
+function sluitNaammenu() {
+  el('naammenu').hidden = true;
+  el('naammenuknop').setAttribute('aria-expanded', 'false');
 }
 
 async function start() {
@@ -219,11 +246,11 @@ el('naammenuknop').addEventListener('click', () => {
 // iemand toevallig opnieuw op de knop klikt.
 document.addEventListener('click', (e) => {
   const ik = el('topbalkik');
-  if (!ik.contains(e.target)) el('naammenu').hidden = true;
+  if (!ik.contains(e.target)) sluitNaammenu();
 });
 
 el('naammenu-voorkeuren').addEventListener('click', () => {
-  el('naammenu').hidden = true;
+  sluitNaammenu();
   if (huidigePersoon) toonVoorkeuren(huidigePersoon);
 });
 
@@ -232,17 +259,14 @@ el('naammenu-afmelden').addEventListener('click', () => {
   location.reload();
 });
 
-el('naammenu-zaalbeheer').addEventListener('click', () => {
-  el('naammenu').hidden = true;
-  if (huidigeKies) huidigeKies('zaalbeheer');
+el('naammenu-testrol').addEventListener('click', () => {
+  sluitNaammenu();
+  el('testrolscherm').hidden = false;
+  vulTestrolkeuze();
+  el('testrolscherm').scrollIntoView({ block: 'start' });
 });
-el('naammenu-configuratie').addEventListener('click', () => {
-  el('naammenu').hidden = true;
-  if (huidigeKies) huidigeKies('configuratie');
-});
-el('naammenu-dagelijksbeheer').addEventListener('click', () => {
-  el('naammenu').hidden = true;
-  if (huidigeKies) huidigeKies('dagelijksbeheer');
+el('testrolsluiten').addEventListener('click', () => {
+  el('testrolscherm').hidden = true;
 });
 
 el('voorkeurenbewaren').addEventListener('click', bewaarVoorkeuren);

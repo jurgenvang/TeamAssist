@@ -143,11 +143,11 @@ test('de topbalk toont clubnaam en logo, geen hardcoded clubnaam meer in JS', ()
   assert.ok(html.includes('id="topbalkrollen"'), 'rol(len) hoort onder de naam te staan, zoals bij YOAssist');
 });
 
-test('het beheermenu is gesplitst in drie tabbladen, waaronder zaalbeheer', () => {
+test('beheer bestaat uit drie schermen, waaronder zaalbeheer, en die staan in het naammenu', () => {
   const nav = lees('../public/js/navigatie.js');
-  assert.ok(nav.includes("id: 'dagelijksbeheer'"));
-  assert.ok(nav.includes("id: 'zaalbeheer'"));
-  assert.ok(nav.includes("id: 'configuratie'"));
+  assert.ok(nav.includes("id: 'dagelijksbeheer', naam: 'Dagelijks beheer', recht: 'systeem.beheren', inMenu: true"));
+  assert.ok(nav.includes("id: 'zaalbeheer', naam: 'Zaalbeheer', recht: 'systeem.beheren', inMenu: true"));
+  assert.ok(nav.includes("id: 'configuratie', naam: 'Configuratie', recht: 'systeem.beheren', inMenu: true"));
   assert.ok(html.includes('id="tab-dagelijksbeheer"'));
   assert.ok(html.includes('id="tab-zaalbeheer"'));
   assert.ok(html.includes('id="tab-configuratie"'));
@@ -200,10 +200,26 @@ test('een logo dat niet laadt, valt terug op tekst in plaats van kapot te blijve
   assert.ok(bron.match(/logoImg\.addEventListener\('error'[\s\S]{0,150}logoImg\.remove\(\)/));
 });
 
-test('de topbalk gebruikt CSS-variabelen voor kleur en tekst, met een nette terugval', () => {
+test('de topbalk is standaard de donkere YOAssist-strook, een ingestelde clubkleur wint', () => {
   const css = lees('../public/stijl.css');
-  assert.ok(css.includes('var(--topbalk-achtergrond, transparent)'));
-  assert.ok(css.includes('var(--topbalk-tekst, var(--inkt))'));
+  assert.ok(css.includes('var(--topbalk-achtergrond, #12161c)'));
+  assert.ok(css.includes('var(--topbalk-tekst, #ffffff)'));
+});
+
+test('het accent in de appnaam volgt de tekstkleur van een clubkleur, niet het vaste amber', () => {
+  const css = lees('../public/stijl.css');
+  assert.ok(css.includes('var(--merk-accent, #e8a317)'));
+  const bron = lees('../public/js/huisstijl.js');
+  assert.match(bron, /if \(gegevens\.kleur_topbalk\) {[\s\S]{0,250}setProperty\('--merk-accent', tekst\)/);
+  assert.match(bron, /removeProperty\('--merk-accent'\)/);
+});
+
+test('de kopstrook staat buiten <main> en blijft bovenaan bij het scrollen', () => {
+  assert.ok(html.indexOf('<header class="topbalk">') < html.indexOf('<main>'));
+  const css = lees('../public/stijl.css');
+  const blok = css.slice(css.indexOf('.topbalk {'), css.indexOf('.topbalk {') + 300);
+  assert.match(blok, /position:\s*sticky/);
+  assert.match(blok, /safe-area-inset-top/);
 });
 
 test('huisstijl.js past de topbalkkleur toe zonder ze zelf te herberekenen', () => {
@@ -359,6 +375,7 @@ test('de dichtstbevolkte secties zijn samenvouwbaar met <details>, geen kale <h2
   const configStart = html.indexOf('id="tab-configuratie"');
   const configEind = html.indexOf('id="tab-zaalbeheer"');
   const configBlok = html.slice(configStart, configEind);
+  // De paneelkop (het scherm zelf) telt niet: het gaat om de secties erin.
   assert.ok(!configBlok.includes('<h2>'), 'Configuratie hoort geen kale h2 meer te hebben, enkel <summary>');
   assert.match(configBlok, /<summary>Instellingen<\/summary>/);
 
@@ -377,7 +394,6 @@ test('de kleine, veelgebruikte secties staan standaard open, de rest dicht', () 
   assert.match(html2, /<details open>\s*<summary>Instellingen<\/summary>/);
   assert.match(html2, /<details open>\s*<summary>Zalen<\/summary>/);
   assert.match(html2, /<details>\s*<summary>Zaaluren-sjabloon<\/summary>/);
-  assert.match(html2, /<details>\s*<summary>Kijken met een andere rol<\/summary>/);
 });
 
 test('het persoonsscherm toont de ploegen van iemand, met een koppel- en ontkoppelmogelijkheid', () => {
@@ -433,22 +449,42 @@ test('de link- en de codeflow komen samen in dezelfde afrondingslogica', () => {
   assert.ok(aantalAanroepen >= 2, 'zowel de URL-tokenflow als de codeflow roepen voltooiAanmelding aan');
 });
 
-test('het naammenu is opgedeeld in Persoonlijk en Algemeen, zoals bij YOAssist', () => {
+test('het naammenu heeft Beheer bovenaan en het persoonlijke deel eronder, zoals bij YOAssist', () => {
   assert.ok(html.includes('id="naammenu"'));
   assert.ok(html.includes('id="naammenuknop"'));
-  assert.match(html, /naammenu-kop">Persoonlijk/);
-  assert.match(html, /naammenu-kop" id="naammenu-algemeen-kop"/);
-  assert.ok(html.includes('id="naammenu-voorkeuren"'));
+  const beheer = html.indexOf('id="naammenu-beheer-kop"');
+  const scheiding = html.indexOf('id="naammenu-scheiding"');
+  const voorkeuren = html.indexOf('id="naammenu-voorkeuren"');
+  assert.ok(beheer !== -1 && beheer < scheiding && scheiding < voorkeuren);
   assert.ok(html.includes('id="naammenu-afmelden"'));
 });
 
-test('de Algemeen-sectie van het naammenu staat standaard verborgen, enkel admin ziet ze', () => {
-  const start = html.indexOf('id="naammenu-algemeen-kop"');
-  const stuk = html.slice(Math.max(0, start - 60), start + 60);
-  assert.match(stuk, /hidden/);
-  const app = lees('../public/js/app.js');
-  assert.ok(app.includes("'systeem.beheren' in rechten"));
-  assert.match(app, /naammenu-algemeen-kop'\)\.hidden = !isAdmin/);
+test('de kop Beheer en de scheiding staan standaard verborgen', () => {
+  for (const id of ['naammenu-beheer-kop', 'naammenu-scheiding', 'naammenu-testrol']) {
+    const start = html.indexOf(`id="${id}"`);
+    assert.match(html.slice(start, html.indexOf('>', start)), /hidden/, id);
+  }
+});
+
+test('de knoppen onder Beheer komen uit de rechten, niet uit een vaste lijst in app.js', () => {
+  assert.ok(app.includes('menuTabbladen(rechten)'));
+  assert.ok(!app.includes("huidigeKies('zaalbeheer')"), 'geen vaste knop per scherm meer');
+  assert.match(app, /naammenu-beheer-kop'\)\.hidden = !iets/);
+});
+
+test('Kijken als … staat enkel in het menu als de backend zegt dat het werkt', () => {
+  assert.match(app, /bouwBeheermenu\(rechten, gegevens\.testrol_mogelijk === true\)/);
+  assert.match(app, /naammenu-testrol'\)\.hidden = !testrolMogelijk/);
+  // Niet meer bij Configuratie: daar blijft enkel de instelling zelf.
+  const configBlok = html.slice(html.indexOf('id="tab-configuratie"'), html.indexOf('id="tab-zaalbeheer"'));
+  assert.ok(!configBlok.includes('id="testrolrol"'));
+  assert.ok(html.includes('id="testrolscherm"'));
+});
+
+test('de beheerschermen hebben een titel, want er licht geen tabblad op', () => {
+  assert.match(html, /id="tab-configuratie" hidden>\s*<h2 class="paneelkop">Configuratie<\/h2>/);
+  assert.match(html, /id="tab-zaalbeheer" hidden>\s*<h2 class="paneelkop">Zaalbeheer<\/h2>/);
+  assert.match(html, /id="tab-dagelijksbeheer" hidden>\s*<h2 class="paneelkop">Dagelijks beheer<\/h2>/);
 });
 
 test('de oude losse afmeldknop op Overzicht bestaat niet meer, enkel die in het naammenu', () => {
@@ -483,12 +519,9 @@ test('bij het aanmelden wint de databank, niet de lokale opslag', () => {
   assert.match(app, /pasDonkereModusToe\(gegevens\.persoon\.donkere_modus\)/);
 });
 
-test('naammenu-zaalbeheer/configuratie/dagelijksbeheer gebruiken de kies-functie van bouwNavigatie', () => {
-  const app = lees('../public/js/app.js');
+test('de knoppen onder Beheer gebruiken de kies-functie van bouwNavigatie', () => {
   assert.ok(app.includes('huidigeKies = bouwNavigatie'));
-  assert.ok(app.includes("huidigeKies('zaalbeheer')"));
-  assert.ok(app.includes("huidigeKies('configuratie')"));
-  assert.ok(app.includes("huidigeKies('dagelijksbeheer')"));
+  assert.match(app, /huidigeKies\(knop\.dataset\.scherm\)/);
 });
 
 test('dark mode gebruikt de accentkleur enkel als achtergrond, niet als tekst op de donkere pagina', () => {
@@ -500,7 +533,7 @@ test('dark mode gebruikt de accentkleur enkel als achtergrond, niet als tekst op
 
 test('de topbalk centreert de twee kanten in plaats van bovenaan uit te lijnen', () => {
   const css = lees('../public/stijl.css');
-  const blok = css.slice(css.indexOf('.topbalk {'), css.indexOf('.topbalk {') + 400);
+  const blok = css.slice(css.indexOf('.topbalk-rij {'), css.indexOf('.topbalk-rij {') + 200);
   assert.match(blok, /align-items:\s*center/);
 });
 

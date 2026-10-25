@@ -11,7 +11,7 @@ WIJZIGINGEN-bestanden blijven kloppen:
   punt *U* (Microsoft 365) heet hier **VU**, want TeamAssist heeft al een *U*
 - **T** + nummer, en de letters **A–AB** — TeamAssist
 
-Stand: YOAssist **v1.17.0**, TeamAssist **0.26.0**
+Stand: YOAssist **v1.17.0**, TeamAssist **0.27.0**
 
 ---
 
@@ -29,8 +29,8 @@ Bijgewerkt bij elke versie. Voor de volledige tekst: zoek de kop verderop
 - **I1** — nagaan of `teamassist.org` te krijgen is.
 
 ### Klaar om te bouwen
-- **I1, fase 1** — de kopbalk en menu's van YOAssist in TeamAssist; push,
-  `verwittigen.js`, berichten en mededelingen samengevoegd.
+- **I1, fase 1b (0.28.0)** — Mijn berichten, mededelingen en het
+  meldingenbolletje. Daarna **1c (0.29.0)**: push.
 - **T7** — tabblad Mijn club.
 - **T12** — aanmelden als.
 - **T18, T19** — twee kleine gaten uit de code-audit.
@@ -126,8 +126,17 @@ Bijgewerkt bij elke versie. Voor de volledige tekst: zoek de kop verderop
 
 ### Fases — één pakket per fase, telkens met zip en delta-zip
 
-1. **Schil en fundament.** De kopbalk en menu's van YOAssist in TeamAssist;
-   push (VAPID), `verwittigen.js`, berichten en mededelingen samengevoegd.
+1. **Schil en fundament**, in drie pakketten:
+   - **1a — 0.27.0, afgewerkt**: de kopbalk en het naammenu van YOAssist;
+     Dagelijks beheer, Configuratie en Zaalbeheer enkel nog onder Beheer in
+     het naammenu; *Kijken als …* in het naammenu. Een ingestelde
+     topbalkkleur wint van de donkere strook.
+   - **1b — 0.28.0**: Mijn berichten, mededelingen en het meldingenbolletje.
+   - **1c — 0.29.0**: push (VAPID, `public/sw.js`, toestellen),
+     `verwittigen.js` samengevoegd.
+   Tabbladen per stuk uitzetten (YOAssist's `verborgen_tabs`) komt pas
+   wanneer de schermen van de module Officials erbij komen; met drie
+   tabbladen heeft het nog geen zin.
 2. **Schema van de module Officials**, plus `tools/migreer-yoassist.mjs`: leest
    een YOAssist-backup (JSON, alle 22 tabellen) en maakt er SQL voor het nieuwe
    schema van. Getest tegen een echte backup.
@@ -187,6 +196,7 @@ Tot de overstap blijft YOAssist live en krijgt het enkel bugfixes.
 | 0.23.0 | T14 afgewerkt: een volledige backup van de databank als JSON. Beter dan aanvankelijk voorgesteld — geen hardcoded tabellenlijst met een test die drift moet vangen (de YOAssist-aanpak), maar tabellen rechtstreeks uit `sqlite_master` gehaald, wat de hele bugklasse structureel onmogelijk maakt. De kerntest bewijst dat letterlijk: een tabel die pas ná het schrijven van de route wordt aangemaakt, zit er toch in. |
 | 0.24.0 | T16 en T17 afgewerkt. `verwittig()` heeft geen `kanaal`-parameter meer en leest voortaan `kanaal_voorkeur` — mail blijft de terugval zolang push niet bestaat, met een aparte logregel voor wie 'push' koos. Blokken bij Zaalbeheer staan nu gegroepeerd per weekdag als losse blokjes, met bewust neutrale kleuren in plaats van de accentkleur. |
 | 0.25.0 | T15 afgewerkt: opruiming van `logboek` (365 dagen), `taak_runs` (30 dagen), `berichten` (120 dagen), en het definitief verwijderen van een inactieve persoon na 180 dagen. Twee tabellen extra gevonden tijdens het bouwen (`accounts`, `ouder_kind`) die niet in het oorspronkelijke overzicht stonden. Enkel `aanwezigheden` wordt geanonimiseerd in plaats van verwijderd — de enige tabel waar dat structureel kon — wat een schema-heropbouw vroeg, grondig getoetst tegen een nagemaakte bestaande databank. |
+| 0.27.0 | I1 fase 1a: de kopbalk en het naammenu van YOAssist. Donkere strook die bovenaan blijft staan, een ingestelde topbalkkleur wint. Dagelijks beheer, Configuratie en Zaalbeheer uit de tabbalk, enkel nog onder Beheer in het naammenu, gebouwd uit dezelfde rechten als de tabbalk. *Kijken als …* in het naammenu, en enkel nog aangeboden als `testrol_toegelaten` aanstaat (`/api/mij` → `testrol_mogelijk`) — tot nu toe beweerde de testbalk soms iets wat de backend stil negeerde. Ook: een test die sinds oktober altijd faalde door een vaste septemberdatum. 746 tests. |
 | 0.26.0 | T1 afgewerkt: taken bij een wedstrijd (klok, 24 seconden, tablet, ploegafgevaardigde). Taakslots ontstaan automatisch bij de synchronisatie, toewijzen mag wie de selectie beheert, elk actief clublid komt in aanmerking, en een toewijzing verwittigt — de derde fase 5-trigger, opnieuw zonder aanpassing aan `verwittigen.js`. Onderweg bleek `/api/admin/personen` niet bruikbaar als kandidatenlijst (vraagt `personen.beheren`, en weigert bewust een volledige lijst), dus een eigen smalle route die enkel id en naam teruggeeft. |
 
 Zolang er punten onder 'Nog uit te klaren' staan, wordt er niet gebouwd: het
@@ -744,8 +754,8 @@ Overzicht) en **Algemeen**, enkel zichtbaar voor wie `systeem.beheren` heeft
 (snelkoppelingen naar Zaalbeheer, Configuratie, Dagelijks beheer).
 
 **Bewust opengelaten:** die drie tabbladen zijn niet uit de tabbalk
-verwijderd — de snelkoppeling staat er gewoon naast. Of dat later alsnog
-gebeurt, blijft een keuze voor een volgende ronde.
+verwijderd — de snelkoppeling staat er gewoon naast. **Beslist in I1, gebouwd
+in 0.27.0:** ze staan enkel nog in het naammenu, onder Beheer.
 
 **Mijn voorkeuren**, twee schakelaars:
 - **Dark mode**: kolom op `personen` (`donkere_modus`: systeem/licht/donker),

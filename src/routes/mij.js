@@ -5,6 +5,8 @@
 
 import { json } from '../lib/http.js';
 import { VERSIE } from '../versie.js';
+import { magTestrolGebruiken } from '../lib/rechten.js';
+import { instellingLezen } from './admin/instellingen.js';
 
 /**
  * De ploegen ophalen waar deze persoon iets mee te maken heeft.
@@ -57,6 +59,17 @@ export async function mij(ctx) {
   const zietAlles = rechten.ploegenMet('team.bekijken') === '*';
   const ploegen = await ploegenVan(db, persoon.id, seizoen.code, zietAlles);
 
+  // Of 'Kijken als …' in het naammenu mag staan. Zonder deze vlag toonde het
+  // scherm de keuze ook wanneer testrol_toegelaten uit stond: de backend
+  // negeerde de kop dan stil, en de testbalk beweerde iets dat niet klopte.
+  // Bij een lopende testrol zijn de rechten al versmald en is dit false — de
+  // testbalk is dan de weg terug, niet het menu.
+  const testrolMogelijk = magTestrolGebruiken(
+    rechten,
+    await instellingLezen(db, 'testrol_toegelaten', '0'),
+    'COACH'
+  );
+
   return json({
     versie: VERSIE,
     seizoen: { code: seizoen.code, naam: seizoen.naam },
@@ -72,5 +85,6 @@ export async function mij(ctx) {
     ziet_alle_ploegen: zietAlles,
     ploegen,
     rechten: rechten.overzicht(),
+    testrol_mogelijk: testrolMogelijk,
   });
 }

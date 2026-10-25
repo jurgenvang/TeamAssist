@@ -13,24 +13,37 @@ export const TABBLADEN = [
   { id: 'mij', naam: 'Overzicht', recht: null },
   { id: 'ploegen', naam: 'Ploegen', recht: 'team.bekijken' },
   { id: 'personen', naam: 'Personen', recht: 'personen.beheren' },
-  // Drie menu-items in plaats van twee: zalen, periodes en de sjablonen
-  // stonden verspreid over Configuratie en Dagelijks beheer terwijl ze
-  // inhoudelijk hetzelfde geheel vormen — vakanties, examens en feestdagen
-  // sturen rechtstreeks wat een zaal-gebonden trainingsreeks genereert. Nu
-  // samen onder Zaalbeheer; Dagelijks beheer blijft over voor wat je vaak
-  // even wil checken (de bond bekijken), Configuratie voor wat zelden wijzigt
-  // (huisstijl, instellingen, de testrol).
-  { id: 'dagelijksbeheer', naam: 'Dagelijks beheer', recht: 'systeem.beheren' },
-  { id: 'zaalbeheer', naam: 'Zaalbeheer', recht: 'systeem.beheren' },
-  { id: 'configuratie', naam: 'Configuratie', recht: 'systeem.beheren' },
+  // De beheerschermen staan enkel onder Beheer in het naammenu, niet in de
+  // tabbalk — zoals in YOAssist (I1). De tabbalk is voor het dagelijkse werk
+  // van iedereen; wat zelden of enkel door een beheerder geopend wordt, zou er
+  // anders de helft van innemen. Ze blijven wel in deze lijst, zodat het
+  // tonen en verbergen van de panelen op één plaats gebeurt.
+  //
+  // Zalen, periodes en de sjablonen staan samen onder Zaalbeheer — vakanties,
+  // examens en feestdagen sturen rechtstreeks wat een zaal-gebonden
+  // trainingsreeks genereert. Dagelijks beheer is voor wat je vaak even wil
+  // checken (de bond bekijken), Configuratie voor wat zelden wijzigt.
+  { id: 'dagelijksbeheer', naam: 'Dagelijks beheer', recht: 'systeem.beheren', inMenu: true },
+  { id: 'configuratie', naam: 'Configuratie', recht: 'systeem.beheren', inMenu: true },
+  { id: 'zaalbeheer', naam: 'Zaalbeheer', recht: 'systeem.beheren', inMenu: true },
 ];
 
 export function zichtbareTabbladen(rechten) {
   return TABBLADEN.filter((t) => !t.recht || Object.hasOwn(rechten ?? {}, t.recht));
 }
 
+/** Wat in de tabbalk komt; de rest opent via het naammenu. */
+export function tabbalkTabbladen(rechten) {
+  return zichtbareTabbladen(rechten).filter((t) => !t.inMenu);
+}
+
+/** Wat onder Beheer in het naammenu komt, in de volgorde van TABBLADEN. */
+export function menuTabbladen(rechten) {
+  return zichtbareTabbladen(rechten).filter((t) => t.inMenu);
+}
+
 export function bouwNavigatie(rechten, bijWissel) {
-  const tabs = zichtbareTabbladen(rechten);
+  const tabs = tabbalkTabbladen(rechten);
   const nav = el('navigatie');
 
   nav.innerHTML = tabs

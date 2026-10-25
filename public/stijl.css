@@ -44,62 +44,100 @@
 
   body {
     margin: 0;
-    padding: 2rem 1.25rem 4rem;
+    padding: 0 0 4rem;
     font: 16px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     color: var(--inkt);
     background: var(--achtergrond);
     -webkit-text-size-adjust: 100%;
   }
 
-  main { max-width: 44rem; margin: 0 auto; }
+  main { max-width: 44rem; margin: 0 auto; padding: 0 1.25rem; }
 
-  /* Topbalk: logo en clubnaam links onder de apptitel, naam en rol(len)
-     rechts — dezelfde opbouw als bij YOAssist ('club onder de apptitel,
-     rol(len) onder de eigen naam'). align-items: center, niet flex-start:
-     de linkerkant (logo/titel/clubnaam/versie) is intussen drie regels,
-     de rechterkant (naam/rollen) twee — flex-start liet die laatste dan
-     bovenaan hangen in plaats van gecentreerd.
+  /* De kopstrook van YOAssist (I1): een donkere strook over de volle breedte,
+     appnaam met de club eronder links, naam met de rol(len) eronder rechts.
+     Blijft bovenaan staan bij het scrollen, met ruimte voor de inkeping van
+     een iPhone (safe-area-inset-top).
 
      --topbalk-achtergrond en --topbalk-tekst komen van huisstijl.js, enkel
-     wanneer een beheerder een topbalkkleur instelde. Zonder die instelling
-     vallen ze terug op transparant/de gewone inktkleur — precies het huidige
-     uiterlijk. */
+     wanneer een beheerder een topbalkkleur instelde: dan wint de clubkleur.
+     Zonder die instelling de donkere YOAssist-strook met witte tekst. Alles
+     wat erop staat, rekent met currentColor, zodat het ook op een lichte
+     clubkleur leesbaar blijft. */
   .topbalk {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 1rem;
-    flex-wrap: wrap;
-    background: var(--topbalk-achtergrond, transparent);
-    color: var(--topbalk-tekst, var(--inkt));
-    border-bottom: 2px solid var(--topbalk-achtergrond, var(--inkt));
-    border-radius: var(--radius) var(--radius) 0 0;
-    padding: .75rem 1rem;
-    margin: 0 0 2rem;
+    background: var(--topbalk-achtergrond, #12161c);
+    color: var(--topbalk-tekst, #ffffff);
+    padding: calc(.9rem + env(safe-area-inset-top)) 1.25rem .9rem;
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    margin: 0 0 1.25rem;
   }
-  .topbalk-merk { display: flex; align-items: center; gap: .7rem; }
-  .topbalk-merk img { height: 2.5rem; width: auto; max-width: 6rem; object-fit: contain; }
-  h1 { margin: 0; font-size: 1.5rem; letter-spacing: -.01em; color: inherit; }
-  #clubnaam { margin: .15rem 0 0; color: var(--topbalk-tekst, var(--gedempt)); opacity: .8; font-size: .9rem; }
+  /* align-items: center: de linkerkant (merk, club) en de rechterkant (naam,
+     rollen) zijn elk twee regels, en het logo één blok — zo staan ze op
+     dezelfde hoogte in plaats van bovenaan te hangen. */
+  .topbalk-rij {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    max-width: 41.5rem;
+    margin: 0 auto;
+    position: relative;
+  }
+  .topbalk-logo { height: 2.2rem; width: auto; max-width: 5rem; object-fit: contain; }
+  .topbalk-merk { display: flex; flex-direction: column; gap: .08rem; min-width: 0; }
+  .merk {
+    font-size: 1.15rem;
+    font-weight: 700;
+    letter-spacing: -.02em;
+    display: flex;
+    align-items: baseline;
+    gap: .4rem;
+  }
+  /* Amber op de donkere strook, zoals in YOAssist; op een clubkleur zet
+     huisstijl.js dit op de tekstkleur van de strook, want amber is daar niet
+     gegarandeerd leesbaar. */
+  .merk-accent { color: var(--merk-accent, #e8a317); }
+  .versie {
+    font-size: .62rem;
+    font-weight: 600;
+    letter-spacing: .04em;
+    border: 1px solid currentColor;
+    border-radius: 999px;
+    padding: .08rem .38rem;
+    font-variant-numeric: tabular-nums;
+    opacity: .55;
+    position: relative;
+    top: -.1rem;
+  }
+  .versie:empty { display: none; }
+  .merk-club { font-size: .72rem; opacity: .7; letter-spacing: .01em; }
+  .merk-club:empty { display: none; }
 
-  /* Het naammenu: een knop (naam + rollen), en een uitklappaneel eronder met
-     twee secties. 'Algemeen' bestaat enkel voor wie systeem.beheren heeft —
-     de frontend verbergt het element dan gewoon, de rechten zelf liggen al
-     achter elke afzonderlijke route. */
-  .topbalk-ik { position: relative; text-align: right; }
+  /* De naam is zelf de menuknop: je eigen naam is de plek waar mensen hun
+     eigen dingen verwachten. Het pijltje zegt dat er iets openklapt. */
+  .topbalk-ik { position: relative; margin-left: auto; flex-shrink: 0; }
   .topbalk-ik-knop {
-    background: none;
-    border: none;
+    background: transparent;
+    border: 0;
     color: inherit;
     font: inherit;
+    font-size: .78rem;
+    line-height: 1.3;
+    text-align: right;
     cursor: pointer;
-    padding: .2rem;
+    padding: .3rem .5rem;
+    border-radius: 8px;
     display: flex;
-    flex-direction: column;
-    align-items: flex-end;
+    align-items: center;
+    gap: .4rem;
   }
-  #topbalknaam { font-weight: 600; color: inherit; }
-  .topbalk-rollen { color: var(--topbalk-tekst, var(--gedempt)); opacity: .8; font-size: .85rem; }
+  .topbalk-ik-knop:hover { background: color-mix(in srgb, currentColor 12%, transparent); }
+  .topbalk-ik-knop::after { content: '⌄'; font-size: .95em; line-height: 1; transition: transform .15s ease; }
+  .topbalk-ik-knop[aria-expanded="true"]::after { transform: rotate(180deg); }
+  .topbalk-ik-knop > span { display: block; text-align: right; }
+  #topbalknaam { display: block; font-weight: 600; font-size: .85rem; }
+  .topbalk-rollen { display: block; font-size: .7rem; letter-spacing: .04em; opacity: .75; }
+  .topbalk-rollen.beheer { color: var(--merk-accent, #e8a317); opacity: 1; font-weight: 600; }
 
   .naammenu {
     position: absolute;
@@ -124,7 +162,7 @@
     letter-spacing: .03em;
     padding: .5rem .9rem .2rem;
   }
-  .naammenu-kop:not(:first-child) { border-top: 1px solid var(--lijn); margin-top: .3rem; padding-top: .6rem; }
+  .naammenu-scheiding { border-top: 1px solid var(--lijn); margin: .3rem 0; }
   .naammenu button {
     display: block;
     width: 100%;
@@ -141,6 +179,9 @@
   .naammenu button:hover { background: var(--vlak); }
 
   h2 { font-size: 1rem; margin: 2rem 0 .6rem; }
+  /* De titel van een beheerscherm: die opent uit het naammenu, er licht dus
+     geen tabblad op dat zegt waar je bent. */
+  h2.paneelkop { font-size: 1.2rem; margin-top: .5rem; }
   h3 { font-size: .92rem; margin: 1.5rem 0 .4rem; color: var(--gedempt); }
 
   details { margin: 1.5rem 0; border-top: 1px solid var(--lijn); padding-top: .75rem; }

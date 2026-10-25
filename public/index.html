@@ -7,32 +7,40 @@
 <link rel="stylesheet" href="/stijl.css">
 </head>
 <body>
-<main>
-  <header class="topbalk">
+<!-- De kopstrook van YOAssist (I1): appnaam met de club eronder links, de
+     eigen naam met de rol(len) eronder rechts, en die naam is zelf de knop
+     naar het naammenu. Buiten het main-element, zodat de strook de volle breedte neemt
+     en bovenaan blijft staan bij het scrollen. -->
+<header class="topbalk">
+  <div class="topbalk-rij">
+    <img id="clublogo" class="topbalk-logo" alt="" hidden>
     <div class="topbalk-merk">
-      <img id="clublogo" alt="" hidden>
-      <div>
-        <h1>TeamAssist</h1>
-        <p id="clubnaam">AB InBev Leuven Bears</p>
-        <p class="klein" id="topbalkversie"></p>
-      </div>
+      <div class="merk"><span>Team<span class="merk-accent">Assist</span></span><span class="versie" id="topbalkversie"></span></div>
+      <div class="merk-club" id="clubnaam">AB InBev Leuven Bears</div>
     </div>
     <div class="topbalk-ik" id="topbalkik" hidden>
-      <button type="button" class="topbalk-ik-knop" id="naammenuknop" aria-haspopup="true" aria-expanded="false">
-        <span id="topbalknaam"></span>
-        <span id="topbalkrollen" class="topbalk-rollen"></span>
+      <button type="button" class="topbalk-ik-knop" id="naammenuknop" aria-haspopup="menu" aria-expanded="false">
+        <span>
+          <strong id="topbalknaam"></strong>
+          <span id="topbalkrollen" class="topbalk-rollen"></span>
+        </span>
       </button>
-      <div class="naammenu" id="naammenu" hidden>
-        <div class="naammenu-kop">Persoonlijk</div>
-        <button type="button" id="naammenu-voorkeuren">Mijn voorkeuren</button>
-        <button type="button" id="naammenu-afmelden">Afmelden</button>
-        <div class="naammenu-kop" id="naammenu-algemeen-kop" hidden>Algemeen</div>
-        <button type="button" id="naammenu-zaalbeheer" hidden>Zaalbeheer</button>
-        <button type="button" id="naammenu-configuratie" hidden>Configuratie</button>
-        <button type="button" id="naammenu-dagelijksbeheer" hidden>Dagelijks beheer</button>
+      <div class="naammenu" id="naammenu" role="menu" hidden>
+        <!-- Beheer bovenaan, het persoonlijke deel eronder: voor wie geen
+             beheerder is, blijft enkel het tweede deel over. De knoppen van
+             Beheer worden gebouwd uit de rechten (navigatie.js). -->
+        <div class="naammenu-kop" id="naammenu-beheer-kop" hidden>Beheer</div>
+        <div id="naammenu-beheer"></div>
+        <button type="button" role="menuitem" id="naammenu-testrol" hidden>Kijken als …</button>
+        <div class="naammenu-scheiding" id="naammenu-scheiding" hidden></div>
+        <button type="button" role="menuitem" id="naammenu-voorkeuren">Mijn voorkeuren</button>
+        <button type="button" role="menuitem" id="naammenu-afmelden">Afmelden</button>
       </div>
     </div>
-  </header>
+  </div>
+</header>
+
+<main>
 
   <!-- Aanmelden -->
   <section id="aanmelden" hidden>
@@ -241,6 +249,7 @@
 
     <!-- Beheer -->
     <section id="tab-configuratie" hidden>
+      <h2 class="paneelkop">Configuratie</h2>
       <details>
         <summary>Huisstijl</summary>
         <p class="klein">
@@ -276,22 +285,10 @@
         <div id="backupmelding" class="melding" hidden></div>
       </details>
 
-      <details>
-        <summary>Kijken met een andere rol</summary>
-        <p class="klein">
-          Werkt enkel wanneer de instelling <code>testrol_toegelaten</code> aanstaat. Je rechten
-          worden dan versmald tot die rol; meer dan wat je zelf mag, krijg je nooit.
-        </p>
-        <form>
-          <select id="testrolrol"></select>
-          <span id="testrolteamveld" hidden><select id="testrolteam"></select></span>
-          <button type="button" id="testrolstart">Zo kijken</button>
-        </form>
-        <p id="testrolmelding" class="klein"></p>
-      </details>
     </section>
 
     <section id="tab-zaalbeheer" hidden>
+      <h2 class="paneelkop">Zaalbeheer</h2>
       <details open>
         <summary>Zalen</summary>
         <table>
@@ -410,7 +407,8 @@
     </section>
 
     <section id="tab-dagelijksbeheer" hidden>
-      <h2>Gegevens van de bond bekijken</h2>
+      <h2 class="paneelkop">Dagelijks beheer</h2>
+      <h3>Gegevens van de bond bekijken</h3>
       <p class="klein">
         Laat leeg voor de ploegenlijst van de club, of vul een ploeg-GUID in zoals
         <code>BVBL1125J16&nbsp;&nbsp;2</code> — met twee spaties. Het volledige antwoord bevat
@@ -422,6 +420,24 @@
         <button type="button" class="stil" id="diagnoseruw">Volledig antwoord</button>
       </form>
       <pre id="diagnoseuitvoer" hidden></pre>
+    </section>
+
+    <!-- Kijken als …, bereikbaar via Beheer in het naammenu. Enkel daar
+         zichtbaar als testrol_toegelaten aanstaat (/api/mij geeft
+         testrol_mogelijk mee). -->
+    <section id="testrolscherm" hidden>
+      <h2>Kijken als …</h2>
+      <p class="klein">
+        Je rechten worden versmald tot die rol; meer dan wat je zelf mag, krijg je nooit.
+        Zolang het duurt, staat bovenaan een balk met de weg terug.
+      </p>
+      <form>
+        <select id="testrolrol"></select>
+        <span id="testrolteamveld" hidden><select id="testrolteam"></select></span>
+        <button type="button" id="testrolstart">Zo kijken</button>
+        <button type="button" class="stil" id="testrolsluiten">Sluiten</button>
+      </form>
+      <p id="testrolmelding" class="klein"></p>
     </section>
 
     <!-- Mijn voorkeuren, bereikbaar via het naammenu -->

@@ -13,7 +13,7 @@ import { bouwRechten, beperkTot } from '../src/lib/rechten.js';
 // keuzefunctie getest. Die uit het bestand halen houdt de test los van een
 // browser.
 const bron = readFileSync(new URL('../public/js/navigatie.js', import.meta.url), 'utf8');
-const { TABBLADEN, zichtbareTabbladen } = await import(
+const { TABBLADEN, zichtbareTabbladen, tabbalkTabbladen, menuTabbladen } = await import(
   `data:text/javascript,${encodeURIComponent(
     bron.replace(/^import .*$/m, '').replace(/export function bouwNavigatie[\s\S]*$/, '')
   )}`
@@ -50,4 +50,20 @@ test('een beheerder die als coach kijkt, verliest de beheertabbladen', () => {
 
 test('het overzicht heeft geen recht nodig', () => {
   assert.equal(TABBLADEN.find((t) => t.id === 'mij').recht, null);
+});
+
+test('de beheerschermen staan in het naammenu, niet in de tabbalk', () => {
+  const rechten = bouwRechten({ rollen: [{ rol: 'ADMIN', team_guid: null }] }).overzicht();
+  assert.deepEqual(tabbalkTabbladen(rechten).map((t) => t.id), ['mij', 'ploegen', 'personen']);
+  assert.deepEqual(menuTabbladen(rechten).map((t) => t.id), ['dagelijksbeheer', 'configuratie', 'zaalbeheer']);
+});
+
+test('een coach heeft niets onder Beheer', () => {
+  const rechten = bouwRechten({ rollen: [{ rol: 'COACH', team_guid: J16 }] }).overzicht();
+  assert.deepEqual(menuTabbladen(rechten), []);
+});
+
+test('een beheerder die als coach kijkt, verliest ook Beheer in het menu', () => {
+  const echt = bouwRechten({ rollen: [{ rol: 'ADMIN', team_guid: null }] });
+  assert.deepEqual(menuTabbladen(beperkTot(echt, 'COACH', J16).overzicht()), []);
 });

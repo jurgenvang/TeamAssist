@@ -176,7 +176,12 @@ test('genereren voor een onbestaande reeks geeft 404', async () => {
 
 test('trainingenTonen toont de geplande trainingen voor wie het team mag bekijken', async () => {
   const db = zetKlaar();
-  const { id } = await maakReeks(db);
+  // Relatief tegenover vandaag: trainingenTonen toont enkel wat niet ouder is
+  // dan een week. Met de vaste septemberreeks van maakReeks() werd deze test
+  // vanzelf rood zodra september voorbij was, zonder dat er iets aan de code
+  // veranderde.
+  const dag = (n) => new Date(Date.now() + n * 86400000).toISOString().slice(0, 10);
+  const { id } = await maakReeks(db, { van: dag(0), tot: dag(28) });
   await reeksGenereren({ db, persoon, request: verzoek(`/x?reeks=${id}&uitvoeren=1`, null, 'POST') });
 
   const coachRechten = bouwRechten({ rollen: [{ rol: 'COACH', team_guid: T1 }] });
