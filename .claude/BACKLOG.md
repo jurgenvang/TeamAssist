@@ -28,7 +28,7 @@ Bijgewerkt bij elke versie. Voor de volledige tekst: zoek de kop verderop
   Mijn berichten gaat.
 - **I1** — `clubassist.org` bij Resend als afzenderdomein verifiëren (de
   standaardafzender is sinds 0.28.0 `noreply@clubassist.org`), en de Worker
-  er als eigen domein aan hangen.
+  als eigen domein aan `teamassist.clubassist.org` hangen.
 
 ### Klaar om te bouwen
 - **I1, fase 1c (0.29.0)** — push (VAPID, `public/sw.js`, toestellen).
@@ -88,11 +88,21 @@ Bijgewerkt bij elke versie. Voor de volledige tekst: zoek de kop verderop
 
 ### Domein
 
-**`clubassist.org`** (gekocht; `teamassist.org` was niet beschikbaar).
-Subdomeinen kunnen daaronder (bv. `demo.clubassist.org` voor V30).
-- De app op `clubassist.org`.
+**`clubassist.org`** (gekocht; `teamassist.org` was niet beschikbaar). De app
+blijft **TeamAssist** heten.
+
+**Beslist:** de app draait op **één adres, `teamassist.clubassist.org`**. Niet
+op twee subdomeinen tegelijk (bv. ook `yoassist.clubassist.org`): voor de
+browser zijn dat twee aparte sites, met elk een eigen aanmelding, eigen
+pushabonnementen en een eigen icoon op het beginscherm. Wie coach én official
+is, zou zich dan twee keer moeten aanmelden.
+- `clubassist.org` zelf stuurt door (301) naar `teamassist.clubassist.org`.
+- `yoassist.clubassist.org` is niet nodig; komt het er toch, dan enkel als
+  doorverwijzing, nooit als tweede ingang tot de app.
+- Andere subdomeinen voor wat echt apart draait: `demo.clubassist.org` (V30).
+- Afzender van de mail: `noreply@clubassist.org`.
 - `yoassist.org` blijft als tweede eigen domein aan dezelfde Worker hangen en
-  stuurt door (301) naar `clubassist.org` — **behalve** `/api/kalender/` en
+  stuurt door (301) naar `teamassist.clubassist.org` — **behalve** `/api/kalender/` en
   `/api/extern/`, die het rechtstreeks blijft bedienen. Een agenda-abonnement
   van een official staat al in zijn agenda, en niet elke agenda-app volgt een
   doorverwijzing.
@@ -156,8 +166,6 @@ Tot de overstap blijft YOAssist live en krijgt het enkel bugfixes.
 
 ### Nog te bepalen
 
-- Of de app zelf ook *ClubAssist* gaat heten, nu het domein zo heet. Tot dan
-  blijft de naam TeamAssist; enkel het afzenderadres volgt het domein al.
 - **Volgorde tegenover T7, T12, T18 en T19.** Voorstel: I1 eerst. T12 raakt
   `personen` en `berichten` (`is_testpersoon`, `is_test`), en die tabellen
   krijgen bij I1 hun definitieve vorm; T12 erna bouwen vermijdt dubbel werk.
