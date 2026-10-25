@@ -5,6 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>TeamAssist</title>
 <link rel="stylesheet" href="/stijl.css">
+<!-- Icoon en manifest (0.29.0): nodig voor 'Zet op beginscherm', en op een
+     iPhone is dat de enige weg naar meldingen. -->
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" type="image/png" sizes="32x32" href="/icoon/favicon-32.png">
+<link rel="apple-touch-icon" href="/icoon/apple-touch-icon.png">
+<meta name="theme-color" content="#12161c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="TeamAssist">
 </head>
 <body>
 <!-- De kopstrook van YOAssist (I1): appnaam met de club eronder links, de
@@ -525,15 +533,29 @@
           <option value="beide">Beide</option>
         </select>
       </label>
-      <p class="klein" id="voorkeurkanaalnotitie" hidden>
-        Meldingen op het toestel bestaan nog niet — tot dan gaat alles via mail,
-        ongeacht deze keuze.
+      <p class="klein">
+        Kies je enkel meldingen, zet ze dan hieronder ook aan op je toestel. Komt er
+        op geen enkel toestel een melding aan, dan krijg je het bericht toch per mail.
       </p>
       <form>
         <button type="button" id="voorkeurenbewaren">Bewaren</button>
         <button type="button" class="stil" id="voorkeurensluiten">Sluiten</button>
       </form>
       <div id="voorkeurenmelding" class="melding" hidden></div>
+
+      <h3>Meldingen op dit toestel</h3>
+      <p class="klein" id="meldingenstatus"></p>
+      <p class="klein" id="meldingeniphone" hidden>
+        Open TeamAssist in Safari, tik op het deelicoon (het vierkantje met de pijl
+        omhoog), kies <strong>Zet op beginscherm</strong>, en open de app daarna via dat
+        icoon. Pas dan kan je hier meldingen aanzetten. Dat is een regel van Apple.
+      </p>
+      <form>
+        <button type="button" id="meldingenaan" hidden>Meldingen aanzetten</button>
+        <button type="button" class="stil" id="meldingentest" hidden>Testmelding sturen</button>
+        <button type="button" class="stil" id="meldingenuit" hidden>Uitzetten op dit toestel</button>
+      </form>
+      <div id="meldingenmelding" class="melding" hidden></div>
     </section>
 
     <!-- Detail van één persoon, over de tabbladen heen -->

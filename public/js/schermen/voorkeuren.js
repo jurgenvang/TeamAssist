@@ -9,6 +9,7 @@
 
 import { api } from '../api.js';
 import { el, toon } from '../hulp.js';
+import { toonMeldingenstatus } from './meldingen.js';
 
 const OPSLAG_MODUS = 'teamassist.donkere_modus';
 
@@ -30,9 +31,9 @@ function bewaarLokaleModus(modus) {
 export function toonVoorkeuren(persoon) {
   el('voorkeurmodus').value = persoon.donkere_modus ?? 'systeem';
   el('voorkeurkanaal').value = persoon.kanaal_voorkeur ?? 'mail';
-  el('voorkeurkanaalnotitie').hidden = false; // push bestaat nog niet, zie WIJZIGINGEN
   el('voorkeurenmelding').hidden = true;
   el('voorkeuren').hidden = false;
+  toonMeldingenstatus();
 }
 
 export async function bewaarVoorkeuren() {

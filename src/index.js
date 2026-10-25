@@ -22,6 +22,7 @@ import {
   berichtenTonen, berichtenOngelezen, berichtGelezen, berichtVerwijderen, mededelingTonen, mededelingWegklikken,
 } from './routes/berichten.js';
 import { mededelingHuidige, mededelingPlaatsen, mededelingIntrekken } from './routes/admin/mededeling.js';
+import { pushAbonneer, pushAfmelden, pushToestellen, pushTest } from './routes/push.js';
 import { opgaveZetten, mijnOpgaven } from './routes/aanwezigheid-opgave.js';
 import { aanmeldlink } from './routes/aanmeldlink.js';
 import { vblDiagnose } from './routes/admin/vbl-diagnose.js';
@@ -64,6 +65,9 @@ export const ROUTES = [
       json({
         supabase_url: env.SUPABASE_URL ?? '',
         supabase_publishable_key: env.SUPABASE_PUBLISHABLE_KEY ?? '',
+        // De publieke VAPID-sleutel: de browser heeft ze nodig om zich in te
+        // schrijven. Publiek van aard; de private sleutel blijft een secret.
+        vapid_publiek: env.VAPID_PUBLIEK ?? '',
         versie: VERSIE,
       }),
   },
@@ -89,6 +93,11 @@ export const ROUTES = [
   { methode: 'POST', pad: '/api/berichten/verwijderen', doe: berichtVerwijderen },
   { methode: 'GET', pad: '/api/mededeling', doe: mededelingTonen },
   { methode: 'POST', pad: '/api/mededeling/wegklikken', doe: mededelingWegklikken },
+  // Meldingen op dit toestel: ook over jezelf.
+  { methode: 'POST', pad: '/api/push/abonneer', doe: pushAbonneer },
+  { methode: 'POST', pad: '/api/push/afmelden', doe: pushAfmelden },
+  { methode: 'GET', pad: '/api/push/toestellen', doe: pushToestellen },
+  { methode: 'POST', pad: '/api/push/test', doe: pushTest },
   // Een mededeling plaatsen: enkel wie het systeem beheert.
   { methode: 'GET', pad: '/api/admin/mededeling', recht: 'systeem.beheren', doe: mededelingHuidige },
   { methode: 'POST', pad: '/api/admin/mededeling', recht: 'systeem.beheren', doe: mededelingPlaatsen },

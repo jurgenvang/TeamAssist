@@ -11,7 +11,7 @@ WIJZIGINGEN-bestanden blijven kloppen:
   punt *U* (Microsoft 365) heet hier **VU**, want TeamAssist heeft al een *U*
 - **T** + nummer, en de letters **A–AB** — TeamAssist
 
-Stand: YOAssist **v1.17.0**, TeamAssist **0.28.0**
+Stand: YOAssist **v1.17.0**, TeamAssist **0.29.0**
 
 ---
 
@@ -29,9 +29,15 @@ Bijgewerkt bij elke versie. Voor de volledige tekst: zoek de kop verderop
 - **I1** — `clubassist.org` bij Resend als afzenderdomein verifiëren (de
   standaardafzender is sinds 0.28.0 `noreply@clubassist.org`), en de Worker
   als eigen domein aan `teamassist.clubassist.org` hangen.
+- **I1** — de VAPID-secrets bij de Worker zetten (`node tools/maak-vapid.mjs`,
+  zie README); zonder blijft alles per mail.
+- **I1, fase 2** — een verse YOAssist-backup (Beheer → backup, JSON) om de
+  migratie tegen te toetsen.
 
 ### Klaar om te bouwen
-- **I1, fase 1c (0.29.0)** — push (VAPID, `public/sw.js`, toestellen).
+- **I1, fase 2** — het schema van de module Officials en
+  `tools/migreer-yoassist.mjs`. Kan starten; de toets tegen een echte backup
+  wacht op die backup.
 - **T7** — tabblad Mijn club.
 - **T12** — aanmelden als.
 - **T18, T19** — twee kleine gaten uit de code-audit.
@@ -145,8 +151,10 @@ is, zou zich dan twee keer moeten aanmelden.
    - **1b — 0.28.0, afgewerkt**: Mijn berichten, belangrijk nieuws (met een
      doelgroep: iedereen, de begeleiding of één ploeg) en het
      meldingenbolletje.
-   - **1c — 0.29.0**: push (VAPID, `public/sw.js`, toestellen),
-     `verwittigen.js` samengevoegd.
+   - **1c — 0.29.0, afgewerkt**: push (VAPID, `public/sw.js`, toestellen),
+     meldingen aan/uit per toestel in Mijn voorkeuren, manifest en icoon voor
+     'Zet op beginscherm'. `kanaal_voorkeur` wordt nu echt gevolgd; wie push
+     koos zonder werkend toestel, krijgt mail.
    Tabbladen per stuk uitzetten (YOAssist's `verborgen_tabs`) komt pas
    wanneer de schermen van de module Officials erbij komen; met drie
    tabbladen heeft het nog geen zin.
@@ -208,6 +216,7 @@ Tot de overstap blijft YOAssist live en krijgt het enkel bugfixes.
 | 0.23.0 | T14 afgewerkt: een volledige backup van de databank als JSON. Beter dan aanvankelijk voorgesteld — geen hardcoded tabellenlijst met een test die drift moet vangen (de YOAssist-aanpak), maar tabellen rechtstreeks uit `sqlite_master` gehaald, wat de hele bugklasse structureel onmogelijk maakt. De kerntest bewijst dat letterlijk: een tabel die pas ná het schrijven van de route wordt aangemaakt, zit er toch in. |
 | 0.24.0 | T16 en T17 afgewerkt. `verwittig()` heeft geen `kanaal`-parameter meer en leest voortaan `kanaal_voorkeur` — mail blijft de terugval zolang push niet bestaat, met een aparte logregel voor wie 'push' koos. Blokken bij Zaalbeheer staan nu gegroepeerd per weekdag als losse blokjes, met bewust neutrale kleuren in plaats van de accentkleur. |
 | 0.25.0 | T15 afgewerkt: opruiming van `logboek` (365 dagen), `taak_runs` (30 dagen), `berichten` (120 dagen), en het definitief verwijderen van een inactieve persoon na 180 dagen. Twee tabellen extra gevonden tijdens het bouwen (`accounts`, `ouder_kind`) die niet in het oorspronkelijke overzicht stonden. Enkel `aanwezigheden` wordt geanonimiseerd in plaats van verwijderd — de enige tabel waar dat structureel kon — wat een schema-heropbouw vroeg, grondig getoetst tegen een nagemaakte bestaande databank. |
+| 0.29.0 | I1 fase 1c: pushmeldingen. `verwittig()` volgt `kanaal_voorkeur` echt: mail, push, of beide; wie push koos maar op geen enkel toestel bereikbaar is, krijgt toch mail. Push enkel in de modus *normaal*. Meldingen aan/uit per toestel in Mijn voorkeuren, gemeten op het abonnement van dat toestel, met een testmelding en de iPhone-uitleg. Tikken op een melding opent Mijn berichten. Manifest en een voorlopig icoon, nodig voor 'Zet op beginscherm' en dus voor push op een iPhone. Push-code uit YOAssist overgenomen, nu met een test die een melding echt ontcijfert zoals een browser. Schema: tabel `push_abonnementen` (CREATE). 810 tests. |
 | 0.28.0 | I1 fase 1b: Mijn berichten (ongelezen tot je een bericht aantikt, 'lees meer' met klikbare links, alles gelezen, verwijderen) en het meldingenbolletje op de naam, dat rechtstreeks naar Mijn berichten gaat en zichzelf om de drie minuten ververst. Belangrijk nieuws: één banner tegelijk, met een doelgroep (iedereen, de begeleiding, of één ploeg met spelers, ouders en begeleiding); wie erin zit en een account heeft, krijgt ze ook als bericht — via het batch-endpoint van Resend, honderd per oproep. Onderweg gevonden: een persoon met een wedstrijdtaak (0.26.0) kon nooit verwijderd worden; nu een test die elke foreign key naar `personen` naloopt. `schema-alles-in-een.sql` en `schema-kaal.sql` worden voortaan gegenereerd. Standaardafzender naar `clubassist.org`. Schema: drie kolommen in `berichten` (ALTER), tabellen `mededelingen` en `mededeling_gezien`. 786 tests. |
 | 0.27.0 | I1 fase 1a: de kopbalk en het naammenu van YOAssist. Donkere strook die bovenaan blijft staan, een ingestelde topbalkkleur wint. Dagelijks beheer, Configuratie en Zaalbeheer uit de tabbalk, enkel nog onder Beheer in het naammenu, gebouwd uit dezelfde rechten als de tabbalk. *Kijken als …* in het naammenu, en enkel nog aangeboden als `testrol_toegelaten` aanstaat (`/api/mij` → `testrol_mogelijk`) — tot nu toe beweerde de testbalk soms iets wat de backend stil negeerde. Ook: een test die sinds oktober altijd faalde door een vaste septemberdatum. 746 tests. |
 | 0.26.0 | T1 afgewerkt: taken bij een wedstrijd (klok, 24 seconden, tablet, ploegafgevaardigde). Taakslots ontstaan automatisch bij de synchronisatie, toewijzen mag wie de selectie beheert, elk actief clublid komt in aanmerking, en een toewijzing verwittigt — de derde fase 5-trigger, opnieuw zonder aanpassing aan `verwittigen.js`. Onderweg bleek `/api/admin/personen` niet bruikbaar als kandidatenlijst (vraagt `personen.beheren`, en weigert bewust een volledige lijst), dus een eigen smalle route die enkel id en naam teruggeeft. |
@@ -594,11 +603,10 @@ team. Opnieuw zonder enige aanpassing aan `verwittigen.js` zelf.
 **Nog open, dezelfde `verwittig()`-functie hergebruikend:**
 - Welkomstmail voor een nieuw aangemaakte persoon.
 - Herinneringen aan wie nog niet invulde.
-- Push als tweede kanaal (VAPID-secrets, `public/sw.js`, toestelregistratie).
-  Komt uit YOAssist, in fase 1 van I1.
-- T6 (Mijn voorkeuren) om het kanaal per persoon te kunnen kiezen — het
-  scherm zelf bestaat sinds 0.19.0, enkel `verwittigen.js` gebruikt de keuze
-  nog niet: die geeft vandaag altijd mail, ongeacht `kanaal_voorkeur`.
+- ~~Push als tweede kanaal~~ — **afgewerkt in 0.29.0** (I1 fase 1c), en
+  daarmee ook de keuze uit T6: `kanaal_voorkeur` wordt nu echt gevolgd.
+  Een mededeling (`verwittigVelen`) gaat nog enkel per mail en banner: push
+  naar honderden toestellen tegelijk vraagt evenveel uitgaande oproepen.
 
 **Restpunt uit de huisstijl (0.10.0/0.11.0):** of het clublogo ook in mails
 komt. Dat vraagt een publiek bereikbare URL — voor het VBL-afgeleide logo is

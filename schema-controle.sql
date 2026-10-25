@@ -1,4 +1,4 @@
--- TeamAssist — controle op de databankstructuur (versie 0.28.0)
+-- TeamAssist — controle op de databankstructuur (versie 0.29.0)
 --
 -- Plak dit in de D1-console na het uitvoeren van een schemawijziging. Het wijzigt
 -- niets; het vergelijkt wat er staat met wat er hoort te staan.
@@ -21,6 +21,7 @@ WITH verwacht_object(soort, naam) AS (VALUES
   ('index', 'idx_periodes_seizoen'),
   ('index', 'idx_personen_email'),
   ('index', 'idx_personen_relguid'),
+  ('index', 'idx_push_persoon'),
   ('index', 'idx_rollen_persoon'),
   ('index', 'idx_rollen_uniek'),
   ('index', 'idx_taak_runs_taak'),
@@ -44,6 +45,7 @@ WITH verwacht_object(soort, naam) AS (VALUES
   ('table', 'ouder_kind'),
   ('table', 'periodes'),
   ('table', 'personen'),
+  ('table', 'push_abonnementen'),
   ('table', 'rollen'),
   ('table', 'seizoenen'),
   ('table', 'taak_runs'),
@@ -158,6 +160,15 @@ verwacht_kolom(tabel, kolom) AS (VALUES
   ('personen', 'kanaal_voorkeur'),
   ('personen', 'aangemaakt'),
   ('personen', 'gewijzigd'),
+  ('push_abonnementen', 'id'),
+  ('push_abonnementen', 'persoon_id'),
+  ('push_abonnementen', 'endpoint'),
+  ('push_abonnementen', 'p256dh'),
+  ('push_abonnementen', 'auth'),
+  ('push_abonnementen', 'toestel'),
+  ('push_abonnementen', 'aangemaakt'),
+  ('push_abonnementen', 'laatst_ok'),
+  ('push_abonnementen', 'mislukt'),
   ('rollen', 'id'),
   ('rollen', 'persoon_id'),
   ('rollen', 'rol'),
@@ -294,7 +305,7 @@ SELECT 0 AS volgorde,
             THEN 'ALLES OK'
             ELSE (SELECT count(*) FROM problemen) || ' PROBLEEM/PROBLEMEN'
        END AS soort,
-       'structuur versie 0.28.0' AS naam
+       'structuur versie 0.29.0' AS naam
 UNION ALL
 SELECT 1, soort, naam FROM problemen
 ORDER BY volgorde, soort, naam;

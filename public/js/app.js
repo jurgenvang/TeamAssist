@@ -18,8 +18,9 @@ import {
   downloadZaalsjabloon, uploadZaalsjabloon, downloadReeksensjabloon, uploadReeksensjabloon,
 } from './schermen/trainingen.js';
 import { toonTestbalk, vulTestrolkeuze, koppelTestrol } from './schermen/testrol.js';
-import { startTeller, toonBerichten, allesGelezen, toonMededeling, mededelingWegklikken } from './schermen/berichten.js';
+import { startTeller, ververTeller, toonBerichten, allesGelezen, toonMededeling, mededelingWegklikken } from './schermen/berichten.js';
 import { laadMededelingBeheer, koppelMededelingBeheer } from './schermen/mededeling-beheer.js';
+import { zetMeldingenAan, zetMeldingenUit, stuurTestmelding, luisterNaarServiceWorker } from './schermen/meldingen.js';
 
 function toonAanmelden() {
   el('aanmelden').hidden = false;
@@ -101,6 +102,14 @@ function toonApp(gegevens) {
 
   startTeller();
   toonMededeling();
+
+  // Aangekomen via een tik op een melding, terwijl de app nog niet openstond
+  // (sw.js opent dan /?open=berichten). De URL daarna opkuisen, zodat een
+  // herlaadbeurt niet opnieuw naar de berichten springt.
+  if (new URLSearchParams(location.search).get('open') === 'berichten') {
+    history.replaceState(null, '', location.pathname);
+    toonBerichten();
+  }
 }
 
 /**
@@ -273,6 +282,12 @@ el('berichtensluiten').addEventListener('click', () => {
   el('berichtenscherm').hidden = true;
 });
 el('mededelingweg').addEventListener('click', mededelingWegklikken);
+el('meldingenaan').addEventListener('click', zetMeldingenAan);
+el('meldingenuit').addEventListener('click', zetMeldingenUit);
+el('meldingentest').addEventListener('click', stuurTestmelding);
+// Stond de app al open toen er op een melding getikt werd, dan vraagt de
+// service worker om Mijn berichten te openen — sneller dan een herlaadbeurt.
+luisterNaarServiceWorker({ openBerichten: toonBerichten, nieuwBericht: ververTeller });
 koppelMededelingBeheer();
 
 el('naammenu-voorkeuren').addEventListener('click', () => {

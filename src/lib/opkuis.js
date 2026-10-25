@@ -78,6 +78,8 @@ export async function verwijderInactievePersonenOp(db) {
     // Sinds 0.28.0: wie welke mededeling wegklikte. Zonder dit blokkeert de
     // foreign key het verwijderen van de persoon zelf.
     await db.prepare(`DELETE FROM mededeling_gezien WHERE persoon_id = ?`).bind(id).run();
+    // Sinds 0.29.0: de toestellen van de persoon.
+    await db.prepare(`DELETE FROM push_abonnementen WHERE persoon_id = ?`).bind(id).run();
 
     await db.prepare(`UPDATE aanwezigheden SET persoon_id = NULL WHERE persoon_id = ?`).bind(id).run();
     await db.prepare(`UPDATE aanwezigheden SET opgave_door = NULL WHERE opgave_door = ?`).bind(id).run();

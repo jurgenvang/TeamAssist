@@ -681,3 +681,61 @@ test('de mededeling-beheerroutes en de berichtenroutes lopen via api()', () => {
     assert.ok(!/fetch\(/.test(bron));
   }
 });
+
+// --- 0.29.0: push ------------------------------------------------------------
+
+const meldingenJs = lees('../public/js/schermen/meldingen.js');
+const sw = lees('../public/sw.js');
+
+test('manifest en icoon staan er: zonder kan een iPhone geen meldingen krijgen', async () => {
+  const { existsSync } = await import('node:fs');
+  const manifest = JSON.parse(lees('../public/manifest.json'));
+  assert.equal(manifest.display, 'standalone');
+  for (const i of manifest.icons) {
+    assert.ok(existsSync(new URL(`../public${i.src}`, import.meta.url)), i.src);
+  }
+  assert.ok(html.includes('<link rel="manifest" href="/manifest.json">'));
+  assert.ok(existsSync(new URL('../public/icoon/apple-touch-icon.png', import.meta.url)));
+});
+
+test('tikken op een melding opent Mijn berichten: een open venster krijgt een boodschap, anders /?open=berichten', () => {
+  assert.match(sw, /postMessage\(\{ type: 'open-berichten' \}\)[\s\S]{0,60}venster\.focus\(\)/);
+  assert.match(sw, /openWindow\('\/\?open=berichten'\)/);
+  assert.match(app, /get\('open'\) === 'berichten'\) {\s*history\.replaceState[\s\S]{0,60}toonBerichten\(\)/);
+  assert.match(app, /luisterNaarServiceWorker\(\{ openBerichten: toonBerichten, nieuwBericht: ververTeller \}\)/);
+});
+
+test('de service worker cachet niets', () => {
+  assert.ok(!/caches\.|addEventListener\('fetch'/.test(sw));
+});
+
+test('de status komt van het abonnement van dit toestel, niet van de voorkeur in de databank', () => {
+  const status = meldingenJs.slice(meldingenJs.indexOf('export async function toonMeldingenstatus'), meldingenJs.indexOf('function volgVoorkeur'));
+  assert.match(status, /abonnementVanDitToestel\(\)/);
+  assert.ok(!status.includes('kanaal_voorkeur'));
+});
+
+test('uitzetten meldt eerst af bij de server, dan pas in de browser', () => {
+  const uit = meldingenJs.slice(meldingenJs.indexOf('export async function zetMeldingenUit'));
+  assert.ok(uit.indexOf("api('/api/push/afmelden'") < uit.indexOf('abonnement.unsubscribe()'));
+});
+
+test('toestemming vragen gebeurt rechtstreeks vanuit de knop, zoals iOS eist', () => {
+  assert.match(app, /el\('meldingenaan'\)\.addEventListener\('click', zetMeldingenAan\)/);
+  const aan = meldingenJs.slice(meldingenJs.indexOf('export async function zetMeldingenAan'));
+  assert.ok(aan.indexOf('Notification.requestPermission()') < aan.indexOf('await navigator.serviceWorker.register'),
+    'eerst de toestemming, vóór er iets anders gewacht wordt');
+});
+
+test('de VAPID-sleutel wordt correct omgezet naar bytes', async () => {
+  const bron = meldingenJs.slice(meldingenJs.indexOf('export function sleutelNaarBytes'), meldingenJs.indexOf('function alsB64url'));
+  const sleutelNaarBytes = new Function(`${bron.replace('export ', '')}; return sleutelNaarBytes;`)();
+  const { maakVapidSleutels, b64urlNaarBytes } = await import('../src/lib/push.js');
+  const { publiek } = await maakVapidSleutels();
+  assert.deepEqual([...sleutelNaarBytes(publiek)], [...b64urlNaarBytes(publiek)]);
+  assert.equal(sleutelNaarBytes(publiek).length, 65);
+});
+
+test('de iPhone-uitleg over het beginscherm staat in het scherm', () => {
+  assert.match(html, /id="meldingeniphone" hidden>[\s\S]{0,200}Zet op beginscherm/);
+});

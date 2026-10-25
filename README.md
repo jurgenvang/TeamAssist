@@ -275,6 +275,21 @@ stilzwijgend iets anders te doen.
 De `alg` uit het token bepaalt nooit welke weg gekozen wordt; dat is precies het
 lek dat je niet wil.
 
+### Pushmeldingen (sinds 0.29.0)
+
+```
+node tools/maak-vapid.mjs                           # één keer: maakt een sleutelpaar
+npx wrangler secret put VAPID_PUBLIEK               # de eerste regel
+npx wrangler secret put VAPID_PRIVE                 # de tweede regel
+npx wrangler secret put VAPID_CONTACT               # een mailadres, bv. beheer@clubassist.org
+```
+
+Zonder deze drie werkt alles gewoon per mail; Mijn voorkeuren zegt dan dat
+meldingen nog niet ingesteld zijn. Maak het paar maar één keer: een nieuw paar
+maakt elk ingeschreven toestel ongeldig. De sleutels van YOAssist kunnen ook,
+maar het abonnement hangt aan het domein — officials schrijven zich op
+`teamassist.clubassist.org` hoe dan ook opnieuw in.
+
 De publishable key is geen geheim — ze staat in de pagina, zoals bedoeld. Ze gaat
 hier toch als secret mee, omdat wat in `wrangler.toml` staat bij elke deploy
 overschreven wordt.

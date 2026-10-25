@@ -9,11 +9,13 @@
 // Welk kanaal gebruikt wordt, is sinds T16 geen keuze van de aanroeper meer.
 // De aanroeper zegt enkel wie iets moet weten en wat — deze functie zelf
 // bepaalt hoe, aan de hand van `personen.kanaal_voorkeur` (mail/push/beide,
-// ingesteld bij Mijn voorkeuren, T6). Vóór T16 werd die kolom nergens
-// gelezen: iedereen kreeg mail, ongeacht wat hij instelde. Zolang er geen
-// push-kanaal bestaat, blijft mail het enige werkelijke kanaal — wie 'push'
-// koos, krijgt voorlopig toch mail, met een aparte, niet-alarmerende
-// logregel zodat dat zichtbaar blijft tot push er is.
+// ingesteld bij Mijn voorkeuren, T6).
+//
+// Push bestaat sinds 0.29.0 (I1, uit YOAssist). Mail blijft het betrouwbare
+// kanaal: op een iPhone werkt push enkel als de app op het beginscherm staat,
+// en abonnementen verlopen stil. Daarom: wie 'push' koos maar geen enkel
+// werkend toestel heeft, krijgt toch mail — liever een mail te veel dan een
+// bericht dat nergens aankomt.
 //
 // bericht_modus bepaalt wat er met een bericht gebeurt:
 //
@@ -29,11 +31,65 @@
 //               in `berichten`; bij een mislukking enkel in het logboek.
 
 import { verstuurMail, verstuurMailBatch } from './mailer.js';
+import { stuurPush } from './push.js';
 import { logSchrijf } from './logboek.js';
 
 async function instelling(db, sleutel) {
   const rij = await db.prepare(`SELECT waarde FROM instellingen WHERE sleutel = ?`).bind(sleutel).first();
   return rij?.waarde || null;
+}
+
+/**
+ * Push naar elk toestel van één persoon.
+ *
+ * Een verlopen abonnement (404/410) wordt meteen gewist: blijven proberen
+ * levert enkel ruis op. Een gewone mislukking telt op in `mislukt`, want die
+ * kan voorbijgaan. Bijwerken mag het versturen nooit laten mislukken.
+ *
+ * @returns {{verstuurd: number, verlopen: number, toestellen: number}}
+ */
+export async function pushNaarToestellen(ctx, persoon_id, { titel, tekst }) {
+  const { db, env } = ctx;
+  const rijen = await db
+    .prepare(`SELECT id, endpoint, p256dh, auth FROM push_abonnementen WHERE persoon_id = ?`)
+    .bind(persoon_id)
+    .all();
+  const toestellen = rijen.results ?? [];
+  const uit = { verstuurd: 0, verlopen: 0, toestellen: toestellen.length };
+  if (!toestellen.length) return uit;
+
+  const sleutels = {
+    publiek: env.VAPID_PUBLIEK,
+    prive: env.VAPID_PRIVE,
+    onderwerp: `mailto:${env.VAPID_CONTACT || 'noreply@clubassist.org'}`,
+  };
+  // Tikken op een melding opent altijd Mijn berichten (sw.js), dus geen url
+  // per bericht: je landt altijd op hetzelfde vertrouwde scherm.
+  const bericht = { titel, tekst };
+
+  for (const t of toestellen) {
+    const res = await stuurPush(t, bericht, sleutels);
+    try {
+      if (res.verstuurd) {
+        uit.verstuurd += 1;
+        await db.prepare(`UPDATE push_abonnementen SET laatst_ok = datetime('now'), mislukt = 0 WHERE id = ?`).bind(t.id).run();
+      } else if (res.verlopen) {
+        uit.verlopen += 1;
+        await db.prepare(`DELETE FROM push_abonnementen WHERE id = ?`).bind(t.id).run();
+      } else {
+        await db.prepare(`UPDATE push_abonnementen SET mislukt = mislukt + 1 WHERE id = ?`).bind(t.id).run();
+      }
+    } catch {
+      // Het toestel bijwerken is boekhouding; het bericht is al vertrokken of niet.
+    }
+  }
+  return uit;
+}
+
+/** De tekst van een pushmelding: de korte regel, of de eerste regels. */
+function pushTekst(kort, inhoud) {
+  if (kort) return kort;
+  return String(inhoud ?? '').split('\n').filter((r) => r.trim()).slice(0, 2).join(' ').slice(0, 180);
 }
 
 /**
@@ -45,14 +101,17 @@ async function instelling(db, sleutel) {
  * @param {string} [bericht.soort]  waar het over gaat, voor Mijn berichten
  * @param {string} [bericht.kort]   één regel voor de lijst in Mijn berichten
  *
- * Geen kanaal-parameter meer: de aanroeper schrijft niet voor via welk kanaal
- * er verstuurd wordt, dat bepaalt deze functie zelf aan de hand van
- * `personen.kanaal_voorkeur` (mail/push/beide, ingesteld bij Mijn
- * voorkeuren). Zolang er geen push-kanaal bestaat, is mail het enige
- * werkelijke kanaal — wie 'push' koos, krijgt voorlopig toch mail in plaats
- * van niets, maar dat wordt apart gelogd. Zo blijft zichtbaar wie een keuze
- * maakte die nog niet gehonoreerd kan worden, in plaats van dat stilzwijgend
- * te negeren tot push ooit gebouwd wordt.
+ * Geen kanaal-parameter: deze functie bepaalt zelf hoe, aan de hand van
+ * `personen.kanaal_voorkeur`:
+ *  - 'mail'  — enkel mail;
+ *  - 'push'  — push naar elk toestel; komt er op geen enkel toestel iets aan
+ *              (geen toestel, of alle mislukt), dan toch mail;
+ *  - 'beide' — mail én push.
+ * Push vertrekt enkel in de modus 'normaal': in 'omleiden' kan een melding
+ * niet naar een testadres omgeleid worden, en naar de echte persoon mag ze
+ * dan net niet.
+ *
+ * @returns {{verstuurd, omgeleid?, mail?, push?, reden?}}
  */
 export async function verwittig(ctx, { persoon_id, onderwerp, inhoud, soort = null, kort = null }) {
   const { db, env } = ctx;
@@ -61,26 +120,9 @@ export async function verwittig(ctx, { persoon_id, onderwerp, inhoud, soort = nu
     .prepare(`SELECT email, kanaal_voorkeur FROM personen WHERE id = ?`)
     .bind(persoon_id)
     .first();
-  if (!persoon?.email) {
-    await logSchrijf(db, {
-      soort: 'fout',
-      wat: 'bericht niet verstuurd: geen e-mailadres',
-      details: `${persoon_id}: ${onderwerp}`,
-      afgehandeld: 0,
-    });
-    return { verstuurd: false, reden: 'geen e-mailadres' };
-  }
-
-  // Het enige kanaal dat vandaag echt bestaat. Bij 'push' is dit een
-  // terugval, geen vervulde voorkeur — vandaar de aparte logregel hieronder,
-  // pas ná een geslaagde verzending (een voorkeur die niet gehaald wordt, is
-  // geen fout op zich, enkel het scherp maken van wat nog ontbreekt).
-  const kanaal = 'mail';
-  // De terugval op 'mail' hier is defensief: personen.kanaal_voorkeur is
-  // NOT NULL DEFAULT 'mail' in het schema, dus dit pad kan via een normale
-  // UPDATE niet bereikt worden. Blijft staan voor de zeldzame situatie waarin
-  // een rij ooit buiten de app om is aangepast.
-  const voorkeur = persoon.kanaal_voorkeur || 'mail';
+  // De terugval op 'mail' is defensief: kanaal_voorkeur is NOT NULL DEFAULT
+  // 'mail', dit pad bestaat enkel voor een rij die buiten de app om veranderde.
+  const voorkeur = persoon?.kanaal_voorkeur || 'mail';
 
   const modus = (await instelling(db, 'bericht_modus')) || 'omleiden';
 
@@ -88,66 +130,108 @@ export async function verwittig(ctx, { persoon_id, onderwerp, inhoud, soort = nu
     await logSchrijf(db, {
       soort: 'beheer',
       wat: 'bericht niet verstuurd (modus uit)',
-      details: `${persoon.email}: ${onderwerp} — ${inhoud}`,
+      details: `${persoon?.email ?? persoon_id}: ${onderwerp} — ${inhoud}`,
     });
     return { verstuurd: false, reden: 'modus uit' };
   }
 
-  const van = (await instelling(db, 'mail_afzender')) || 'TeamAssist <noreply@clubassist.org>';
-  let bestemming = persoon.email;
+  // Eerst push, want of er nog mail moet volgen, hangt ervan af.
+  let push = { verstuurd: 0, verlopen: 0, toestellen: 0 };
+  if (modus === 'normaal' && (voorkeur === 'push' || voorkeur === 'beide')) {
+    push = await pushNaarToestellen(ctx, persoon_id, { titel: onderwerp, tekst: pushTekst(kort, inhoud) });
+  }
+  const mailNodig = voorkeur !== 'push' || push.verstuurd === 0;
 
-  if (modus === 'omleiden') {
-    const omleidadres = await instelling(db, 'bericht_omleidadres');
-    if (!omleidadres) {
-      await logSchrijf(db, {
-        soort: 'fout',
-        wat: 'omleiden ingesteld maar geen omleidadres gevuld',
-        details: onderwerp,
-        afgehandeld: 0,
-      });
-      return { verstuurd: false, reden: 'geen omleidadres' };
+  let mail = false;
+  if (mailNodig) {
+    if (!persoon?.email) {
+      if (push.verstuurd === 0) {
+        await logSchrijf(db, {
+          soort: 'fout',
+          wat: 'bericht niet verstuurd: geen e-mailadres',
+          details: `${persoon_id}: ${onderwerp}`,
+          afgehandeld: 0,
+        });
+        return { verstuurd: false, reden: 'geen e-mailadres' };
+      }
+    } else {
+      const van = (await instelling(db, 'mail_afzender')) || 'TeamAssist <noreply@clubassist.org>';
+      let bestemming = persoon.email;
+
+      if (modus === 'omleiden') {
+        const omleidadres = await instelling(db, 'bericht_omleidadres');
+        if (!omleidadres) {
+          await logSchrijf(db, {
+            soort: 'fout',
+            wat: 'omleiden ingesteld maar geen omleidadres gevuld',
+            details: onderwerp,
+            afgehandeld: 0,
+          });
+          return { verstuurd: false, reden: 'geen omleidadres' };
+        }
+        bestemming = omleidadres;
+      }
+
+      try {
+        await verstuurMail({ van, naar: bestemming, onderwerp, tekst: inhoud }, env);
+        mail = true;
+      } catch (e) {
+        await logSchrijf(db, {
+          soort: 'fout',
+          wat: 'bericht versturen mislukt',
+          details: `${bestemming}: ${onderwerp} — ${e.message}`,
+          afgehandeld: 0,
+        });
+        if (push.verstuurd === 0) return { verstuurd: false, reden: e.message };
+      }
+
+      if (modus === 'omleiden') {
+        await logSchrijf(db, {
+          soort: 'beheer',
+          wat: 'bericht verstuurd (omgeleid)',
+          details: `voor ${persoon.email}, echt naar ${bestemming}: ${onderwerp}`,
+        });
+        return { verstuurd: true, omgeleid: true };
+      }
     }
-    bestemming = omleidadres;
   }
 
-  try {
-    await verstuurMail({ van, naar: bestemming, onderwerp, tekst: inhoud }, env);
-  } catch (e) {
-    await logSchrijf(db, {
-      soort: 'fout',
-      wat: 'bericht versturen mislukt',
-      details: `${bestemming}: ${onderwerp} — ${e.message}`,
-      afgehandeld: 0,
-    });
-    return { verstuurd: false, reden: e.message };
-  }
-
-  if (modus === 'omleiden') {
-    await logSchrijf(db, {
-      soort: 'beheer',
-      wat: 'bericht verstuurd (omgeleid)',
-      details: `voor ${persoon.email}, echt naar ${bestemming}: ${onderwerp}`,
-    });
-    return { verstuurd: true, omgeleid: true };
-  }
-
-  // modus === 'normaal': werkelijk aangekomen bij de echte persoon.
+  // modus === 'normaal': werkelijk aangekomen bij de echte persoon. Eén rij,
+  // ook bij mail én push — Mijn berichten hoort een bericht niet twee keer
+  // te tonen. `kanaal` zegt wat er zeker aankwam: mail als die vertrok, anders
+  // push.
   await db
     .prepare(`INSERT INTO berichten (persoon_id, kanaal, onderwerp, inhoud, soort, kort) VALUES (?, ?, ?, ?, ?, ?)`)
-    .bind(persoon_id, kanaal, onderwerp, inhoud, soort, kort)
+    .bind(persoon_id, mail ? 'mail' : 'push', onderwerp, inhoud, soort, kort)
     .run();
 
-  if (voorkeur === 'push') {
-    // Geen fout, geen mislukking — enkel zichtbaar maken dat deze persoon
-    // eigenlijk iets anders koos, zodra dat kanaal bestaat.
+  if (voorkeur === 'push' && push.verstuurd === 0) {
+    // Geen fout — wel zichtbaar maken dat deze persoon push koos en het niet
+    // kreeg, zodat een beheerder hem kan aanspreken.
     await logSchrijf(db, {
       soort: 'beheer',
       wat: 'bericht via mail, terwijl de voorkeur push is',
-      details: `${persoon_id}: ${onderwerp} — push bestaat nog niet`,
+      details: `${persoon_id}: ${onderwerp} — ${push.toestellen ? 'geen toestel bereikbaar' : 'geen toestel ingeschreven'}`,
     });
   }
 
-  return { verstuurd: true, omgeleid: false };
+  return { verstuurd: true, omgeleid: false, mail, push: push.verstuurd };
+}
+
+/**
+ * Een testmelding naar je eigen toestellen, vanuit Mijn voorkeuren.
+ *
+ * Gaat ook in de modus 'omleiden': het enige toestel dat ze kan krijgen, is
+ * dat van wie op de knop drukte — er valt niets om te leiden. In de modus
+ * 'uit' niet: daar vertrekt niets, ook geen test.
+ */
+export async function verwittigTest(ctx, persoon_id) {
+  const modus = (await instelling(ctx.db, 'bericht_modus')) || 'omleiden';
+  if (modus === 'uit') return { verstuurd: 0, toestellen: 0, reden: 'modus uit' };
+  return pushNaarToestellen(ctx, persoon_id, {
+    titel: 'TeamAssist — testmelding',
+    tekst: 'Als je dit ziet, werken meldingen op dit toestel.',
+  });
 }
 
 /**

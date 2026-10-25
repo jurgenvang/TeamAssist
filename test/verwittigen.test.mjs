@@ -138,7 +138,7 @@ test('een persoon zonder e-mailadres krijgt nooit een verzendpoging', async () =
   assert.match(regel.wat, /geen e-mailadres/);
 });
 
-test('een persoon met kanaal_voorkeur push krijgt vandaag toch mail, met een aparte logregel', async () => {
+test('kanaal_voorkeur push zonder ingeschreven toestel: toch mail, met een aparte logregel', async () => {
   const db = zetKlaar('normaal');
   db._sqlite.exec(`UPDATE personen SET kanaal_voorkeur = 'push' WHERE id = 'p1'`);
 
@@ -149,7 +149,7 @@ test('een persoon met kanaal_voorkeur push krijgt vandaag toch mail, met een apa
   };
   try {
     const uit = await verwittig({ db, env: { RESEND_API_KEY: 'x' } }, bericht());
-    assert.equal(uit.verstuurd, true, 'push bestaat nog niet, dus mail als terugval — niet niets versturen');
+    assert.equal(uit.verstuurd, true, 'geen toestel, dus mail als terugval — niet niets versturen');
     assert.equal(bestemming, 'anna@example.org');
   } finally {
     delete globalThis.fetch;

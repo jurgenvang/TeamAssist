@@ -12,6 +12,7 @@ DROP TABLE IF EXISTS zalen;
 DROP TABLE IF EXISTS instellingen;
 DROP TABLE IF EXISTS mededeling_gezien;
 DROP TABLE IF EXISTS mededelingen;
+DROP TABLE IF EXISTS push_abonnementen;
 DROP TABLE IF EXISTS berichten;
 DROP TABLE IF EXISTS logboek;
 DROP TABLE IF EXISTS ouder_kind;
@@ -176,6 +177,21 @@ CREATE TABLE berichten (
 );
 
 CREATE INDEX idx_berichten_persoon ON berichten (persoon_id, verzonden);
+
+CREATE TABLE push_abonnementen (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  persoon_id  TEXT NOT NULL,
+  endpoint    TEXT NOT NULL UNIQUE,
+  p256dh      TEXT NOT NULL,
+  auth        TEXT NOT NULL,
+  toestel     TEXT,
+  aangemaakt  TEXT NOT NULL DEFAULT (datetime('now')),
+  laatst_ok   TEXT,
+  mislukt     INTEGER NOT NULL DEFAULT 0,
+  FOREIGN KEY (persoon_id) REFERENCES personen (id)
+);
+
+CREATE INDEX idx_push_persoon ON push_abonnementen (persoon_id);
 
 CREATE TABLE mededelingen (
   id          INTEGER PRIMARY KEY AUTOINCREMENT,
