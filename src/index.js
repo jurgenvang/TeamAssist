@@ -41,7 +41,7 @@ import { reeksensjabloonExporteren, reeksensjabloonImporteren } from './routes/a
 import {
   aanwezigheidTonen, vaststellen, uitsluiten, selectieZetten, selectiePubliceren,
 } from './routes/admin/aanwezigheid-beheer.js';
-import { wedstrijdtakenTonen, wedstrijdtaakToewijzen, wedstrijdtaakProbleemMelden } from './routes/admin/wedstrijdtaken.js';
+import { wedstrijdtakenTonen, wedstrijdtaakToewijzen, wedstrijdtaakProbleemMelden, taakKandidaten } from './routes/admin/wedstrijdtaken.js';
 import { brandingVoorstel, brandingTonen } from './routes/admin/branding.js';
 import { VERSIE } from './versie.js';
 
@@ -202,6 +202,7 @@ export const ROUTES = [
   { methode: 'POST', pad: '/api/admin/selectie', doe: selectieZetten },
   { methode: 'POST', pad: '/api/admin/selectie/publiceren', doe: selectiePubliceren },
   { methode: 'GET', pad: '/api/admin/wedstrijdtaken', doe: wedstrijdtakenTonen },
+  { methode: 'GET', pad: '/api/admin/wedstrijdtaken/kandidaten', doe: taakKandidaten },
   { methode: 'POST', pad: '/api/admin/wedstrijdtaken/toewijzen', doe: wedstrijdtaakToewijzen },
   { methode: 'POST', pad: '/api/admin/wedstrijdtaken/probleem', doe: wedstrijdtaakProbleemMelden },
 

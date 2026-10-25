@@ -567,3 +567,25 @@ test('de blokjes-CSS gebruikt neutrale kleuren, geen accentkleur — geen rolbad
   assert.ok(!blok.includes('var(--accent)'), 'roosterinformatie, geen rolbadge');
   assert.ok(blok.includes('var(--vlak)') || blok.includes('var(--lijn)'));
 });
+
+test('het aanwezigheidsscherm toont een taakblok bij een wedstrijd (T1)', () => {
+  assert.ok(html.includes('id="taakblok"'));
+  assert.ok(html.includes('id="taaklijf"'));
+  assert.ok(html.includes('id="taakmelding"'));
+  const bron = lees('../public/js/schermen/aanwezigheid-beheer.js');
+  assert.ok(bron.includes('async function toonTaken'));
+  assert.ok(bron.includes("api('/api/admin/wedstrijdtaken/toewijzen'"));
+});
+
+test('het taakblok blijft weg bij een training en bij een wedstrijd zonder taakslots', () => {
+  const bron = lees('../public/js/schermen/aanwezigheid-beheer.js');
+  const fn = bron.slice(bron.indexOf('async function toonTaken'));
+  assert.match(fn, /soort !== 'wedstrijd'[\s\S]{0,120}hidden = true/);
+  assert.match(fn, /!uit\.body\?\.taken\?\.length[\s\S]{0,80}hidden = true/);
+});
+
+test('de kandidatenlijst komt van de eigen smalle route, niet van personenZoeken', () => {
+  const bron = lees('../public/js/schermen/aanwezigheid-beheer.js');
+  assert.ok(bron.includes('/api/admin/wedstrijdtaken/kandidaten'));
+  assert.ok(!bron.includes("api('/api/admin/personen')"), 'die route vraagt personen.beheren, wat een coach niet heeft');
+});

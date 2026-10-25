@@ -132,6 +132,77 @@ async function toonAanwezigheid(soort, activiteitId) {
   } else {
     selectieBlok.hidden = true;
   }
+
+  // Taken (T1): enkel bij een wedstrijd, en enkel als er taakslots bestaan.
+  // Een wedstrijd van een ploeg met een onbekende categorie heeft er geen —
+  // dan blijft dit blok gewoon weg in plaats van een lege tabel te tonen.
+  await toonTaken(soort, activiteitId);
+}
+
+async function toonTaken(soort, activiteitId) {
+  const blok = el('taakblok');
+  if (soort !== 'wedstrijd') {
+    blok.hidden = true;
+    return;
+  }
+
+  const uit = await api(`/api/admin/wedstrijdtaken?wedstrijd_id=${activiteitId}`);
+  if (uit.status !== 200 || !uit.body?.taken?.length) {
+    blok.hidden = true;
+    return;
+  }
+
+  blok.hidden = false;
+  el('taakmelding').hidden = true;
+
+  el('taaklijf').innerHTML = uit.body.taken
+    .map(
+      (t) => `<tr>
+        <td>${veilig(t.taak_naam)}</td>
+        <td class="ploegen">${
+          t.persoon_naam
+            ? veilig(t.persoon_naam) +
+              (t.probleem_gemeld
+                ? ` — <strong>probleem gemeld</strong>${t.probleem_reden ? `: ${veilig(t.probleem_reden)}` : ''}`
+                : '')
+            : 'nog niemand'
+        }</td>
+        <td>
+          <select data-taak-keuze="${t.id}"></select>
+          <button type="button" class="stil" data-taak-toewijzen="${t.id}">Aanduiden</button>
+        </td>
+      </tr>`
+    )
+    .join('');
+
+  // De kandidatenlijst is elk actief clublid — zo is T1 uitgeklaard, geen
+  // beperking tot ouders van spelers in dat team.
+  const personen = await api(`/api/admin/wedstrijdtaken/kandidaten?wedstrijd_id=${activiteitId}`);
+  const opties = (personen.body?.kandidaten ?? [])
+    .map((p) => `<option value="${veilig(p.id)}">${veilig(p.voornaam)} ${veilig(p.achternaam)}</option>`)
+    .join('');
+
+  for (const keuze of el('taaklijf').querySelectorAll('[data-taak-keuze]')) {
+    const taakId = Number(keuze.dataset.taakKeuze);
+    const taak = uit.body.taken.find((t) => t.id === taakId);
+    keuze.innerHTML = `<option value="">— kies —</option>${opties}`;
+    if (taak?.persoon_id) keuze.value = taak.persoon_id;
+  }
+
+  for (const knop of el('taaklijf').querySelectorAll('[data-taak-toewijzen]')) {
+    knop.addEventListener('click', async () => {
+      const taakId = Number(knop.dataset.taakToewijzen);
+      const keuze = el('taaklijf').querySelector(`[data-taak-keuze="${taakId}"]`);
+      const persoonId = keuze?.value;
+      if (!persoonId) return;
+      const res = await api('/api/admin/wedstrijdtaken/toewijzen', 'POST', {
+        wedstrijdtaak_id: taakId,
+        persoon_id: persoonId,
+      });
+      if (res.status === 200) await toonTaken('wedstrijd', activiteitId);
+      else toon('taakmelding', res.body?.fout ?? `Fout ${res.status}`, true);
+    });
+  }
 }
 
 export async function bewaarSelectie() {

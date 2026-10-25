@@ -107,6 +107,37 @@ export async function wedstrijdtaakToewijzen(ctx) {
 }
 
 /**
+ * De kandidaten voor een wedstrijdtaak: elk actief clublid, enkel id en naam.
+ *
+ * Een eigen route in plaats van `/api/admin/personen` (personenZoeken): die
+ * vraagt `personen.beheren`, wat een coach niet heeft, en weigert bewust een
+ * volledige lijst zonder zoekterm terug te geven. Hier is een volledige lijst
+ * net wel nodig — T1 klaarde uit dat om het even welk actief clublid in
+ * aanmerking komt — maar dan zonder de gevoelige velden die personenZoeken
+ * wél meegeeft (e-mail, geboortedatum, lidnummer, rel_guid). Enkel wat een
+ * keuzelijst nodig heeft.
+ */
+export async function taakKandidaten(ctx) {
+  const { db, rechten, request } = ctx;
+  const wedstrijdId = new URL(request.url).searchParams.get('wedstrijd_id');
+  if (!wedstrijdId) return fout(400, 'wedstrijd_id ontbreekt');
+
+  const wed = await db.prepare(`SELECT team_guid FROM wedstrijden WHERE id = ?`).bind(wedstrijdId).first();
+  if (!wed) return fout(404, 'die wedstrijd bestaat niet');
+  if (!rechten.mag('team.selectie.beheren', wed.team_guid)) return fout(403, 'geen recht op deze ploeg');
+
+  const rijen = await db
+    .prepare(
+      `SELECT id, voornaam, achternaam FROM personen
+        WHERE actief = 1
+        ORDER BY lower(achternaam), lower(voornaam)`
+    )
+    .all();
+
+  return json({ kandidaten: rijen.results ?? [] });
+}
+
+/**
  * Een toegewezen persoon kan zijn taak niet zelf wijzigen, wel een probleem
  * melden — hetzelfde patroon als aanwezigheid. Gaat naar de begeleiding van
  * dat team (COACH/COORD/PLOEGV), niet naar de persoon zelf.

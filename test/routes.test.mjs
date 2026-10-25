@@ -62,6 +62,7 @@ test('een route die geen recht vraagt, doet dat bewust', () => {
       '/api/admin/selectie',
       '/api/admin/selectie/publiceren',
       '/api/admin/wedstrijdtaken',
+      '/api/admin/wedstrijdtaken/kandidaten',
       '/api/admin/wedstrijdtaken/toewijzen',
       '/api/admin/wedstrijdtaken/probleem',
       '/api/admin/trainingen',
