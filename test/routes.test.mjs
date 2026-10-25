@@ -54,6 +54,12 @@ test('een route die geen recht vraagt, doet dat bewust', () => {
     [
       '/api/mij',
       '/api/mij/voorkeuren',
+      '/api/berichten',
+      '/api/berichten/ongelezen',
+      '/api/berichten/gelezen',
+      '/api/berichten/verwijderen',
+      '/api/mededeling',
+      '/api/mededeling/wegklikken',
       '/api/aanwezigheid/opgave',
       '/api/aanwezigheid/mijn',
       '/api/admin/aanwezigheid',

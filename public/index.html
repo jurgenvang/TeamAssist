@@ -25,6 +25,10 @@
           <span id="topbalkrollen" class="topbalk-rollen"></span>
         </span>
       </button>
+      <!-- Het meldingenbolletje: een badge op de naamknop, met een eigen klik
+           die rechtstreeks naar Mijn berichten gaat — los van de knop
+           eronder, die het menu opent. -->
+      <button type="button" class="berichtenbadge" id="berichtenbadge" hidden>0</button>
       <div class="naammenu" id="naammenu" role="menu" hidden>
         <!-- Beheer bovenaan, het persoonlijke deel eronder: voor wie geen
              beheerder is, blijft enkel het tweede deel over. De knoppen van
@@ -33,6 +37,7 @@
         <div id="naammenu-beheer"></div>
         <button type="button" role="menuitem" id="naammenu-testrol" hidden>Kijken als …</button>
         <div class="naammenu-scheiding" id="naammenu-scheiding" hidden></div>
+        <button type="button" role="menuitem" id="naammenu-berichten">Mijn berichten</button>
         <button type="button" role="menuitem" id="naammenu-voorkeuren">Mijn voorkeuren</button>
         <button type="button" role="menuitem" id="naammenu-afmelden">Afmelden</button>
       </div>
@@ -70,6 +75,14 @@
     <div id="testbalk" class="testbalk" hidden>
       <span id="testbalktekst"></span>
       <button type="button" id="testrolstop">Terug naar mijn eigen rollen</button>
+    </div>
+
+    <!-- Belangrijk nieuws: één mededeling tegelijk, tot ze verloopt of tot je
+         ze wegklikt. -->
+    <div class="mededeling" id="mededeling" hidden>
+      <span id="mededelingtekst"></span>
+      <a id="mededelinglink" target="_blank" rel="noopener noreferrer" hidden></a>
+      <button type="button" class="sluit-klein" id="mededelingweg" aria-label="Wegklikken">×</button>
     </div>
 
     <nav id="navigatie" hidden></nav>
@@ -408,7 +421,44 @@
 
     <section id="tab-dagelijksbeheer" hidden>
       <h2 class="paneelkop">Dagelijks beheer</h2>
-      <h3>Gegevens van de bond bekijken</h3>
+      <details open>
+        <summary>Belangrijk nieuws</summary>
+        <div id="mededelinghuidig"></div>
+        <form>
+          <button type="button" class="stil" id="mededelingintrekken" hidden>Huidige mededeling weghalen</button>
+        </form>
+        <p class="klein">
+          Eén mededeling tegelijk, als balk bovenaan bij wie tot de doelgroep hoort, tot de
+          einddatum of tot iemand ze wegklikt. Wie een account heeft, krijgt ze ook als
+          bericht. Altijd eerst voorbereiden: dat toont hoeveel mensen het krijgen.
+        </p>
+        <label class="veld"><span>Tekst</span>
+          <textarea id="mededelinginvoer" rows="3" maxlength="500"></textarea></label>
+        <label class="veld"><span>Link (optioneel)</span>
+          <input type="url" id="mededelinginvoerlink" placeholder="https://"></label>
+        <label class="veld"><span>Tekst van de link (optioneel)</span>
+          <input type="text" id="mededelinginvoerlinktekst" placeholder="Meer lezen"></label>
+        <label class="veld"><span>Zichtbaar tot</span>
+          <input type="datetime-local" id="mededelingtot"></label>
+        <form>
+          <select id="mededelingdoelgroep">
+            <option value="iedereen">Iedereen</option>
+            <option value="begeleiding">De begeleiding (COORD, COACH, PLOEGV)</option>
+            <option value="ploeg">Eén ploeg (spelers, ouders, begeleiding)</option>
+          </select>
+          <select id="mededelingploeg" hidden></select>
+        </form>
+        <label class="vinkje"><input type="checkbox" id="mededelingbericht" checked>
+          Ook als bericht: mail en Mijn berichten</label>
+        <form>
+          <button type="button" class="stil" id="mededelingvoorbereiden">Voorbereiden</button>
+          <button type="button" id="mededelingplaatsen" hidden>Plaatsen</button>
+        </form>
+        <div id="mededelingplan" class="melding" hidden></div>
+      </details>
+
+      <details>
+      <summary>Gegevens van de bond bekijken</summary>
       <p class="klein">
         Laat leeg voor de ploegenlijst van de club, of vul een ploeg-GUID in zoals
         <code>BVBL1125J16&nbsp;&nbsp;2</code> — met twee spaties. Het volledige antwoord bevat
@@ -420,6 +470,7 @@
         <button type="button" class="stil" id="diagnoseruw">Volledig antwoord</button>
       </form>
       <pre id="diagnoseuitvoer" hidden></pre>
+      </details>
     </section>
 
     <!-- Kijken als …, bereikbaar via Beheer in het naammenu. Enkel daar
@@ -438,6 +489,21 @@
         <button type="button" class="stil" id="testrolsluiten">Sluiten</button>
       </form>
       <p id="testrolmelding" class="klein"></p>
+    </section>
+
+    <!-- Mijn berichten, via het naammenu of het bolletje op de naam -->
+    <section id="berichtenscherm" hidden>
+      <h2>Mijn berichten</h2>
+      <p class="klein">
+        Wat de app je stuurde. Tik een bericht aan om het als gelezen te markeren en,
+        waar dat kan, de volledige tekst te zien.
+      </p>
+      <form>
+        <button type="button" class="stil" id="berichtenallesgelezen">Alles gelezen</button>
+        <button type="button" class="stil" id="berichtensluiten">Sluiten</button>
+      </form>
+      <div id="berichtenmelding" class="melding" hidden></div>
+      <div id="berichtenlijst"></div>
     </section>
 
     <!-- Mijn voorkeuren, bereikbaar via het naammenu -->

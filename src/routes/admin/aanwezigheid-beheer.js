@@ -39,7 +39,7 @@ async function meldSelectiePublicatie(ctx, wed) {
     const inhoud = geselecteerdeIds.has(speler.persoon_id)
       ? `Je staat op de selectie voor de wedstrijd van ${beschrijving}.`
       : `De selectie voor de wedstrijd van ${beschrijving} is bekend. Je staat er deze keer niet bij.`;
-    await verwittig(ctx, { persoon_id: speler.persoon_id, onderwerp, inhoud });
+    await verwittig(ctx, { persoon_id: speler.persoon_id, onderwerp, inhoud, soort: 'selectie' });
     aantal += 1;
   }
   return aantal;

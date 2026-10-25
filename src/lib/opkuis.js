@@ -75,11 +75,21 @@ export async function verwijderInactievePersonenOp(db) {
     await db.prepare(`DELETE FROM ouder_kind WHERE ouder_id = ? OR kind_id = ?`).bind(id, id).run();
     await db.prepare(`DELETE FROM wedstrijdselecties WHERE persoon_id = ?`).bind(id).run();
     await db.prepare(`DELETE FROM berichten WHERE persoon_id = ?`).bind(id).run();
+    // Sinds 0.28.0: wie welke mededeling wegklikte. Zonder dit blokkeert de
+    // foreign key het verwijderen van de persoon zelf.
+    await db.prepare(`DELETE FROM mededeling_gezien WHERE persoon_id = ?`).bind(id).run();
 
     await db.prepare(`UPDATE aanwezigheden SET persoon_id = NULL WHERE persoon_id = ?`).bind(id).run();
     await db.prepare(`UPDATE aanwezigheden SET opgave_door = NULL WHERE opgave_door = ?`).bind(id).run();
     await db.prepare(`UPDATE aanwezigheden SET uitgesloten_door = NULL WHERE uitgesloten_door = ?`).bind(id).run();
     await db.prepare(`UPDATE aanwezigheden SET vaststelling_door = NULL WHERE vaststelling_door = ?`).bind(id).run();
+    // Wedstrijdtaken (T1, 0.26.0) stonden hier niet bij: een persoon met een
+    // toegewezen taak liet het verwijderen mislukken op de foreign key, en
+    // daarmee de hele ronde. Zoals bij aanwezigheden blijft de taak bestaan
+    // en wordt enkel de persoon losgekoppeld — ook als toewijzer en bij een
+    // open taak opnieuw een open plaats.
+    await db.prepare(`UPDATE wedstrijdtaken SET persoon_id = NULL WHERE persoon_id = ?`).bind(id).run();
+    await db.prepare(`UPDATE wedstrijdtaken SET toegewezen_door = NULL WHERE toegewezen_door = ?`).bind(id).run();
 
     await db.prepare(`DELETE FROM personen WHERE id = ?`).bind(id).run();
     aantal += 1;

@@ -297,7 +297,11 @@ bijgehouden:
 
 ```
 node tools/genereer-controle.mjs
+node tools/genereer-schemas.mjs
 ```
+
+Het tweede bouwt `schema-alles-in-een.sql` en `schema-kaal.sql` opnieuw op
+(sinds 0.28.0; daarvoor met de hand).
 
 Er staat een test op die faalt zodra de twee uit elkaar lopen. In YOAssist bleef
 de backuplijst jarenlang achter op het schema, telkens wanneer er een tabel

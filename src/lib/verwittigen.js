@@ -28,7 +28,7 @@
 //  'normaal'  — echt versturen naar de echte ontvanger. Bij succes komt het
 //               in `berichten`; bij een mislukking enkel in het logboek.
 
-import { verstuurMail } from './mailer.js';
+import { verstuurMail, verstuurMailBatch } from './mailer.js';
 import { logSchrijf } from './logboek.js';
 
 async function instelling(db, sleutel) {
@@ -42,6 +42,8 @@ async function instelling(db, sleutel) {
  * @param {string} bericht.persoon_id
  * @param {string} bericht.onderwerp
  * @param {string} bericht.inhoud
+ * @param {string} [bericht.soort]  waar het over gaat, voor Mijn berichten
+ * @param {string} [bericht.kort]   één regel voor de lijst in Mijn berichten
  *
  * Geen kanaal-parameter meer: de aanroeper schrijft niet voor via welk kanaal
  * er verstuurd wordt, dat bepaalt deze functie zelf aan de hand van
@@ -52,7 +54,7 @@ async function instelling(db, sleutel) {
  * maakte die nog niet gehonoreerd kan worden, in plaats van dat stilzwijgend
  * te negeren tot push ooit gebouwd wordt.
  */
-export async function verwittig(ctx, { persoon_id, onderwerp, inhoud }) {
+export async function verwittig(ctx, { persoon_id, onderwerp, inhoud, soort = null, kort = null }) {
   const { db, env } = ctx;
 
   const persoon = await db
@@ -91,7 +93,7 @@ export async function verwittig(ctx, { persoon_id, onderwerp, inhoud }) {
     return { verstuurd: false, reden: 'modus uit' };
   }
 
-  const van = (await instelling(db, 'mail_afzender')) || 'TeamAssist <noreply@teamassist.org>';
+  const van = (await instelling(db, 'mail_afzender')) || 'TeamAssist <noreply@clubassist.org>';
   let bestemming = persoon.email;
 
   if (modus === 'omleiden') {
@@ -131,8 +133,8 @@ export async function verwittig(ctx, { persoon_id, onderwerp, inhoud }) {
 
   // modus === 'normaal': werkelijk aangekomen bij de echte persoon.
   await db
-    .prepare(`INSERT INTO berichten (persoon_id, kanaal, onderwerp, inhoud) VALUES (?, ?, ?, ?)`)
-    .bind(persoon_id, kanaal, onderwerp, inhoud)
+    .prepare(`INSERT INTO berichten (persoon_id, kanaal, onderwerp, inhoud, soort, kort) VALUES (?, ?, ?, ?, ?, ?)`)
+    .bind(persoon_id, kanaal, onderwerp, inhoud, soort, kort)
     .run();
 
   if (voorkeur === 'push') {
@@ -146,4 +148,99 @@ export async function verwittig(ctx, { persoon_id, onderwerp, inhoud }) {
   }
 
   return { verstuurd: true, omgeleid: false };
+}
+
+/**
+ * Hetzelfde bericht aan veel mensen tegelijk — voor een mededeling.
+ *
+ * Dezelfde drie modi als verwittig(), met twee verschillen die bij een grote
+ * groep tellen:
+ *  - 'normaal' verstuurt via het batch-endpoint van Resend, honderd per
+ *    oproep, in plaats van één oproep per persoon. Een Worker mag per aanroep
+ *    maar een beperkt aantal uitgaande oproepen doen.
+ *  - 'omleiden' stuurt één mail naar het testadres, met erin voor hoeveel
+ *    mensen ze bedoeld was — niet driehonderd keer dezelfde mail.
+ * Een batch die mislukt, laat de andere niet mislukken; wie erin zat, komt
+ * niet in `berichten` en staat als mislukt in het logboek.
+ *
+ * @param {Array<{id, email}>} ontvangers  zie doelgroep.js
+ * @returns {{verstuurd, mislukt, zonderMail, omgeleid?, reden?}}
+ */
+export async function verwittigVelen(ctx, ontvangers, { onderwerp, inhoud, soort = null, kort = null }) {
+  const { db, env } = ctx;
+  const metMail = ontvangers.filter((o) => o.email);
+  const zonderMail = ontvangers.length - metMail.length;
+  const uitkomst = { verstuurd: 0, mislukt: 0, zonderMail };
+
+  const modus = (await instelling(db, 'bericht_modus')) || 'omleiden';
+  if (modus === 'uit') {
+    await logSchrijf(db, {
+      soort: 'beheer',
+      wat: 'bericht niet verstuurd (modus uit)',
+      details: `${metMail.length} ontvangers: ${onderwerp} — ${inhoud}`,
+    });
+    return { ...uitkomst, reden: 'modus uit' };
+  }
+
+  const van = (await instelling(db, 'mail_afzender')) || 'TeamAssist <noreply@clubassist.org>';
+
+  if (modus === 'omleiden') {
+    const omleidadres = await instelling(db, 'bericht_omleidadres');
+    if (!omleidadres) {
+      await logSchrijf(db, {
+        soort: 'fout',
+        wat: 'omleiden ingesteld maar geen omleidadres gevuld',
+        details: onderwerp,
+        afgehandeld: 0,
+      });
+      return { ...uitkomst, reden: 'geen omleidadres' };
+    }
+    const tekst = `[Omgeleid: bedoeld voor ${metMail.length} ontvanger(s)]\n\n${inhoud}`;
+    try {
+      await verstuurMail({ van, naar: omleidadres, onderwerp, tekst }, env);
+    } catch (e) {
+      await logSchrijf(db, {
+        soort: 'fout',
+        wat: 'bericht versturen mislukt',
+        details: `${omleidadres}: ${onderwerp} — ${e.message}`,
+        afgehandeld: 0,
+      });
+      return { ...uitkomst, mislukt: metMail.length, reden: e.message };
+    }
+    await logSchrijf(db, {
+      soort: 'beheer',
+      wat: 'bericht verstuurd (omgeleid)',
+      details: `voor ${metMail.length} ontvangers, echt naar ${omleidadres}: ${onderwerp}`,
+    });
+    return { ...uitkomst, omgeleid: true };
+  }
+
+  for (let i = 0; i < metMail.length; i += 100) {
+    const groep = metMail.slice(i, i + 100);
+    try {
+      await verstuurMailBatch(
+        groep.map((o) => ({ van, naar: o.email, onderwerp, tekst: inhoud })),
+        env
+      );
+    } catch (e) {
+      uitkomst.mislukt += groep.length;
+      await logSchrijf(db, {
+        soort: 'fout',
+        wat: 'bericht versturen mislukt',
+        details: `${groep.length} ontvangers (${groep[0].email} …): ${onderwerp} — ${e.message}`,
+        afgehandeld: 0,
+      });
+      continue;
+    }
+    // Enkel wie in een geslaagde batch zat: 'Mijn berichten' toont wat echt
+    // vertrok, zoals bij verwittig().
+    for (const o of groep) {
+      await db
+        .prepare(`INSERT INTO berichten (persoon_id, kanaal, onderwerp, inhoud, soort, kort) VALUES (?, 'mail', ?, ?, ?, ?)`)
+        .bind(o.id, onderwerp, inhoud, soort, kort)
+        .run();
+    }
+    uitkomst.verstuurd += groep.length;
+  }
+  return uitkomst;
 }

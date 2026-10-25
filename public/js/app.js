@@ -18,6 +18,8 @@ import {
   downloadZaalsjabloon, uploadZaalsjabloon, downloadReeksensjabloon, uploadReeksensjabloon,
 } from './schermen/trainingen.js';
 import { toonTestbalk, vulTestrolkeuze, koppelTestrol } from './schermen/testrol.js';
+import { startTeller, toonBerichten, allesGelezen, toonMededeling, mededelingWegklikken } from './schermen/berichten.js';
+import { laadMededelingBeheer, koppelMededelingBeheer } from './schermen/mededeling-beheer.js';
 
 function toonAanmelden() {
   el('aanmelden').hidden = false;
@@ -86,6 +88,9 @@ function toonApp(gegevens) {
     if (tab === 'configuratie') {
       laadInstellingen();
     }
+    if (tab === 'dagelijksbeheer') {
+      laadMededelingBeheer();
+    }
     if (tab === 'zaalbeheer') {
       laadZalen();
       laadPeriodes();
@@ -93,6 +98,9 @@ function toonApp(gegevens) {
   });
 
   bouwBeheermenu(rechten, gegevens.testrol_mogelijk === true);
+
+  startTeller();
+  toonMededeling();
 }
 
 /**
@@ -248,6 +256,24 @@ document.addEventListener('click', (e) => {
   const ik = el('topbalkik');
   if (!ik.contains(e.target)) sluitNaammenu();
 });
+
+el('naammenu-berichten').addEventListener('click', () => {
+  sluitNaammenu();
+  toonBerichten();
+});
+// Het bolletje gaat rechtstreeks naar Mijn berichten, zonder het menu te
+// openen: wie een rood bolletje ziet, wil de berichten, niet het menu.
+el('berichtenbadge').addEventListener('click', (e) => {
+  e.stopPropagation();
+  sluitNaammenu();
+  toonBerichten();
+});
+el('berichtenallesgelezen').addEventListener('click', allesGelezen);
+el('berichtensluiten').addEventListener('click', () => {
+  el('berichtenscherm').hidden = true;
+});
+el('mededelingweg').addEventListener('click', mededelingWegklikken);
+koppelMededelingBeheer();
 
 el('naammenu-voorkeuren').addEventListener('click', () => {
   sluitNaammenu();

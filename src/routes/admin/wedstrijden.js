@@ -47,7 +47,7 @@ async function meldWijziging(ctx, ploeg, seizoen, w) {
     `Was: ${wedstrijdBeschrijving(w.was)}\n` +
     `Wordt: ${wedstrijdBeschrijving(w)}`;
   for (const persoon of begeleiding) {
-    await verwittig(ctx, { persoon_id: persoon.id, onderwerp, inhoud });
+    await verwittig(ctx, { persoon_id: persoon.id, onderwerp, inhoud, soort: 'wedstrijd' });
   }
   return begeleiding.length;
 }

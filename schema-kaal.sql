@@ -1,5 +1,5 @@
-DROP TABLE IF EXISTS wedstrijdtaken;
 DROP TABLE IF EXISTS taak_runs;
+DROP TABLE IF EXISTS wedstrijdtaken;
 DROP TABLE IF EXISTS wedstrijdselecties;
 DROP TABLE IF EXISTS aanwezigheden;
 DROP TABLE IF EXISTS wedstrijden;
@@ -9,8 +9,10 @@ DROP TABLE IF EXISTS periodes;
 DROP TABLE IF EXISTS zaal_sluitingen;
 DROP TABLE IF EXISTS zaal_blokken;
 DROP TABLE IF EXISTS zalen;
-DROP TABLE IF EXISTS berichten;
 DROP TABLE IF EXISTS instellingen;
+DROP TABLE IF EXISTS mededeling_gezien;
+DROP TABLE IF EXISTS mededelingen;
+DROP TABLE IF EXISTS berichten;
 DROP TABLE IF EXISTS logboek;
 DROP TABLE IF EXISTS ouder_kind;
 DROP TABLE IF EXISTS team_spelers;
@@ -52,12 +54,9 @@ CREATE TABLE personen (
   gemeente           TEXT,
   actief             INTEGER NOT NULL DEFAULT 1 CHECK (actief IN (0, 1)),
   inactief_sinds     TEXT,
-
   laatste_aanmeldlink TEXT,
-
   donkere_modus      TEXT NOT NULL DEFAULT 'systeem'
                      CHECK (donkere_modus IN ('systeem', 'licht', 'donker')),
-
   kanaal_voorkeur    TEXT NOT NULL DEFAULT 'mail'
                      CHECK (kanaal_voorkeur IN ('mail', 'push', 'beide')),
   aangemaakt         TEXT NOT NULL DEFAULT (datetime('now')),
@@ -88,20 +87,16 @@ CREATE TABLE teams (
   guid           TEXT NOT NULL,
   seizoen        TEXT NOT NULL,
   naam           TEXT NOT NULL,
-
   naam_kort      TEXT,
   categorie      TEXT,
-
   onderwijsgroep TEXT NOT NULL DEFAULT 'geen'
                  CHECK (onderwijsgroep IN ('geen', 'secundair', 'hoger')),
   gevolgd        INTEGER NOT NULL DEFAULT 0 CHECK (gevolgd IN (0, 1)),
   selectie_aan   INTEGER NOT NULL DEFAULT 0 CHECK (selectie_aan IN (0, 1)),
-
   opgave_toegelaten_training  INTEGER NOT NULL DEFAULT 1 CHECK (opgave_toegelaten_training IN (0, 1)),
   opgave_toegelaten_wedstrijd INTEGER NOT NULL DEFAULT 1 CHECK (opgave_toegelaten_wedstrijd IN (0, 1)),
   opgave_termijn_training_uren  INTEGER NOT NULL DEFAULT 1,
   opgave_termijn_wedstrijd_uren INTEGER NOT NULL DEFAULT 1,
-
   bij_bond       INTEGER NOT NULL DEFAULT 1 CHECK (bij_bond IN (0, 1)),
   laatst_gezien  TEXT,
   aangemaakt     TEXT NOT NULL DEFAULT (datetime('now')),
@@ -174,10 +169,38 @@ CREATE TABLE berichten (
   onderwerp  TEXT NOT NULL,
   inhoud     TEXT,
   verzonden  TEXT NOT NULL DEFAULT (datetime('now')),
+  soort      TEXT,
+  kort       TEXT,
+  gelezen_op TEXT,
   FOREIGN KEY (persoon_id) REFERENCES personen (id)
 );
 
 CREATE INDEX idx_berichten_persoon ON berichten (persoon_id, verzonden);
+
+CREATE TABLE mededelingen (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  tekst       TEXT NOT NULL,
+  link        TEXT,
+  link_tekst  TEXT,
+  doelgroep   TEXT NOT NULL DEFAULT 'iedereen'
+              CHECK (doelgroep IN ('iedereen', 'begeleiding', 'ploeg')),
+  team_guid   TEXT,
+  seizoen     TEXT,
+  geldig_tot  TEXT NOT NULL,
+  gezet_door  TEXT NOT NULL,
+  gezet_op    TEXT NOT NULL DEFAULT (datetime('now')),
+  actief      INTEGER NOT NULL DEFAULT 1 CHECK (actief IN (0, 1)),
+  CHECK ((doelgroep = 'ploeg') = (team_guid IS NOT NULL AND seizoen IS NOT NULL))
+);
+
+CREATE TABLE mededeling_gezien (
+  mededeling_id INTEGER NOT NULL,
+  persoon_id    TEXT NOT NULL,
+  weggeklikt_op TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (mededeling_id, persoon_id),
+  FOREIGN KEY (mededeling_id) REFERENCES mededelingen (id) ON DELETE CASCADE,
+  FOREIGN KEY (persoon_id) REFERENCES personen (id)
+);
 
 CREATE TABLE instellingen (
   sleutel   TEXT PRIMARY KEY,
@@ -188,12 +211,10 @@ CREATE TABLE instellingen (
 INSERT INTO instellingen (sleutel, waarde) VALUES
   ('bericht_modus', 'omleiden'),
   ('bericht_omleidadres', ''),
-  ('mail_afzender', 'TeamAssist <noreply@teamassist.org>'),
+  ('mail_afzender', 'TeamAssist <noreply@clubassist.org>'),
   ('clubnaam', 'AB InBev Leuven Bears'),
   ('club_guid', 'BVBL1125'),
-
   ('testrol_toegelaten', '0'),
-
   ('stille_periodes', '[{"van_dag":"06-01","tot_dag":"08-15"},{"van_dag":"12-28","tot_dag":"01-03"}]');
 
 CREATE TABLE zalen (
@@ -202,7 +223,6 @@ CREATE TABLE zalen (
   adres        TEXT,
   vbl_acc_guid TEXT,
   actief       INTEGER NOT NULL DEFAULT 1 CHECK (actief IN (0, 1)),
-
   open_op_feestdagen INTEGER NOT NULL DEFAULT 0 CHECK (open_op_feestdagen IN (0, 1)),
   aangemaakt   TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -260,7 +280,6 @@ CREATE TABLE trainingsreeksen (
   locatie_tekst TEXT,
   van           TEXT NOT NULL,
   tot           TEXT NOT NULL,
-
   vakantie_doorlopen INTEGER NOT NULL DEFAULT 0 CHECK (vakantie_doorlopen IN (0, 1)),
   actief        INTEGER NOT NULL DEFAULT 1 CHECK (actief IN (0, 1)),
   aangemaakt    TEXT NOT NULL DEFAULT (datetime('now')),
@@ -286,7 +305,6 @@ CREATE TABLE trainingen (
   status        TEXT NOT NULL DEFAULT 'gepland'
                 CHECK (status IN ('gepland', 'afgelast', 'verplaatst', 'zaal_niet_beschikbaar')),
   bron          TEXT NOT NULL DEFAULT 'reeks' CHECK (bron IN ('reeks', 'handmatig')),
-
   handmatig_gewijzigd INTEGER NOT NULL DEFAULT 0 CHECK (handmatig_gewijzigd IN (0, 1)),
   opmerking     TEXT,
   aangemaakt    TEXT NOT NULL DEFAULT (datetime('now')),
@@ -316,7 +334,6 @@ CREATE TABLE wedstrijden (
   wijzigingshash  TEXT,
   bij_bond        INTEGER NOT NULL DEFAULT 1 CHECK (bij_bond IN (0, 1)),
   laatst_gezien   TEXT,
-
   selectie_gepubliceerd INTEGER NOT NULL DEFAULT 0 CHECK (selectie_gepubliceerd IN (0, 1)),
   aangemaakt      TEXT NOT NULL DEFAULT (datetime('now')),
   FOREIGN KEY (team_guid, seizoen) REFERENCES teams (guid, seizoen)
@@ -330,14 +347,12 @@ CREATE TABLE aanwezigheden (
   activiteit_id       INTEGER NOT NULL,
   team_guid           TEXT NOT NULL,
   seizoen             TEXT NOT NULL,
-
   persoon_id          TEXT,
   hoedanigheid        TEXT NOT NULL CHECK (hoedanigheid IN ('SPELER', 'OUVO')),
 
   opgave_status       TEXT CHECK (opgave_status IN ('aanwezig', 'afwezig')),
   opgave_reden        TEXT CHECK (opgave_reden IN ('ziek', 'gekwetst', 'ander')),
   opgave_toelichting  TEXT,
-
   opgave_door         TEXT,
   opgave_tijdstip     TEXT,
 
@@ -376,7 +391,6 @@ CREATE TABLE wedstrijdtaken (
   persoon_id           TEXT,
   toegewezen_door      TEXT,
   toegewezen_tijdstip  TEXT,
-
   probleem_gemeld      INTEGER NOT NULL DEFAULT 0 CHECK (probleem_gemeld IN (0, 1)),
   probleem_reden       TEXT,
   probleem_tijdstip    TEXT,

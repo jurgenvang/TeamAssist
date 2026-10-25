@@ -218,3 +218,49 @@ test('logboek.wie wordt bewust niet losgekoppeld — een verantwoordingsspoor bl
   const rij = db._sqlite.prepare(`SELECT wie FROM logboek`).get();
   assert.equal(rij.wie, 'p1', 'blijft verwijzen naar wie het deed, ook al bestaat die persoon niet meer');
 });
+
+test('wie een mededeling wegklikte, kan toch verwijderd worden (0.28.0)', async () => {
+  const db = zetKlaar();
+  persoonKlaarVoorVerwijdering(db);
+  db._sqlite.exec(`
+    INSERT INTO mededelingen (id, tekst, geldig_tot, gezet_door) VALUES (1, 'Nieuws', '2099-01-01T00:00:00.000Z', 'p1');
+    INSERT INTO mededeling_gezien (mededeling_id, persoon_id) VALUES (1, 'p1');
+  `);
+  await verwijderInactievePersonenOp(db);
+  assert.equal(db._sqlite.prepare(`SELECT count(*) AS n FROM mededeling_gezien WHERE persoon_id = 'p1'`).get().n, 0);
+  assert.equal(db._sqlite.prepare(`SELECT count(*) AS n FROM personen WHERE id = 'p1'`).get().n, 0);
+  // De mededeling zelf blijft: gezet_door is een verantwoordingsspoor, zoals logboek.wie.
+  assert.equal(db._sqlite.prepare(`SELECT count(*) AS n FROM mededelingen`).get().n, 1);
+});
+
+test('elke tabel met een foreign key naar personen wordt opgeruimd bij het verwijderen', async () => {
+  // Structureel, zodat een nieuwe tabel niet stil vergeten wordt: zonder
+  // opruiming blokkeert de foreign key het verwijderen van de persoon, en
+  // blijft iemand die al lang weg is voor altijd in de databank.
+  const { readFileSync } = await import('node:fs');
+  const bron = readFileSync(new URL('../src/lib/opkuis.js', import.meta.url), 'utf8');
+  const db = zetKlaar();
+  const tabellen = db._sqlite
+    .prepare(`SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'`)
+    .all()
+    .map((r) => r.name)
+    .filter((t) => t !== 'personen' &&
+      db._sqlite.prepare(`PRAGMA foreign_key_list(${t})`).all().some((fk) => fk.table === 'personen'));
+  assert.ok(tabellen.length > 5);
+  for (const t of tabellen) {
+    assert.match(bron, new RegExp(`(DELETE FROM|UPDATE) ${t}\\b`), `${t} ontbreekt in verwijderInactievePersonenOp`);
+  }
+});
+
+test('wie een wedstrijdtaak had, kan verwijderd worden; de taak blijft, zonder persoon', async () => {
+  const db = zetKlaar();
+  persoonKlaarVoorVerwijdering(db);
+  db._sqlite.exec(`
+    INSERT INTO wedstrijden (id, wedstrijd_guid, team_guid, seizoen, datum, begin, thuis) VALUES (1, 'W1', 'T1', '2026-27', '2026-09-12', '10:30', 1);
+    INSERT INTO wedstrijdtaken (wedstrijd_id, taak, persoon_id, toegewezen_door) VALUES (1, 'klok', 'p1', 'p1');
+  `);
+  await verwijderInactievePersonenOp(db);
+  assert.equal(db._sqlite.prepare(`SELECT count(*) AS n FROM personen WHERE id = 'p1'`).get().n, 0);
+  const taak = db._sqlite.prepare(`SELECT persoon_id, toegewezen_door FROM wedstrijdtaken`).get();
+  assert.deepEqual({ ...taak }, { persoon_id: null, toegewezen_door: null });
+});

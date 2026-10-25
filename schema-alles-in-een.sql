@@ -6,8 +6,8 @@
 --
 -- De volgorde van de DROP's is omgekeerd aan die van de foreign keys.
 
-DROP TABLE IF EXISTS wedstrijdtaken;
 DROP TABLE IF EXISTS taak_runs;
+DROP TABLE IF EXISTS wedstrijdtaken;
 DROP TABLE IF EXISTS wedstrijdselecties;
 DROP TABLE IF EXISTS aanwezigheden;
 DROP TABLE IF EXISTS wedstrijden;
@@ -17,8 +17,10 @@ DROP TABLE IF EXISTS periodes;
 DROP TABLE IF EXISTS zaal_sluitingen;
 DROP TABLE IF EXISTS zaal_blokken;
 DROP TABLE IF EXISTS zalen;
-DROP TABLE IF EXISTS berichten;
 DROP TABLE IF EXISTS instellingen;
+DROP TABLE IF EXISTS mededeling_gezien;
+DROP TABLE IF EXISTS mededelingen;
+DROP TABLE IF EXISTS berichten;
 DROP TABLE IF EXISTS logboek;
 DROP TABLE IF EXISTS ouder_kind;
 DROP TABLE IF EXISTS team_spelers;
@@ -265,6 +267,17 @@ CREATE INDEX idx_logboek_tijdstip ON logboek (tijdstip);
 -- naar de wedstrijd/training zelf: die kan intussen verplaatst of gewijzigd
 -- zijn, en dit bericht moet correct blijven staan voor wat er destijds echt
 -- verstuurd is.
+--
+-- Sinds 0.28.0 (Mijn berichten, I1) drie kolommen erbij, alle drie met een
+-- gewone ALTER toe te voegen:
+--   soort      waar het over gaat ('wedstrijd', 'selectie', 'taak', 'nieuws');
+--              bewust zonder CHECK — een nieuwe soort mag geen DROP vragen
+--   kort       één regel voor de lijst; leeg = de eerste regel van inhoud
+--   gelezen_op pas gezet bij het aantikken van één bericht, niet bij het
+--              openen van de lijst: zo kan iemand eerst scannen zonder dat de
+--              stipjes al verdwijnen (zoals in YOAssist)
+-- `inhoud` blijft de volledige tekst zoals verstuurd; dat is wat 'lees meer'
+-- toont.
 CREATE TABLE berichten (
   id         INTEGER PRIMARY KEY AUTOINCREMENT,
   persoon_id TEXT NOT NULL,
@@ -272,10 +285,58 @@ CREATE TABLE berichten (
   onderwerp  TEXT NOT NULL,
   inhoud     TEXT,
   verzonden  TEXT NOT NULL DEFAULT (datetime('now')),
+  soort      TEXT,
+  kort       TEXT,
+  gelezen_op TEXT,
   FOREIGN KEY (persoon_id) REFERENCES personen (id)
 );
 
 CREATE INDEX idx_berichten_persoon ON berichten (persoon_id, verzonden);
+
+-- ---------------------------------------------------------------------------
+-- Mededelingen: belangrijk nieuws (0.28.0, uit YOAssist)
+-- ---------------------------------------------------------------------------
+-- Eén actieve tegelijk; een nieuwe zet de vorige op inactief. Ze staat als
+-- banner bovenaan bij wie tot de doelgroep hoort, tot geldig_tot of tot hij
+-- ze wegklikt. Wie een account heeft en tot de doelgroep hoort, krijgt ze ook
+-- als bericht (mail, en in Mijn berichten) — dat staat dan in `berichten`,
+-- en blijft daar ook nadat de banner verdwenen is.
+--
+-- De doelgroep wordt bij het plaatsen gekozen: iedereen, de begeleiding
+-- (COORD, COACH, PLOEGV van een ploeg in het seizoen), of één ploeg (spelers,
+-- hun ouders en de begeleiding). Een coach plaatst zelf geen mededeling;
+-- enkel wie systeem.beheren heeft.
+--
+-- team_guid zonder foreign key naar teams: een reset van de ploegen mag een
+-- mededeling niet laten mislukken of meenemen. gezet_door zonder foreign key
+-- naar personen, om dezelfde reden als logboek.wie: een verantwoordingsspoor
+-- blijft staan nadat iemand vertrokken is.
+CREATE TABLE mededelingen (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  tekst       TEXT NOT NULL,
+  link        TEXT,
+  link_tekst  TEXT,
+  doelgroep   TEXT NOT NULL DEFAULT 'iedereen'
+              CHECK (doelgroep IN ('iedereen', 'begeleiding', 'ploeg')),
+  team_guid   TEXT,
+  seizoen     TEXT,
+  geldig_tot  TEXT NOT NULL,                     -- UTC, ISO 8601 met Z: vergelijkbaar als tekst
+  gezet_door  TEXT NOT NULL,                     -- persoon_id
+  gezet_op    TEXT NOT NULL DEFAULT (datetime('now')),
+  actief      INTEGER NOT NULL DEFAULT 1 CHECK (actief IN (0, 1)),
+  CHECK ((doelgroep = 'ploeg') = (team_guid IS NOT NULL AND seizoen IS NOT NULL))
+);
+
+-- Wie welke mededeling wegklikte. Per persoon: wegklikken is een persoonlijke
+-- handeling, verlopen geldt voor iedereen.
+CREATE TABLE mededeling_gezien (
+  mededeling_id INTEGER NOT NULL,
+  persoon_id    TEXT NOT NULL,
+  weggeklikt_op TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (mededeling_id, persoon_id),
+  FOREIGN KEY (mededeling_id) REFERENCES mededelingen (id) ON DELETE CASCADE,
+  FOREIGN KEY (persoon_id) REFERENCES personen (id)
+);
 
 -- ---------------------------------------------------------------------------
 -- Instellingen
@@ -292,7 +353,7 @@ CREATE TABLE instellingen (
 INSERT INTO instellingen (sleutel, waarde) VALUES
   ('bericht_modus', 'omleiden'),
   ('bericht_omleidadres', ''),
-  ('mail_afzender', 'TeamAssist <noreply@teamassist.org>'),
+  ('mail_afzender', 'TeamAssist <noreply@clubassist.org>'),
   ('clubnaam', 'AB InBev Leuven Bears'),
   ('club_guid', 'BVBL1125'),
   -- Laat een beheerder kiezen met welke rol hij wil werken, om te zien wat een

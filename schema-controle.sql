@@ -1,4 +1,4 @@
--- TeamAssist — controle op de databankstructuur (versie 0.27.0)
+-- TeamAssist — controle op de databankstructuur (versie 0.28.0)
 --
 -- Plak dit in de D1-console na het uitvoeren van een schemawijziging. Het wijzigt
 -- niets; het vergelijkt wat er staat met wat er hoort te staan.
@@ -39,6 +39,8 @@ WITH verwacht_object(soort, naam) AS (VALUES
   ('table', 'berichten'),
   ('table', 'instellingen'),
   ('table', 'logboek'),
+  ('table', 'mededeling_gezien'),
+  ('table', 'mededelingen'),
   ('table', 'ouder_kind'),
   ('table', 'periodes'),
   ('table', 'personen'),
@@ -93,6 +95,9 @@ verwacht_kolom(tabel, kolom) AS (VALUES
   ('berichten', 'onderwerp'),
   ('berichten', 'inhoud'),
   ('berichten', 'verzonden'),
+  ('berichten', 'soort'),
+  ('berichten', 'kort'),
+  ('berichten', 'gelezen_op'),
   ('instellingen', 'sleutel'),
   ('instellingen', 'waarde'),
   ('instellingen', 'gewijzigd'),
@@ -103,6 +108,20 @@ verwacht_kolom(tabel, kolom) AS (VALUES
   ('logboek', 'wat'),
   ('logboek', 'details'),
   ('logboek', 'afgehandeld'),
+  ('mededeling_gezien', 'mededeling_id'),
+  ('mededeling_gezien', 'persoon_id'),
+  ('mededeling_gezien', 'weggeklikt_op'),
+  ('mededelingen', 'id'),
+  ('mededelingen', 'tekst'),
+  ('mededelingen', 'link'),
+  ('mededelingen', 'link_tekst'),
+  ('mededelingen', 'doelgroep'),
+  ('mededelingen', 'team_guid'),
+  ('mededelingen', 'seizoen'),
+  ('mededelingen', 'geldig_tot'),
+  ('mededelingen', 'gezet_door'),
+  ('mededelingen', 'gezet_op'),
+  ('mededelingen', 'actief'),
   ('ouder_kind', 'ouder_id'),
   ('ouder_kind', 'kind_id'),
   ('ouder_kind', 'aangemaakt'),
@@ -275,7 +294,7 @@ SELECT 0 AS volgorde,
             THEN 'ALLES OK'
             ELSE (SELECT count(*) FROM problemen) || ' PROBLEEM/PROBLEMEN'
        END AS soort,
-       'structuur versie 0.27.0' AS naam
+       'structuur versie 0.28.0' AS naam
 UNION ALL
 SELECT 1, soort, naam FROM problemen
 ORDER BY volgorde, soort, naam;

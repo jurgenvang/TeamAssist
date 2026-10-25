@@ -18,6 +18,10 @@ import { voerGeplandeTakenUit } from './lib/geplandetaken.js';
 import { logSchrijf } from './lib/logboek.js';
 import { mij } from './routes/mij.js';
 import { voorkeurenBewaren } from './routes/voorkeuren.js';
+import {
+  berichtenTonen, berichtenOngelezen, berichtGelezen, berichtVerwijderen, mededelingTonen, mededelingWegklikken,
+} from './routes/berichten.js';
+import { mededelingHuidige, mededelingPlaatsen, mededelingIntrekken } from './routes/admin/mededeling.js';
 import { opgaveZetten, mijnOpgaven } from './routes/aanwezigheid-opgave.js';
 import { aanmeldlink } from './routes/aanmeldlink.js';
 import { vblDiagnose } from './routes/admin/vbl-diagnose.js';
@@ -77,6 +81,18 @@ export const ROUTES = [
 
   { methode: 'GET', pad: '/api/mij', doe: mij },
   { methode: 'POST', pad: '/api/mij/voorkeuren', doe: voorkeurenBewaren },
+  // Mijn berichten en de banner: over jezelf, zoals /api/mij. Elke query
+  // filtert op de persoon uit het token.
+  { methode: 'GET', pad: '/api/berichten', doe: berichtenTonen },
+  { methode: 'GET', pad: '/api/berichten/ongelezen', doe: berichtenOngelezen },
+  { methode: 'POST', pad: '/api/berichten/gelezen', doe: berichtGelezen },
+  { methode: 'POST', pad: '/api/berichten/verwijderen', doe: berichtVerwijderen },
+  { methode: 'GET', pad: '/api/mededeling', doe: mededelingTonen },
+  { methode: 'POST', pad: '/api/mededeling/wegklikken', doe: mededelingWegklikken },
+  // Een mededeling plaatsen: enkel wie het systeem beheert.
+  { methode: 'GET', pad: '/api/admin/mededeling', recht: 'systeem.beheren', doe: mededelingHuidige },
+  { methode: 'POST', pad: '/api/admin/mededeling', recht: 'systeem.beheren', doe: mededelingPlaatsen },
+  { methode: 'POST', pad: '/api/admin/mededeling/intrekken', recht: 'systeem.beheren', doe: mededelingIntrekken },
 
   // Aanwezigheid opgeven. Geen route.recht: het team waar het over gaat komt
   // pas na een databankoproep boven water (via de activiteit), en of iemand

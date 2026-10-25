@@ -101,7 +101,7 @@ export async function wedstrijdtaakToewijzen(ctx) {
   const inhoud =
     `Je bent aangeduid voor ${TAAKNAMEN[taak.taak] ?? taak.taak} bij de wedstrijd van ` +
     `${taak.datum} om ${taak.begin}${taak.tegenstander ? ` tegen ${taak.tegenstander}` : ''}.`;
-  await verwittig(ctx, { persoon_id, onderwerp, inhoud });
+  await verwittig(ctx, { persoon_id, onderwerp, inhoud, soort: 'taak' });
 
   return json({ id: taak.id, taak: taak.taak, persoon_id });
 }
@@ -188,7 +188,7 @@ export async function wedstrijdtaakProbleemMelden(ctx) {
   const onderwerp = `Probleem gemeld — ${TAAKNAMEN[taak.taak] ?? taak.taak}`;
   const inhoud = `Er is een probleem gemeld bij ${TAAKNAMEN[taak.taak] ?? taak.taak} voor de wedstrijd van ${taak.datum} om ${taak.begin}: ${reden}`;
   for (const rij of begeleiding.results ?? []) {
-    await verwittig(ctx, { persoon_id: rij.persoon_id, onderwerp, inhoud });
+    await verwittig(ctx, { persoon_id: rij.persoon_id, onderwerp, inhoud, soort: 'taak' });
   }
 
   return json({ id: taak.id, probleem_gemeld: true });

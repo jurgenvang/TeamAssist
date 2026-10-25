@@ -381,3 +381,80 @@ nav button[aria-current='true'] {
   padding: .2rem .6rem;
   font-size: .85rem;
 }
+
+/* Het meldingenbolletje (0.28.0): een badge bovenop de naamknop, zoals een
+   bolletje op een app-icoon. Geen apart element in de strook — dat brak in
+   YOAssist af bij een lange naam. */
+.berichtenbadge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border: 0;
+  border-radius: 999px;
+  background: #b4231f;
+  color: #ffffff;
+  font-size: .65rem;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+  cursor: pointer;
+  box-shadow: 0 0 0 2px var(--topbalk-achtergrond, #12161c);
+}
+
+/* Belangrijk nieuws, bovenaan bij wie tot de doelgroep hoort. */
+.mededeling {
+  display: flex;
+  align-items: flex-start;
+  gap: .7rem;
+  flex-wrap: wrap;
+  background: #fdf4e0;
+  color: #17191c;
+  border: 1px solid #f0dcae;
+  border-radius: var(--radius);
+  padding: .7rem .9rem;
+  margin: 0 0 1rem;
+  font-size: .92rem;
+}
+.mededeling a { color: #8a5d00; font-weight: 600; }
+.sluit-klein {
+  margin-left: auto;
+  background: none;
+  border: 0;
+  color: inherit;
+  opacity: .6;
+  font-size: 1.2rem;
+  line-height: 1;
+  padding: 0 .2rem;
+}
+.sluit-klein:hover { opacity: 1; }
+
+/* Mijn berichten */
+.bericht {
+  border: 1px solid var(--lijn);
+  border-radius: var(--radius);
+  padding: .6rem .8rem;
+  margin: .5rem 0;
+  cursor: pointer;
+}
+.bericht.ongelezen { background: var(--vlak); border-color: #e8a317; }
+.bericht-kop { display: flex; align-items: baseline; gap: .5rem; }
+.bericht-tijd { margin: 0 0 0 auto; white-space: nowrap; }
+.bericht-stip { width: 8px; height: 8px; border-radius: 999px; background: #e8a317; flex-shrink: 0; align-self: center; }
+.bericht-kort { margin: .25rem 0 0; }
+.bericht-volledig { margin: .5rem 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.bericht-meer { margin: .3rem 0 0; text-decoration: underline; }
+.bericht-weg { font-size: 1.1rem; text-decoration: none; opacity: .5; }
+
+textarea {
+  width: 100%;
+  padding: .45rem .6rem;
+  border: 1px solid var(--lijn);
+  border-radius: var(--radius);
+  font: inherit;
+  background: var(--achtergrond);
+  color: var(--inkt);
+}
+.vinkje { display: flex; gap: .4rem; align-items: center; margin: .5rem 0; font-size: .92rem; }

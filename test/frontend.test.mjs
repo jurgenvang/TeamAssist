@@ -622,3 +622,62 @@ test('de kandidatenlijst komt van de eigen smalle route, niet van personenZoeken
   assert.ok(bron.includes('/api/admin/wedstrijdtaken/kandidaten'));
   assert.ok(!bron.includes("api('/api/admin/personen')"), 'die route vraagt personen.beheren, wat een coach niet heeft');
 });
+
+// --- 0.28.0: Mijn berichten, het bolletje en de mededeling ------------------
+
+const berichtenJs = lees('../public/js/schermen/berichten.js');
+const mededelingJs = lees('../public/js/schermen/mededeling-beheer.js');
+
+test('het bolletje staat op de naamknop en gaat rechtstreeks naar Mijn berichten, zonder het menu', () => {
+  const ik = html.slice(html.indexOf('id="topbalkik"'), html.indexOf('id="naammenu"'));
+  assert.ok(ik.includes('id="berichtenbadge"'));
+  assert.match(app, /el\('berichtenbadge'\)\.addEventListener\('click', \(e\) => {\s*e\.stopPropagation\(\);[\s\S]{0,60}toonBerichten\(\)/);
+});
+
+test('Mijn berichten staat in het persoonlijke deel van het naammenu', () => {
+  const scheiding = html.indexOf('id="naammenu-scheiding"');
+  const berichten = html.indexOf('id="naammenu-berichten"');
+  assert.ok(berichten > scheiding && berichten < html.indexOf('id="naammenu-voorkeuren"'));
+});
+
+test('de teller ververst enkel als het tabblad zichtbaar is, en meteen bij terugkeren', () => {
+  assert.match(berichtenJs, /setInterval\(\(\) => {\s*if \(document\.visibilityState === 'visible'\) ververTeller\(\)/);
+  assert.match(berichtenJs, /addEventListener\('visibilitychange'/);
+});
+
+test('een bericht wordt pas gelezen bij het aantikken, niet bij het openen van de lijst', () => {
+  const toon = berichtenJs.slice(berichtenJs.indexOf('export async function toonBerichten'), berichtenJs.indexOf('async function openBericht'));
+  assert.ok(!toon.includes('/api/berichten/gelezen'), 'de lijst openen markeert niets');
+  const open = berichtenJs.slice(berichtenJs.indexOf('async function openBericht'));
+  assert.match(open, /api\('\/api\/berichten\/gelezen', 'POST', { id:/);
+});
+
+test('links in een bericht worden klikbaar ná het ontsmetten, en enkel http(s)', async () => {
+  const { veilig } = await import('../public/js/hulp.js');
+  const bron = berichtenJs.slice(berichtenJs.indexOf('export function metLinks'), berichtenJs.indexOf('function datumTekst'));
+  const metLinks = new Function('veilig', `${bron.replace('export ', '')}; return metLinks;`)(veilig);
+  const uit = metLinks('Zie https://club.be/a?b=1&c=2 <script>x</script> javascript:alert(1)');
+  assert.match(uit, /<a href="https:\/\/club\.be\/a\?b=1&amp;c=2"/);
+  assert.ok(!uit.includes('<script>'), 'eigen HTML blijft tekst');
+  assert.ok(!/href="javascript/.test(uit));
+});
+
+test('de banner zet tekst als tekst, en een link enkel als hij met http(s) begint', () => {
+  assert.match(berichtenJs, /el\('mededelingtekst'\)\.textContent = m\.tekst/);
+  assert.match(berichtenJs, /if \(m\.link && \/\^https\?:\\\/\\\/\/\.test\(m\.link\)\)/);
+});
+
+test('een mededeling plaatsen kan pas na de droogloop, en elke wijziging verbergt Plaatsen weer', () => {
+  assert.match(html, /id="mededelingplaatsen" hidden/);
+  const voor = mededelingJs.slice(mededelingJs.indexOf('export async function bereidMededelingVoor'), mededelingJs.indexOf('export async function plaatsMededeling'));
+  assert.ok(!voor.includes('uitvoeren'), 'voorbereiden voert nooit uit');
+  assert.match(voor, /el\('mededelingplaatsen'\)\.hidden = false/);
+  assert.match(mededelingJs, /addEventListener\('input', \(\) => { el\('mededelingplaatsen'\)\.hidden = true; }\)/);
+  assert.match(mededelingJs, /confirm\('Deze mededeling nu plaatsen\?/);
+});
+
+test('de mededeling-beheerroutes en de berichtenroutes lopen via api()', () => {
+  for (const bron of [berichtenJs, mededelingJs]) {
+    assert.ok(!/fetch\(/.test(bron));
+  }
+});

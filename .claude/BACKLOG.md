@@ -11,7 +11,7 @@ WIJZIGINGEN-bestanden blijven kloppen:
   punt *U* (Microsoft 365) heet hier **VU**, want TeamAssist heeft al een *U*
 - **T** + nummer, en de letters **A–AB** — TeamAssist
 
-Stand: YOAssist **v1.17.0**, TeamAssist **0.27.0**
+Stand: YOAssist **v1.17.0**, TeamAssist **0.28.0**
 
 ---
 
@@ -26,11 +26,12 @@ Bijgewerkt bij elke versie. Voor de volledige tekst: zoek de kop verderop
 - **AB** — `{{ .Token }}` in de Magic Link-mailsjabloon van Supabase.
 - **V32** — op een echte telefoon testen of tikken op een pushmelding naar
   Mijn berichten gaat.
-- **I1** — nagaan of `teamassist.org` te krijgen is.
+- **I1** — `clubassist.org` bij Resend als afzenderdomein verifiëren (de
+  standaardafzender is sinds 0.28.0 `noreply@clubassist.org`), en de Worker
+  er als eigen domein aan hangen.
 
 ### Klaar om te bouwen
-- **I1, fase 1b (0.28.0)** — Mijn berichten, mededelingen en het
-  meldingenbolletje. Daarna **1c (0.29.0)**: push.
+- **I1, fase 1c (0.29.0)** — push (VAPID, `public/sw.js`, toestellen).
 - **T7** — tabblad Mijn club.
 - **T12** — aanmelden als.
 - **T18, T19** — twee kleine gaten uit de code-audit.
@@ -87,11 +88,11 @@ Bijgewerkt bij elke versie. Voor de volledige tekst: zoek de kop verderop
 
 ### Domein
 
-`teamassist.org` wordt nagevraagd; subdomeinen kunnen daaronder (bv.
-`demo.teamassist.org` voor V30). Voorstel zolang niets anders beslist is:
-- De app op `teamassist.org`.
+**`clubassist.org`** (gekocht; `teamassist.org` was niet beschikbaar).
+Subdomeinen kunnen daaronder (bv. `demo.clubassist.org` voor V30).
+- De app op `clubassist.org`.
 - `yoassist.org` blijft als tweede eigen domein aan dezelfde Worker hangen en
-  stuurt door (301) naar `teamassist.org` — **behalve** `/api/kalender/` en
+  stuurt door (301) naar `clubassist.org` — **behalve** `/api/kalender/` en
   `/api/extern/`, die het rechtstreeks blijft bedienen. Een agenda-abonnement
   van een official staat al in zijn agenda, en niet elke agenda-app volgt een
   doorverwijzing.
@@ -131,7 +132,9 @@ Bijgewerkt bij elke versie. Voor de volledige tekst: zoek de kop verderop
      Dagelijks beheer, Configuratie en Zaalbeheer enkel nog onder Beheer in
      het naammenu; *Kijken als …* in het naammenu. Een ingestelde
      topbalkkleur wint van de donkere strook.
-   - **1b — 0.28.0**: Mijn berichten, mededelingen en het meldingenbolletje.
+   - **1b — 0.28.0, afgewerkt**: Mijn berichten, belangrijk nieuws (met een
+     doelgroep: iedereen, de begeleiding of één ploeg) en het
+     meldingenbolletje.
    - **1c — 0.29.0**: push (VAPID, `public/sw.js`, toestellen),
      `verwittigen.js` samengevoegd.
    Tabbladen per stuk uitzetten (YOAssist's `verborgen_tabs`) komt pas
@@ -153,7 +156,8 @@ Tot de overstap blijft YOAssist live en krijgt het enkel bugfixes.
 
 ### Nog te bepalen
 
-- Of `teamassist.org` lukt; zo niet, welk domein.
+- Of de app zelf ook *ClubAssist* gaat heten, nu het domein zo heet. Tot dan
+  blijft de naam TeamAssist; enkel het afzenderadres volgt het domein al.
 - **Volgorde tegenover T7, T12, T18 en T19.** Voorstel: I1 eerst. T12 raakt
   `personen` en `berichten` (`is_testpersoon`, `is_test`), en die tabellen
   krijgen bij I1 hun definitieve vorm; T12 erna bouwen vermijdt dubbel werk.
@@ -196,6 +200,7 @@ Tot de overstap blijft YOAssist live en krijgt het enkel bugfixes.
 | 0.23.0 | T14 afgewerkt: een volledige backup van de databank als JSON. Beter dan aanvankelijk voorgesteld — geen hardcoded tabellenlijst met een test die drift moet vangen (de YOAssist-aanpak), maar tabellen rechtstreeks uit `sqlite_master` gehaald, wat de hele bugklasse structureel onmogelijk maakt. De kerntest bewijst dat letterlijk: een tabel die pas ná het schrijven van de route wordt aangemaakt, zit er toch in. |
 | 0.24.0 | T16 en T17 afgewerkt. `verwittig()` heeft geen `kanaal`-parameter meer en leest voortaan `kanaal_voorkeur` — mail blijft de terugval zolang push niet bestaat, met een aparte logregel voor wie 'push' koos. Blokken bij Zaalbeheer staan nu gegroepeerd per weekdag als losse blokjes, met bewust neutrale kleuren in plaats van de accentkleur. |
 | 0.25.0 | T15 afgewerkt: opruiming van `logboek` (365 dagen), `taak_runs` (30 dagen), `berichten` (120 dagen), en het definitief verwijderen van een inactieve persoon na 180 dagen. Twee tabellen extra gevonden tijdens het bouwen (`accounts`, `ouder_kind`) die niet in het oorspronkelijke overzicht stonden. Enkel `aanwezigheden` wordt geanonimiseerd in plaats van verwijderd — de enige tabel waar dat structureel kon — wat een schema-heropbouw vroeg, grondig getoetst tegen een nagemaakte bestaande databank. |
+| 0.28.0 | I1 fase 1b: Mijn berichten (ongelezen tot je een bericht aantikt, 'lees meer' met klikbare links, alles gelezen, verwijderen) en het meldingenbolletje op de naam, dat rechtstreeks naar Mijn berichten gaat en zichzelf om de drie minuten ververst. Belangrijk nieuws: één banner tegelijk, met een doelgroep (iedereen, de begeleiding, of één ploeg met spelers, ouders en begeleiding); wie erin zit en een account heeft, krijgt ze ook als bericht — via het batch-endpoint van Resend, honderd per oproep. Onderweg gevonden: een persoon met een wedstrijdtaak (0.26.0) kon nooit verwijderd worden; nu een test die elke foreign key naar `personen` naloopt. `schema-alles-in-een.sql` en `schema-kaal.sql` worden voortaan gegenereerd. Standaardafzender naar `clubassist.org`. Schema: drie kolommen in `berichten` (ALTER), tabellen `mededelingen` en `mededeling_gezien`. 786 tests. |
 | 0.27.0 | I1 fase 1a: de kopbalk en het naammenu van YOAssist. Donkere strook die bovenaan blijft staan, een ingestelde topbalkkleur wint. Dagelijks beheer, Configuratie en Zaalbeheer uit de tabbalk, enkel nog onder Beheer in het naammenu, gebouwd uit dezelfde rechten als de tabbalk. *Kijken als …* in het naammenu, en enkel nog aangeboden als `testrol_toegelaten` aanstaat (`/api/mij` → `testrol_mogelijk`) — tot nu toe beweerde de testbalk soms iets wat de backend stil negeerde. Ook: een test die sinds oktober altijd faalde door een vaste septemberdatum. 746 tests. |
 | 0.26.0 | T1 afgewerkt: taken bij een wedstrijd (klok, 24 seconden, tablet, ploegafgevaardigde). Taakslots ontstaan automatisch bij de synchronisatie, toewijzen mag wie de selectie beheert, elk actief clublid komt in aanmerking, en een toewijzing verwittigt — de derde fase 5-trigger, opnieuw zonder aanpassing aan `verwittigen.js`. Onderweg bleek `/api/admin/personen` niet bruikbaar als kandidatenlijst (vraagt `personen.beheren`, en weigert bewust een volledige lijst), dus een eigen smalle route die enkel id en naam teruggeeft. |
 
@@ -256,7 +261,8 @@ volume is dus geen ontwerpbeperking meer.
 RLS, geen client-side queries.
 
 **I — Domein.** Een eigen domein voor TeamAssist, niet als subdomein onder
-YOAssist. Beschikbaarheid wordt nagekeken: `teamassist.org` (zie I1).
+YOAssist. Het werd `clubassist.org` (zie I1); `teamassist.org` was niet
+beschikbaar.
 
 **N — Ledenlijst van de bond: aanvaard voor de testfase.** De
 gebruiksvoorwaarden in de spec spreken over kalenders, uitslagen en
@@ -566,6 +572,11 @@ speler van de ploeg krijgt bericht — een andere boodschap naargelang hij wel
 of niet geselecteerd is — niet enkel de begeleiding, die het al wist. Bevestigt
 het patroon: een nieuwe trigger vraagt geen nieuwe infrastructuur, enkel een
 aanroep van dezelfde `verwittig()`-functie op de juiste plek.
+
+**Mijn berichten en belangrijk nieuws — 0.28.0.** Elk bericht draagt een
+`soort` ('wedstrijd', 'selectie', 'taak', 'nieuws'), en `gelezen_op`. Een
+mededeling gaat naar veel mensen tegelijk via `verwittigVelen()`, met het
+batch-endpoint van Resend.
 
 **Een derde trigger staat al in de code, nog niet uitgebracht**: een
 toegewezen wedstrijdtaak (T1, `src/routes/admin/wedstrijdtaken.js`) verwittigt
@@ -1287,7 +1298,7 @@ nieuwe tabel gekoppeld aan `assignments`.
 
 ### V30 — Een aparte demo-omgeving
 **Aanpak gekozen, verder uit te werken.** Na I1 op een subdomein, bv.
-`demo.teamassist.org`. Dient voor twee dingen tegelijk: aan
+`demo.clubassist.org`. Dient voor twee dingen tegelijk: aan
 andere clubs laten zien wat de app kan, én zelf nieuwe functies uitproberen
 zonder de echte club te raken.
 
