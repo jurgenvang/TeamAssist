@@ -58,6 +58,10 @@ test('een route die geen recht vraagt, doet dat bewust', () => {
       '/api/meelezen',
       '/api/meelezen',
       '/api/meelezen/antwoord',
+      // De rechten van wie het gaat om, eventueel een kind: in de route zelf.
+      '/api/officials/wedstrijden',
+      '/api/officials/beschikbaarheid',
+      '/api/officials/probleem',
       '/api/berichten',
       '/api/berichten/ongelezen',
       '/api/berichten/gelezen',

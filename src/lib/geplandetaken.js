@@ -16,6 +16,7 @@ import { actiefSeizoen } from './seizoen.js';
 import { teamsSync } from '../routes/admin/teams.js';
 import { ledenSync } from '../routes/admin/leden.js';
 import { wedstrijdenSync } from '../routes/admin/wedstrijden.js';
+import { officialsSync } from '../officials/sync-route.js';
 import { vakantiesSync, feestdagenSync } from '../routes/admin/periodes.js';
 import { kuisLogboekOp, kuisTaakRunsOp, kuisBerichtenOp, verwijderInactievePersonenOp } from './opkuis.js';
 
@@ -33,7 +34,9 @@ function verzoek() {
  * niemand te alarmeren.
  */
 function isLegeUitgangspositie(status, body) {
-  return status === 400 && typeof body?.fout === 'string' && body.fout.includes('gevolgde ploeg');
+  // Idem voor de officials (0.33.0): nog geen enkele ploeg met officials.
+  return status === 400 && typeof body?.fout === 'string' &&
+    (body.fout.includes('gevolgde ploeg') || body.fout.includes('ploeg met officials'));
 }
 
 /**
@@ -138,6 +141,7 @@ export async function voerGeplandeTakenUit(taken, db, env) {
 
   for (const taak of overige) {
     if (taak === 'wedstrijden') await voerTaakUit(db, env, 'wedstrijden-sync', () => wedstrijdenSync(ctx));
+    if (taak === 'officials') await voerTaakUit(db, env, 'officials-sync', () => officialsSync(ctx));
     if (taak === 'teams') await voerTaakUit(db, env, 'teams-sync', () => teamsSync(ctx));
     if (taak === 'leden') await voerTaakUit(db, env, 'leden-sync', () => ledenSync(ctx));
     if (taak === 'periodes') {

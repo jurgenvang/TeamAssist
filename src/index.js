@@ -20,6 +20,11 @@ import { mij } from './routes/mij.js';
 import { voorkeurenBewaren } from './routes/voorkeuren.js';
 import { meelezenTonen, meelezenZetten, meelezenAntwoord } from './routes/meelezen.js';
 import {
+  officialsWedstrijden, beschikbaarheidZetten, probleemMelden, kandidatenTonen, aanduiden, vrijgeven,
+  scopeZetten, refsBevestigen, problemenTonen, probleemAfhandelen,
+} from './officials/routes.js';
+import { officialsSync } from './officials/sync-route.js';
+import {
   berichtenTonen, berichtenOngelezen, berichtGelezen, berichtVerwijderen, mededelingTonen, mededelingWegklikken,
 } from './routes/berichten.js';
 import { mededelingHuidige, mededelingPlaatsen, mededelingIntrekken } from './routes/admin/mededeling.js';
@@ -94,6 +99,19 @@ export const ROUTES = [
   { methode: 'GET', pad: '/api/meelezen', doe: meelezenTonen },
   { methode: 'POST', pad: '/api/meelezen', doe: meelezenZetten },
   { methode: 'POST', pad: '/api/meelezen/antwoord', doe: meelezenAntwoord },
+  // Module Officials (0.33.0). Voor de official zelf of namens een kind: de
+  // route rekent de rechten van wie het gaat om (officials/routes.js).
+  { methode: 'GET', pad: '/api/officials/wedstrijden', doe: officialsWedstrijden },
+  { methode: 'POST', pad: '/api/officials/beschikbaarheid', doe: beschikbaarheidZetten },
+  { methode: 'POST', pad: '/api/officials/probleem', doe: probleemMelden },
+  { methode: 'POST', pad: '/api/admin/officials/sync', recht: 'officials.beheren', doe: officialsSync },
+  { methode: 'GET', pad: '/api/admin/officials/kandidaten', recht: 'officials.beheren', doe: kandidatenTonen },
+  { methode: 'POST', pad: '/api/admin/officials/aanduiden', recht: 'officials.beheren', doe: aanduiden },
+  { methode: 'POST', pad: '/api/admin/officials/vrijgeven', recht: 'officials.beheren', doe: vrijgeven },
+  { methode: 'POST', pad: '/api/admin/officials/scope', recht: 'officials.beheren', doe: scopeZetten },
+  { methode: 'POST', pad: '/api/admin/officials/refs-bevestigd', recht: 'officials.beheren', doe: refsBevestigen },
+  { methode: 'GET', pad: '/api/admin/officials/problemen', recht: 'officials.beheren', doe: problemenTonen },
+  { methode: 'POST', pad: '/api/admin/officials/probleem-afhandelen', recht: 'officials.beheren', doe: probleemAfhandelen },
   // Mijn berichten en de banner: over jezelf, zoals /api/mij. Elke query
   // filtert op de persoon uit het token.
   { methode: 'GET', pad: '/api/berichten', doe: berichtenTonen },

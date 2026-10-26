@@ -22,6 +22,9 @@ export function takenVoorUur(uur, dag) {
   // Wedstrijden: het meest tijdsgevoelig, want een wijziging triggert een
   // echte mail (verwittig(), sinds 0.18.0). Vier keer per dag, zoals YOAssist.
   if ([0, 6, 12, 18].includes(uur)) taken.push('wedstrijden');
+  // Meteen erna, in dezelfde ronde: de rijen van de gevolgde ploegen staan er
+  // dan al (0.33.0, module Officials).
+  if ([0, 6, 12, 18].includes(uur)) taken.push('officials');
 
   // Ploegen en leden wijzigen veel trager dan de kalender — één keer per dag
   // volstaat. Op een rustig uur, vóór de bestaande ping op 4 uur.

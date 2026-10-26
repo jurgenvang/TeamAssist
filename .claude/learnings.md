@@ -40,6 +40,9 @@ iets nieuws boven kwam; nooit inkorten zonder reden.
   competities.**
 - **De API is niet bereikbaar vanuit de sandbox**; de diagnoseroute in de
   Worker toont een echt antwoord.
+- **Een Worker mag per aanroep maar een beperkt aantal uitgaande oproepen
+  doen** (50 op het gratis plan). Eén oproep per ploeg loopt snel op; de
+  officials gebruiken daarom één `OrgMatchesByGuid` voor de hele club.
 
 ## Supabase
 
