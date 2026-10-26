@@ -63,5 +63,17 @@ iets nieuws boven kwam; nooit inkorten zonder reden.
 - **Een bericht dat bij de eerste sync na een fix voor iedereen vertrekt.**
   Een fix die een veld in de wijzigingshash aanvult, ziet elke rij als
   gewijzigd: kijk of dat een melding geeft (0.30.1: de tegenstander).
+- **`schema-controle.sql` draagt het versienummer.** Ook zonder
+  schemawijziging opnieuw genereren na het ophogen van `src/versie.js`; de
+  test merkt het, maar in 0.34.0 pas na de commit.
+- **De testschil van D1 (`test/d1.mjs`) kende geen `batch()`** tot 0.34.0.
+  Gebruikt nieuwe code iets van D1 dat de schil niet heeft, vul dan de schil
+  aan zoals D1 het doet (batch: alles of niets), in plaats van de code rond
+  de schil te schrijven.
+- **De automatische taken van de officials staan uit tot de overstap**
+  (`officials_automatisch`, 0.34.0). Een nieuwe geplande taak van de module
+  hoort in `OFFICIALS_AUTOMATISCH` (`geplandetaken.js`): zolang YOAssist live
+  is, doet dat het werk, en zou TeamAssist dubbel versturen of vals alarm
+  geven.
 - **`bericht_modus` op *omleiden* met een leeg omleidadres** verstuurt niets,
   ook geen alarm. Bij het testen eerst een omleidadres invullen.
