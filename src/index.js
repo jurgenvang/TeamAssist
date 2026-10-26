@@ -27,6 +27,10 @@ import { officialsSync } from './officials/sync-route.js';
 import { woensdaglijstTonen } from './officials/woensdaglijst-route.js';
 import { automatischAanvullen } from './officials/aanvullen.js';
 import { vulNogIn } from './officials/herinneringen.js';
+import {
+  facturatieOverzicht, facturatieVoorbeeld, facturatieAfsluiten, facturatieStaat, ontvangersZetten,
+  facturatiePerOfficial, tarievenTonen, tariefZetten, mijnVergoeding,
+} from './officials/facturatie.js';
 import { ontvangMail } from './officials/woensdaglijst.js';
 import {
   berichtenTonen, berichtenOngelezen, berichtGelezen, berichtVerwijderen, mededelingTonen, mededelingWegklikken,
@@ -119,6 +123,18 @@ export const ROUTES = [
   { methode: 'GET', pad: '/api/admin/officials/woensdaglijst', recht: 'officials.beheren', doe: woensdaglijstTonen },
   { methode: 'POST', pad: '/api/admin/officials/automatisch', recht: 'officials.beheren', doe: automatischAanvullen },
   { methode: 'POST', pad: '/api/admin/officials/vul-nog-in', recht: 'officials.beheren', doe: vulNogIn },
+  // De vergoedingen (0.36.0): YOADM, ADMIN en FINADM — de penningmeester
+  // beheert de officials niet, maar sluit wel de maand af.
+  { methode: 'GET', pad: '/api/admin/officials/facturatie', recht: 'officials.vergoedingen', doe: facturatieOverzicht },
+  { methode: 'GET', pad: '/api/admin/officials/facturatie/voorbeeld', recht: 'officials.vergoedingen', doe: facturatieVoorbeeld },
+  { methode: 'POST', pad: '/api/admin/officials/facturatie/afsluiten', recht: 'officials.vergoedingen', doe: facturatieAfsluiten },
+  { methode: 'GET', pad: '/api/admin/officials/facturatie/staat', recht: 'officials.vergoedingen', doe: facturatieStaat },
+  { methode: 'GET', pad: '/api/admin/officials/facturatie/officials', recht: 'officials.vergoedingen', doe: facturatiePerOfficial },
+  { methode: 'POST', pad: '/api/admin/officials/facturatie/ontvangers', recht: 'officials.vergoedingen', doe: ontvangersZetten },
+  { methode: 'GET', pad: '/api/admin/officials/tarieven', recht: 'officials.vergoedingen', doe: tarievenTonen },
+  { methode: 'POST', pad: '/api/admin/officials/tarieven', recht: 'officials.vergoedingen', doe: tariefZetten },
+  // Mijn vergoeding: wie iets verdiende, ook als hij intussen geen rol meer heeft.
+  { methode: 'GET', pad: '/api/officials/vergoeding', doe: mijnVergoeding },
   // Mijn berichten en de banner: over jezelf, zoals /api/mij. Elke query
   // filtert op de persoon uit het token.
   { methode: 'GET', pad: '/api/berichten', doe: berichtenTonen },

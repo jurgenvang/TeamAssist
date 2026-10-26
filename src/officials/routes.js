@@ -28,7 +28,7 @@ export function wedstrijdbladUrl(guid) {
  * als YO' ziet dus wat een YO ziet). Met `namens` het kind, met zijn eigen
  * rechten.
  */
-async function voorWie(ctx, namens) {
+export async function voorWie(ctx, namens) {
   const { db, persoon, rechten, seizoen } = ctx;
   if (!namens || namens === persoon.id) return { id: persoon.id, rechten, namens: null };
   if (!(await magNamens(db, persoon.id, namens))) return { fout: fout(403, 'je mag niet namens deze persoon handelen') };

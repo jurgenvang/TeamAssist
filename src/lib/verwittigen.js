@@ -373,3 +373,57 @@ export async function verwittigVelen(ctx, ontvangers, { onderwerp, inhoud, soort
   }
   return uitkomst;
 }
+
+/**
+ * Een bericht naar adressen die geen persoon in de app zijn (0.36.0): de
+ * ontvangers van de verzamelstaat (`facturatie_ontvangers`) — de
+ * penningmeester hoeft daarvoor geen account te hebben. Geen voorkeuren, geen
+ * push, geen `berichten`; wel bericht_modus, net als hierboven.
+ *
+ * @param {string[]} adressen
+ * @returns {{verstuurd, mislukt, omgeleid?, reden?}}
+ */
+export async function verwittigExtern(ctx, adressen, { onderwerp, inhoud }) {
+  const { db, env } = ctx;
+  const uitkomst = { verstuurd: 0, mislukt: 0 };
+  if (!adressen.length) return uitkomst;
+
+  const modus = (await instelling(db, 'bericht_modus')) || 'omleiden';
+  if (modus === 'uit') {
+    await logSchrijf(db, {
+      soort: 'beheer',
+      wat: 'bericht niet verstuurd (modus uit)',
+      details: `${adressen.join(', ')}: ${onderwerp}`,
+    });
+    return { ...uitkomst, reden: 'modus uit' };
+  }
+
+  const van = (await instelling(db, 'mail_afzender')) || 'TeamAssist <noreply@clubassist.org>';
+  let naar = adressen;
+  let tekst = inhoud;
+  if (modus === 'omleiden') {
+    const omleidadres = await instelling(db, 'bericht_omleidadres');
+    if (!omleidadres) {
+      await logSchrijf(db, { soort: 'fout', wat: 'omleiden ingesteld maar geen omleidadres gevuld', details: onderwerp, afgehandeld: 0 });
+      return { ...uitkomst, reden: 'geen omleidadres' };
+    }
+    naar = [omleidadres];
+    tekst = `[Omgeleid: bedoeld voor ${adressen.join(', ')}]\n\n${inhoud}`;
+  }
+
+  for (const adres of naar) {
+    try {
+      await verstuurMail({ van, naar: adres, onderwerp, tekst }, env);
+      uitkomst.verstuurd += 1;
+    } catch (e) {
+      uitkomst.mislukt += 1;
+      await logSchrijf(db, {
+        soort: 'fout',
+        wat: 'bericht versturen mislukt',
+        details: `${adres}: ${onderwerp} — ${e.message}`,
+        afgehandeld: 0,
+      });
+    }
+  }
+  return modus === 'omleiden' ? { ...uitkomst, omgeleid: true } : uitkomst;
+}
