@@ -19,11 +19,14 @@ import { wedstrijdenSync } from '../routes/admin/wedstrijden.js';
 import { officialsSync } from '../officials/sync-route.js';
 import { vakantiesSync, feestdagenSync } from '../routes/admin/periodes.js';
 import { woensdagOm14, woensdagTerugval, avondcontrole } from '../officials/woensdaglijst.js';
+import { herinner, weekoverzicht } from '../officials/herinneringen.js';
 import { instellingLezen } from '../routes/admin/instellingen.js';
 import { json } from './http.js';
 import { kuisLogboekOp, kuisTaakRunsOp, kuisBerichtenOp, verwijderInactievePersonenOp } from './opkuis.js';
 
-const OFFICIALS_AUTOMATISCH = ['woensdagregel', 'woensdag-terugval', 'avondcontrole'];
+const OFFICIALS_AUTOMATISCH = [
+  'woensdagregel', 'woensdag-terugval', 'avondcontrole', 'herinnering-avond', 'herinnering-ochtend', 'weekoverzicht',
+];
 
 // wie = null: het systeem, niet een aangemelde persoon (schema.sql, logboek.wie).
 const SYSTEEM_PERSOON = { id: null };
@@ -151,14 +154,19 @@ export async function voerGeplandeTakenUit(taken, db, env) {
     if (taak === 'leden') await voerTaakUit(db, env, 'leden-sync', () => ledenSync(ctx));
     // De automatische taken van de officials staan uit tot de overstap van
     // YOAssist (instelling officials_automatisch): zolang YOAssist live is,
-    // komt de woensdaglijst daar binnen, en zou hier elke woensdag een vals
-    // alarm vertrekken.
+    // komt de woensdaglijst daar binnen (hier zou elke woensdag een vals
+    // alarm vertrekken), en stuurt YOAssist zelf de herinneringen.
     if (OFFICIALS_AUTOMATISCH.includes(taak) && (await instellingLezen(db, 'officials_automatisch', '0')) === '1') {
       if (taak === 'woensdagregel') await voerTaakUit(db, env, 'woensdagregel', async () => json(await woensdagOm14(ctx)));
       if (taak === 'woensdag-terugval') {
         await voerTaakUit(db, env, 'woensdag-terugval', async () => json(await woensdagTerugval(ctx)));
       }
       if (taak === 'avondcontrole') await voerTaakUit(db, env, 'avondcontrole', async () => json(await avondcontrole(ctx)));
+      if (taak === 'herinnering-avond' || taak === 'herinnering-ochtend') {
+        const avond = taak === 'herinnering-avond';
+        await voerTaakUit(db, env, taak, async () => json(await herinner(ctx, { avond })));
+      }
+      if (taak === 'weekoverzicht') await voerTaakUit(db, env, 'weekoverzicht', async () => json(await weekoverzicht(ctx)));
     }
     if (taak === 'periodes') {
       await voerTaakUit(db, env, 'vakanties-sync', () => vakantiesSync(ctx));

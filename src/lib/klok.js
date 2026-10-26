@@ -24,3 +24,19 @@ export function brusselWeekdag(datum = new Date()) {
   const volgorde = { Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6, Sun: 7 };
   return volgorde[naam] ?? 0;
 }
+
+// De Brusselse kalenderdag, 'jjjj-mm-dd'. Rond middernacht verschilt die van
+// de UTC-dag — een herinnering 'voor morgen' moet over de Brusselse morgen gaan.
+export function brusselDatum(datum = new Date()) {
+  const d = Object.fromEntries(
+    new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Brussels', year: 'numeric', month: '2-digit', day: '2-digit' })
+      .formatToParts(datum)
+      .map((s) => [s.type, s.value])
+  );
+  return `${d.year}-${d.month}-${d.day}`;
+}
+
+/** 'jjjj-mm-dd' plus n dagen. */
+export function plusDagen(iso, n) {
+  return new Date(Date.parse(`${iso}T00:00:00Z`) + n * 86400000).toISOString().slice(0, 10);
+}

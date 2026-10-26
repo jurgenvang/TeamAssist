@@ -411,23 +411,31 @@ export async function aanduiden(ctx) {
   });
 
   const voorbij = w.datum < vandaag();
-  let verstuurd = false;
-  if (!voorbij) {
-    // Een bericht dat mislukt, laat de aanduiding niet mislukken.
-    const uit = await verwittig(ctx, {
-      persoon_id: persoonId,
-      soort: 'aanduiding',
-      onderwerp: `Aangeduid: ${w.ploeg} — ${w.tegenstander ?? ''}`.trim(),
-      kort: `${w.datum} om ${w.begin}${w.locatie_tekst ? ` — ${w.locatie_tekst}` : ''}`,
-      inhoud:
-        `Hallo ${official.voornaam},\n\nJe bent aangeduid voor:\n\n${w.ploeg} — ${w.tegenstander ?? ''}\n` +
-        `${w.datum} om ${w.begin}\n${w.locatie_tekst || 'locatie volgt nog'}\n\n` +
-        `Aanwezig op het terrein om ${opkomstUur(w.begin) ?? w.begin}.\n\n` +
-        'Kan je niet, meld dat dan in de app bij deze wedstrijd — niet door gewoon niet te komen opdagen.',
-    }).catch(() => ({ verstuurd: false }));
-    verstuurd = uit.verstuurd;
-  }
+  // Op een voorbije wedstrijd geen bericht: een rechtzetting achteraf.
+  const verstuurd = voorbij ? false : await verwittigAanduiding(ctx, official, w);
   return json({ aangeduid: true, voorbij, verwittigd: verstuurd, botsingen: botsingen.map((b) => `${b.datum} ${b.uur} ${b.ploeg}`) });
+}
+
+/**
+ * Het bericht bij een aanduiding: handmatig en automatisch hetzelfde. Een
+ * bericht dat mislukt, laat de aanduiding niet mislukken.
+ *
+ * @param official  {id, voornaam}
+ * @param w         {ploeg, tegenstander, datum, begin, locatie_tekst}
+ */
+export async function verwittigAanduiding(ctx, official, w) {
+  const uit = await verwittig(ctx, {
+    persoon_id: official.id,
+    soort: 'aanduiding',
+    onderwerp: `Aangeduid: ${w.ploeg} — ${w.tegenstander ?? ''}`.trim(),
+    kort: `${w.datum} om ${w.begin}${w.locatie_tekst ? ` — ${w.locatie_tekst}` : ''}`,
+    inhoud:
+      `Hallo ${official.voornaam},\n\nJe bent aangeduid voor:\n\n${w.ploeg} — ${w.tegenstander ?? ''}\n` +
+      `${w.datum} om ${w.begin}\n${w.locatie_tekst || 'locatie volgt nog'}\n\n` +
+      `Aanwezig op het terrein om ${opkomstUur(w.begin) ?? w.begin}.\n\n` +
+      'Kan je niet, meld dat dan in de app bij deze wedstrijd — niet door gewoon niet te komen opdagen.',
+  }).catch(() => ({ verstuurd: false }));
+  return Boolean(uit?.verstuurd);
 }
 
 /** POST /api/admin/officials/vrijgeven  { wedstrijd_id, persoon_id } — de rij blijft, voor de facturatie. */

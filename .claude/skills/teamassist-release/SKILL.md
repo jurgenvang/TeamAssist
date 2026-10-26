@@ -36,6 +36,10 @@ of dat er een heropbouw nodig is (zie `learnings.md`, *Databank*).
 - `node tools/genereer-controle.mjs` en `node tools/genereer-schemas.mjs`
   (de tests falen als je het vergeet).
 
+Ook zonder schemawijziging: `node tools/genereer-controle.mjs` na het
+ophogen van het versienummer — het staat in de kop van `schema-controle.sql`,
+en de test legt het ernaast (0.34.0: pas na de commit gemerkt).
+
 ## 4. Documenten
 
 - `.claude/BACKLOG.md`: "Stand" bovenaan; een rij in *TeamAssist —

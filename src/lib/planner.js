@@ -41,6 +41,12 @@ export function takenVoorUur(uur, dag) {
   if (uur === 20 && dag === 3) taken.push('woensdag-terugval');
   if (uur === 20) taken.push('avondcontrole');
 
+  // Herinneringen aan wie aangeduid is (0.35.0): 's avonds voor morgen, 's
+  // ochtends voor vandaag. Maandag 8 uur het overzicht voor de beheerders.
+  if (uur === 19) taken.push('herinnering-avond');
+  if (uur === 7) taken.push('herinnering-ochtend');
+  if (uur === 8 && dag === 1) taken.push('weekoverzicht');
+
   // De bestaande supabase-ping, ongewijzigd.
   if (uur === 4) taken.push('ping');
 

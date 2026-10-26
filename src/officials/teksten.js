@@ -103,3 +103,50 @@ export function tekstAvondcontrole({ wedstrijden }) {
       'Ze staan nog in de aanduidingslijst. Bekijk of ze eruit moeten.',
   };
 }
+
+// --- Herinneringen (0.35.0) --------------------------------------------------------
+
+/** Aan wie aangeduid is: morgen of vandaag fluiten. Eén bericht per persoon, ook bij twee wedstrijden. */
+export function tekstHerinnering({ voornaam, wanneer, wedstrijden }) {
+  const lijst = wedstrijden
+    .map((w) => `- ${w.uur} ${w.wedstrijd} (${w.locatie || 'locatie volgt'}) — op het terrein om ${w.opkomst}`)
+    .join('\n');
+  return {
+    kort: wedstrijden.map((w) => `${w.uur} ${w.wedstrijd}`).join(', ').slice(0, 200),
+    onderwerp:
+      wedstrijden.length === 1 ? `Herinnering: ${wedstrijden[0].wedstrijd}` : `Herinnering: ${wedstrijden.length} wedstrijden`,
+    tekst: `Hallo ${voornaam},\n\n${wanneer} moet je fluiten:\n\n${lijst}\n\nTot dan.`,
+  };
+}
+
+/**
+ * Aan wie voor een weekend nog niets invulde. Anders dan tekstHerinnering: die
+ * gaat over wie al aangeduid is, dit over wie nog helemaal niets antwoordde.
+ */
+export function tekstVulNogIn({ voornaam, wedstrijden, van, tot }) {
+  const lijst = wedstrijden.map((w) => `- ${w.datum} ${w.uur} ${w.thuis} - ${w.uit ?? '?'}`).join('\n');
+  return {
+    kort: `${wedstrijden.length} wedstrijd(en) nog te beantwoorden`,
+    onderwerp: `Nog te beantwoorden: weekend van ${van}`,
+    tekst:
+      `Hallo ${voornaam},\n\n` +
+      `Voor het weekend van ${van} tot ${tot} heb je nog niet aangegeven of je kan fluiten bij:\n\n${lijst}\n\n` +
+      'Zet je beschikbaarheid in de app, ook als het nee is — dan weet de beheerder waar hij aan toe is.',
+  };
+}
+
+/** Maandag aan de beheerders: wat de komende week nog niet volledig is aangeduid. */
+export function tekstWeekoverzicht({ u10u12, overig, van, tot }) {
+  const regel = (w) => `- ${w.datum} ${w.uur} ${w.thuis} - ${w.uit ?? '?'} (nog ${w.nogNodig} nodig)`;
+  const secties = [];
+  if (u10u12.length) secties.push(`U10/U12 (${u10u12.length}):\n${u10u12.map(regel).join('\n')}`);
+  if (overig.length) secties.push(`Overige (${overig.length}):\n${overig.map(regel).join('\n')}`);
+  const aantal = u10u12.length + overig.length;
+  return {
+    kort: `${aantal} wedstrijd(en) nog aan te vullen`,
+    onderwerp: `Weekoverzicht ${van} tot ${tot}: ${aantal} nog aan te vullen`,
+    tekst: secties.length
+      ? `Wedstrijden van ${van} tot ${tot} die nog niet volledig zijn aangeduid:\n\n${secties.join('\n\n')}`
+      : `Alle wedstrijden van ${van} tot ${tot} zijn volledig aangeduid.`,
+  };
+}
