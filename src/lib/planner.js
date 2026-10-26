@@ -34,6 +34,13 @@ export function takenVoorUur(uur, dag) {
   // Wekelijks, maandagochtend, ruim vóór de woensdagse trainingen.
   if (uur === 5 && dag === 1) taken.push('periodes');
 
+  // De woensdagregel van de officials (0.34.0, uit YOAssist): woensdag om 14
+  // uur de lijst van de bond verwerken, om 20 uur terugvallen op de API als
+  // ze er dan nog niet is. Elke avond om 20 uur daarna de avondcontrole.
+  if (uur === 14 && dag === 3) taken.push('woensdagregel');
+  if (uur === 20 && dag === 3) taken.push('woensdag-terugval');
+  if (uur === 20) taken.push('avondcontrole');
+
   // De bestaande supabase-ping, ongewijzigd.
   if (uur === 4) taken.push('ping');
 

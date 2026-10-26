@@ -18,7 +18,12 @@ import { ledenSync } from '../routes/admin/leden.js';
 import { wedstrijdenSync } from '../routes/admin/wedstrijden.js';
 import { officialsSync } from '../officials/sync-route.js';
 import { vakantiesSync, feestdagenSync } from '../routes/admin/periodes.js';
+import { woensdagOm14, woensdagTerugval, avondcontrole } from '../officials/woensdaglijst.js';
+import { instellingLezen } from '../routes/admin/instellingen.js';
+import { json } from './http.js';
 import { kuisLogboekOp, kuisTaakRunsOp, kuisBerichtenOp, verwijderInactievePersonenOp } from './opkuis.js';
+
+const OFFICIALS_AUTOMATISCH = ['woensdagregel', 'woensdag-terugval', 'avondcontrole'];
 
 // wie = null: het systeem, niet een aangemelde persoon (schema.sql, logboek.wie).
 const SYSTEEM_PERSOON = { id: null };
@@ -144,6 +149,17 @@ export async function voerGeplandeTakenUit(taken, db, env) {
     if (taak === 'officials') await voerTaakUit(db, env, 'officials-sync', () => officialsSync(ctx));
     if (taak === 'teams') await voerTaakUit(db, env, 'teams-sync', () => teamsSync(ctx));
     if (taak === 'leden') await voerTaakUit(db, env, 'leden-sync', () => ledenSync(ctx));
+    // De automatische taken van de officials staan uit tot de overstap van
+    // YOAssist (instelling officials_automatisch): zolang YOAssist live is,
+    // komt de woensdaglijst daar binnen, en zou hier elke woensdag een vals
+    // alarm vertrekken.
+    if (OFFICIALS_AUTOMATISCH.includes(taak) && (await instellingLezen(db, 'officials_automatisch', '0')) === '1') {
+      if (taak === 'woensdagregel') await voerTaakUit(db, env, 'woensdagregel', async () => json(await woensdagOm14(ctx)));
+      if (taak === 'woensdag-terugval') {
+        await voerTaakUit(db, env, 'woensdag-terugval', async () => json(await woensdagTerugval(ctx)));
+      }
+      if (taak === 'avondcontrole') await voerTaakUit(db, env, 'avondcontrole', async () => json(await avondcontrole(ctx)));
+    }
     if (taak === 'periodes') {
       await voerTaakUit(db, env, 'vakanties-sync', () => vakantiesSync(ctx));
       await voerTaakUit(db, env, 'feestdagen-sync', () => feestdagenSync(ctx));

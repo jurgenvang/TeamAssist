@@ -328,6 +328,22 @@ van elk hoogstens 90 kB: die voer je na elkaar uit in de D1-console. Opnieuw
 uitvoeren maakt geen dubbels. Pas bij de overschakeling (fase 5), met verse
 backups.
 
+### De woensdaglijst van de bond (sinds 0.34.0)
+
+Basketbal Vlaanderen stuurt elke woensdag een nieuwsbrief met de wedstrijden
+zonder officials. De Worker leest die zelf, via een `email()`-handler. Pas bij
+de overstap (fase 5), want tot dan komt ze bij YOAssist binnen:
+
+1. Cloudflare → het domein → **Email Routing**: een adres (bv.
+   `vbl@clubassist.org`) met als bestemming *Send to a Worker* → `teamassist`.
+2. Dat adres inschrijven op de nieuwsbrief van de bond, of er een mailbox naar
+   laten doorsturen. Vraagt Gmail of Mailchimp een bevestiging, dan stuurt de
+   app die door naar de beheerders: het adres zelf is geen mailbox.
+3. Beheer → Configuratie: `officials_automatisch` aanzetten. Zonder lopen de
+   woensdagregel om 14 uur, de terugval om 20 uur en de avondcontrole niet.
+
+Of de lijst binnenkomt: `GET /api/admin/officials/woensdaglijst`.
+
 ## Bij een volgende versie
 
 `schema-controle.sql` wordt gegenereerd uit `schema.sql` en niet met de hand

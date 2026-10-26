@@ -34,6 +34,10 @@ export const INSTELBAAR = {
   // eigen upload elders (of geen logo) zet dit op 'eigen'. Enkel om in het
   // scherm te tonen waar een waarde vandaan komt, geen gedragswijziging.
   clublogo_bron: { soort: 'keuze', keuzes: ['vbl', 'eigen'] },
+  // De automatische taken van de officials: woensdagregel, terugval en
+  // avondcontrole (0.34.0). Uit tot de overstap van YOAssist (I1, fase 5):
+  // tot dan komt de woensdaglijst bij YOAssist binnen.
+  officials_automatisch: { soort: 'vlag' },
 };
 
 export async function instellingLezen(db, sleutel, standaard = null) {

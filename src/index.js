@@ -24,6 +24,8 @@ import {
   scopeZetten, refsBevestigen, problemenTonen, probleemAfhandelen,
 } from './officials/routes.js';
 import { officialsSync } from './officials/sync-route.js';
+import { woensdaglijstTonen } from './officials/woensdaglijst-route.js';
+import { ontvangMail } from './officials/woensdaglijst.js';
 import {
   berichtenTonen, berichtenOngelezen, berichtGelezen, berichtVerwijderen, mededelingTonen, mededelingWegklikken,
 } from './routes/berichten.js';
@@ -112,6 +114,7 @@ export const ROUTES = [
   { methode: 'POST', pad: '/api/admin/officials/refs-bevestigd', recht: 'officials.beheren', doe: refsBevestigen },
   { methode: 'GET', pad: '/api/admin/officials/problemen', recht: 'officials.beheren', doe: problemenTonen },
   { methode: 'POST', pad: '/api/admin/officials/probleem-afhandelen', recht: 'officials.beheren', doe: probleemAfhandelen },
+  { methode: 'GET', pad: '/api/admin/officials/woensdaglijst', recht: 'officials.beheren', doe: woensdaglijstTonen },
   // Mijn berichten en de banner: over jezelf, zoals /api/mij. Elke query
   // filtert op de persoon uit het token.
   { methode: 'GET', pad: '/api/berichten', doe: berichtenTonen },
@@ -343,6 +346,22 @@ export default {
         details: String(e && e.stack ? e.stack : e),
       });
       return fout(500, 'er ging iets mis');
+    }
+  },
+
+  // De woensdaglijst van de bond komt per mail binnen (Cloudflare Email
+  // Routing, 0.34.0). Nooit gooien en nooit weigeren: een geweigerde mail
+  // kaatst terug naar de bond of naar Gmail.
+  async email(message, env) {
+    try {
+      const raw = await new Response(message.raw).text();
+      await ontvangMail({ db: env.DB, env }, raw, { naar: message.to });
+    } catch (e) {
+      await logSchrijf(env.DB, {
+        soort: 'fout',
+        wat: 'woensdaglijst: mail niet verwerkt',
+        details: `${message.from}: ${String(e?.message || e)}`,
+      });
     }
   },
 

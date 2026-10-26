@@ -54,6 +54,19 @@ export function maakDb({ metSchema = true } = {}) {
   return {
     prepare: (sql) => new Statement(sqlite, sql),
     exec: async (sql) => sqlite.exec(sql),
+    // Zoals D1: alles of niets, in volgorde.
+    batch: async (opdrachten) => {
+      sqlite.exec('BEGIN');
+      try {
+        const uit = [];
+        for (const o of opdrachten) uit.push(await o.run());
+        sqlite.exec('COMMIT');
+        return uit;
+      } catch (e) {
+        sqlite.exec('ROLLBACK');
+        throw e;
+      }
+    },
     _sqlite: sqlite,
   };
 }

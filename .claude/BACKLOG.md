@@ -11,7 +11,7 @@ WIJZIGINGEN-bestanden blijven kloppen:
   punt *U* (Microsoft 365) heet hier **VU**, want TeamAssist heeft al een *U*
 - **T** + nummer, en de letters **A–AB** — TeamAssist
 
-Stand: YOAssist **v1.17.0**, TeamAssist **0.33.0**
+Stand: YOAssist **v1.17.0**, TeamAssist **0.34.0**
 
 ---
 
@@ -36,8 +36,8 @@ Bijgewerkt bij elke versie. Voor de volledige tekst: zoek de kop verderop
   zie README); zonder blijft alles per mail.
 
 ### Klaar om te bouwen
-- **I1, fase 3c (0.34.0)** — de woensdagregel en de woensdaglijst van de
-  bond. Daarna 3d–3f (zie I1).
+- **I1, fase 3d (0.35.0)** — automatisch aanvullen en herinneringen.
+  Daarna 3e–3f en fase 4 (zie I1).
 - **T7** — tabblad Mijn club.
 - **T12** — aanmelden als.
 - **T18, T19** — twee kleine gaten uit de code-audit.
@@ -205,9 +205,11 @@ rapport. Verder:
      bond, forfait); hoeveel officials nodig, botsingen, beschikbaarheid
      opgeven (ook namens een kind), aanduiden en vrijgeven, een probleem
      melden.
-   - **3c — 0.34.0: de woensdagregel.** Met de API, de woensdaglijst
-     (`email()`-handler, mime, xlsx), de terugval om 20 uur en de
-     avondcontrole.
+   - **3c — 0.34.0, afgewerkt: de woensdagregel.** De woensdaglijst
+     (`email()`-handler, mime, xlsx), verwerken om 14 uur, de terugval op
+     de API om 20 uur, de avondcontrole, en Regio volgt de lijst. De
+     automatische taken staan uit tot de overstap (instelling
+     `officials_automatisch`, zie fase 5).
    - **3d — 0.35.0: automatisch aanvullen en herinneringen.** Avond en
      ochtend, wie nog niet invulde, het maandagoverzicht voor de beheerders.
    - **3e — 0.36.0: facturatie.** Tarieven, een maand afsluiten met
@@ -219,7 +221,9 @@ rapport. Verder:
 4. **Frontend overzetten**, scherm per scherm, als modules.
 5. **Parallel draaien** op een testadres, daarna overschakelen: migratie
    uitvoeren, officials uitnodigen via Supabase, `yoassist.org` laten
-   doorverwijzen.
+   doorverwijzen. Ook: Email Routing van het adres van de woensdaglijst naar
+   de TeamAssist-Worker, en `officials_automatisch` aanzetten (Beheer →
+   Configuratie) — pas dan lopen woensdagregel, terugval en avondcontrole.
 
 Tot de overstap blijft YOAssist live en krijgt het enkel bugfixes.
 
@@ -341,6 +345,7 @@ YOAssist met `ruudcuyvers@…`, vermoedelijk het adres van zijn vader.
 | 0.23.0 | T14 afgewerkt: een volledige backup van de databank als JSON. Beter dan aanvankelijk voorgesteld — geen hardcoded tabellenlijst met een test die drift moet vangen (de YOAssist-aanpak), maar tabellen rechtstreeks uit `sqlite_master` gehaald, wat de hele bugklasse structureel onmogelijk maakt. De kerntest bewijst dat letterlijk: een tabel die pas ná het schrijven van de route wordt aangemaakt, zit er toch in. |
 | 0.24.0 | T16 en T17 afgewerkt. `verwittig()` heeft geen `kanaal`-parameter meer en leest voortaan `kanaal_voorkeur` — mail blijft de terugval zolang push niet bestaat, met een aparte logregel voor wie 'push' koos. Blokken bij Zaalbeheer staan nu gegroepeerd per weekdag als losse blokjes, met bewust neutrale kleuren in plaats van de accentkleur. |
 | 0.25.0 | T15 afgewerkt: opruiming van `logboek` (365 dagen), `taak_runs` (30 dagen), `berichten` (120 dagen), en het definitief verwijderen van een inactieve persoon na 180 dagen. Twee tabellen extra gevonden tijdens het bouwen (`accounts`, `ouder_kind`) die niet in het oorspronkelijke overzicht stonden. Enkel `aanwezigheden` wordt geanonimiseerd in plaats van verwijderd — de enige tabel waar dat structureel kon — wat een schema-heropbouw vroeg, grondig getoetst tegen een nagemaakte bestaande databank. |
+| 0.34.0 | I1 fase 3c: de woensdagregel, backend. De woensdaglijst van de bond komt per mail binnen (`email()`-handler van de Worker, mime en xlsx uit YOAssist, zonder bibliotheek): afzender en onderwerp nagekeken, het Excel-bestand opgehaald en gelezen (een anders gekleurde cel = aangeduid), gekoppeld aan de eigen thuiswedstrijden vanaf U14 en aan Regio. Woensdag 14 uur verwerkt (in de lijst = 0 of 1, niet in de lijst = 2 volgens de bond; wat automatisch in de lijst kwam en niemand heeft, gaat eruit), anders een waarschuwing; om 20 uur terugval op de API; een latere lijst zet recht; elke avond de avondcontrole. YO+ krijgt de gewone mail, de beheerders (YOADM, ADMIN) het overzicht met elke afwijking. Gmail- en Mailchimp-bevestigingen naar de beheerders. Status: `GET /api/admin/officials/woensdaglijst`. De automatische taken staan uit tot de overstap (`officials_automatisch`). Anders dan YOAssist neemt de API-terugval geen onbekende categorie (G08) meer mee. Geen schemawijziging. 916 tests. |
 | 0.33.0 | I1 fase 3b: de kern van de module Officials, backend. Een eigen sync (één OrgMatchesByGuid voor de club, zoals YOAssist) vult `officials_wedstrijd` voor de thuiswedstrijden van ploegen met officials — ook van ploegen die TeamAssist niet volgt (een eigen rij, zonder taken) — met de scheidsrechters van de bond, het forfait en U10/U12 vanzelf in de lijst; vier keer per dag meteen na de gewone sync. Wat een official ziet en opgeeft (YO enkel U10/U12, namens een kind met de rechten van het kind), een probleem melden, aanduiden met de controles uit YOAssist (lijst, forfait, profiel, plaatsen, 'nee', botsingen), vrijgeven, scope, refs bevestigen, problemen. Geen schemawijziging. 901 tests. |
 | 0.32.0 | I1 fase 3a: ouder en kind. Berichten aan een kind gaan ook naar zijn ouders: altijd zonder eigen adres, standaard bij een minderjarige (uitzetten pas met toestemming van elke ouder), standaard niet bij een meerderjarige (die beslist zelf); onbekende geboortedatum telt als minderjarig. Eén rij in `berichten`, bij het kind; de ouder ziet ze in zijn eigen Mijn berichten met 'voor …'. De schakelaar en de vragen bij Mijn voorkeuren; ouders en kinderen koppelen in het persoonsscherm (geen ketens). Eén gedeelde controle `namens.js`. De migratie kent een keuzebestand voor YOAssist-adressen van een ouder. Ook: een gewijzigde wedstrijd kreeg haar uitslag pas een sync later. Schema: `personen.ouders_meelezen` (ALTER), tabel `ouder_toestemming` (CREATE). 878 tests. |
 | 0.31.0 | I1 fase 2b: `tools/migreer-yoassist.mjs`. Leest een YOAssist- en een TeamAssist-backup en maakt een rapport (wie bij wie terechtkomt, per tabel wat meegaat en waarom niet, aandachtspunten zoals een mogelijk ouderadres) plus SQL, in delen voor de D1-console, op een grens tussen opdrachten. Personen op e-mail, anders op naam bij precies één kandidaat zonder ander adres; wedstrijden via (guid, ploeg), niet via id; alles opnieuw uit te voeren zonder dubbels. Getoetst tegen de echte backups: 9 officials, 210 wedstrijden, alle rijen terecht, geen foreign-keyfout. Geen schemawijziging. 853 tests. |

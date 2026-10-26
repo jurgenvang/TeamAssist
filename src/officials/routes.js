@@ -14,6 +14,7 @@ import { verwittig } from '../lib/verwittigen.js';
 import { rechtenVoor } from '../lib/rechten-db.js';
 import { magNamens } from '../lib/namens.js';
 import { aantalNodig, conflicten, opkomstUur } from './regels.js';
+import { beheerders } from './ontvangers.js';
 
 const vandaag = () => new Date().toISOString().slice(0, 10);
 
@@ -196,17 +197,6 @@ export async function beschikbaarheidZetten(ctx) {
       .run();
   }
   return json({ wedstrijd_id: id, status: body.status, namens: wie.namens });
-}
-
-/** Wie de officials beheert: elke actieve YOADM en ADMIN. */
-async function beheerders(db) {
-  const r = await db
-    .prepare(
-      `SELECT DISTINCT p.id FROM rollen r JOIN personen p ON p.id = r.persoon_id
-        WHERE r.rol IN ('YOADM', 'ADMIN') AND p.actief = 1`
-    )
-    .all();
-  return (r.results ?? []).map((x) => x.id);
 }
 
 const omschrijving = (w) => `${w.ploeg} — ${w.tegenstander ?? '?'} (${w.datum} om ${w.begin})`;
