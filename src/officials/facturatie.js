@@ -45,8 +45,8 @@ export async function berekenMaand(db, seizoen, maand) {
   // telt niet vanzelf mee — er is misschien niet gefloten — maar wordt getoond.
   const r = await db
     .prepare(
-      `SELECT a.persoon_id, m.wedstrijd_guid, m.datum, m.bij_bond, m.thuis_naam, m.uit_naam, m.cat_code, m.forfait,
-              p.voornaam, p.achternaam, c.label AS cat_label, c.tarief_cent
+      `SELECT a.persoon_id, m.id AS wedstrijd_id, m.wedstrijd_guid, m.datum, m.bij_bond, m.thuis_naam, m.uit_naam,
+              m.cat_code, m.forfait, p.voornaam, p.achternaam, c.label AS cat_label, c.tarief_cent
          FROM officials_aanduidingen a
          JOIN ${OFFICIALS_WEDSTRIJD} m ON m.id = a.wedstrijd_id
          JOIN personen p ON p.id = a.persoon_id
@@ -74,7 +74,8 @@ export async function berekenMaand(db, seizoen, maand) {
       continue;
     }
     teVergoeden.push({
-      wedstrijdGuid: x.wedstrijd_guid, persoonId: x.persoon_id, naam, catCode: x.cat_code, catLabel: x.cat_label,
+      // Het id om 'weg' te kunnen zeggen bij het nakijken: dat is vrijgeven.
+      wedstrijdId: x.wedstrijd_id, wedstrijdGuid: x.wedstrijd_guid, persoonId: x.persoon_id, naam, catCode: x.cat_code, catLabel: x.cat_label,
       tariefCent: x.tarief_cent, datum: x.datum, thuisNaam: x.thuis_naam, uitNaam: x.uit_naam, forfait: x.forfait,
     });
   }
@@ -376,7 +377,13 @@ async function verwerktDetail(db, { maand = null, persoonId = null }) {
 export async function facturatieStaat(ctx) {
   const { db } = ctx;
   const maand = new URL(ctx.request.url).searchParams.get('maand');
-  const kop = await db.prepare(`SELECT * FROM officials_maanden WHERE maand = ?`).bind(maand).first();
+  const kop = await db
+    .prepare(
+      `SELECT m.*, trim(coalesce(p.voornaam, '') || ' ' || coalesce(p.achternaam, '')) AS afgesloten_door_naam
+         FROM officials_maanden m LEFT JOIN personen p ON p.id = m.afgesloten_door WHERE m.maand = ?`
+    )
+    .bind(maand)
+    .first();
   if (!kop) return fout(404, `${maand} is niet afgesloten`);
   const r = await db
     .prepare(`SELECT * FROM officials_vergoeding_regels WHERE maand = ? ORDER BY naam, soort DESC, betreft_maand, cat_code`)

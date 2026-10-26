@@ -160,6 +160,8 @@ export function wedstrijdenPerOfficial(items) {
       ...(per.get(w.persoonId) ?? []),
       {
         wedstrijdGuid: w.wedstrijdGuid,
+        // Enkel bij werk in een open maand: daar kan het nog weg (vrijgeven).
+        wedstrijdId: w.wedstrijdId ?? null,
         datum: w.datum ?? null,
         // Een wedstrijd die intussen uit de databank verdween, heeft geen
         // namen meer; de GUID is dan het enige houvast.
