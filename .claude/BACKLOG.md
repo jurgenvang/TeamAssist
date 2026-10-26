@@ -33,8 +33,9 @@ Bijgewerkt bij elke versie. Voor de volledige tekst: zoek de kop verderop
   zie README); zonder blijft alles per mail.
 
 ### Klaar om te bouwen
-- **I1, fase 3** — de backend van YOAssist overzetten. Groot: eerst opdelen
-  in pakketten (voorstel bij de start van fase 3).
+- **I1, fase 3** — de backend van YOAssist overzetten, in zes pakketten
+  (3a–3f, zie I1). Wacht op bevestiging van die opdeling en van *Ouder en
+  kind*.
 - **T7** — tabblad Mijn club.
 - **T12** — aanmelden als.
 - **T18, T19** — twee kleine gaten uit de code-audit.
@@ -192,16 +193,78 @@ rapport. Verder:
      **Nog niet uitvoeren:** het script hoort bij de overschakeling (fase 5),
      met een verse backup van dat moment — YOAssist blijft tot dan live, en
      wat nu overgezet wordt, is dan verouderd.
-3. **Backend overzetten**: woensdagregel en woensdaglijst (mail, xlsx),
-   aanduiden en botsingen, autotoewijzing, facturatie, Regio, forfait,
-   herinneringen, agendafeed en externe API. De tests verhuizen mee naar
-   `node:sqlite` — dan draaien ze ook in een Claude-sandbox.
+3. **Backend overzetten**, in zes pakketten — **voorstel, nog te
+   bevestigen**. Elk pakket enkel backend en tests; de schermen komen in
+   fase 4. De tests van YOAssist verhuizen mee naar `node:sqlite`.
+   - **3a — 0.32.0: ouder en kind duidelijk.** Zie *Ouder en kind* hieronder.
+     Eerst, omdat aanduidingen, berichten en de migratie erop steunen.
+   - **3b — 0.33.0: de kern.** De wedstrijdsync vult ook
+     `officials_wedstrijd` (scope U10/U12 automatisch, scheidsrechters van de
+     bond, forfait); hoeveel officials nodig, botsingen, beschikbaarheid
+     opgeven (ook namens een kind), aanduiden en vrijgeven, een probleem
+     melden.
+   - **3c — 0.34.0: de woensdagregel.** Met de API, de woensdaglijst
+     (`email()`-handler, mime, xlsx), de terugval om 20 uur en de
+     avondcontrole.
+   - **3d — 0.35.0: automatisch aanvullen en herinneringen.** Avond en
+     ochtend, wie nog niet invulde, het maandagoverzicht voor de beheerders.
+   - **3e — 0.36.0: facturatie.** Tarieven, een maand afsluiten met
+     momentopname en correcties, de maandmail.
+   - **3f — 0.37.0: de rest.** Regio (volgsync), forfait-afhandeling,
+     agendafeed en externe API (met `yoassist.org/api/kalender/` en
+     `/api/extern/`), en de mail aan PV's en coaches bij te weinig
+     scheidsrechters — nu via de rollen PLOEGV en COACH.
 4. **Frontend overzetten**, scherm per scherm, als modules.
 5. **Parallel draaien** op een testadres, daarna overschakelen: migratie
    uitvoeren, officials uitnodigen via Supabase, `yoassist.org` laten
    doorverwijzen.
 
 Tot de overstap blijft YOAssist live en krijgt het enkel bugfixes.
+
+### Ouder en kind — **voorstel, nog te bevestigen**
+
+Waarom nu: een deel van de officials is minderjarig, en in YOAssist vult een
+ouder vaak in voor zijn kind. De migratie toonde het al: Max Cuyvers staat in
+YOAssist met `ruudcuyvers@…`, vermoedelijk het adres van zijn vader.
+
+**Hoe het vandaag zit.**
+- *YOAssist*: het kind is een gewone gebruiker met een eigen, uniek
+  e-mailadres — vaak dat van een ouder, een plusadres of een fictief adres
+  op het eigen domein, want `email` is de sleutel. `ouder_kind` laat een
+  ouder invullen namens het kind (`namens.js`), maar die tabel bestaat niet
+  in de echte databank: er is nooit een koppeling gemaakt.
+- *TeamAssist*: een persoon hoeft geen e-mailadres te hebben. `ouder_kind`
+  koppelt twee personen; een ouder krijgt daardoor de rol OUVO in de ploegen
+  van zijn kind en geeft aanwezigheden op namens hem (gecontroleerd tegen
+  `ouder_kind`). Koppelingen ontstaan enkel via het personensjabloon (kolom
+  *E-mail ouder/voogd*); het persoonsscherm toont ze niet en kan ze niet
+  maken. En `verwittig()` naar een kind zonder adres verstuurt niets — enkel
+  een foutregel in het logboek.
+
+**Voorstel (3a):**
+1. **De official is altijd het kind zelf.** De rol YO/YOPLUS, de
+   beschikbaarheden, aanduidingen en de vergoeding staan op de persoon van
+   het kind, nooit op de ouder.
+2. **Een ouder handelt namens zijn kind, met de rechten van het kind.** Zoals
+   bij aanwezigheden: `namens` in het verzoek, altijd gecontroleerd tegen
+   `ouder_kind`, anders 403. De ouder hoeft zelf geen rol YO te hebben. Eén
+   gedeelde controle (`src/lib/namens.js`) voor aanwezigheden en officials.
+3. **Een kind heeft geen fictief adres meer nodig.** Zonder eigen adres meldt
+   het kind zich niet aan; de ouder doet alles. Met een eigen adres kunnen
+   kind en ouder allebei.
+4. **Berichten aan een kind zonder adres gaan naar zijn ouders** (elke ouder
+   met een adres). Mijn berichten bewaart ze bij het kind; de ouder ziet ze
+   als hij namens het kind kijkt. Heeft het kind een eigen adres, dan enkel
+   naar het kind. Dit geldt voor de hele app, niet enkel de officials — het
+   dicht ook het gat bij een gepubliceerde selectie.
+5. **Het persoonsscherm toont ouders en kinderen**, en een beheerder kan er
+   een koppeling maken of weghalen. Niet enkel via het sjabloon: een official
+   die geen speler is, staat niet in een ploegsjabloon.
+6. **De migratie krijgt een keuzebestand.** Per YOAssist-adres dat van een
+   ouder is: wie die ouder is. Dan komt het adres bij de ouder (een bestaande
+   persoon, of een nieuwe zonder rol), het kind blijft zonder adres, en de
+   koppeling wordt gelegd. Zonder keuze blijft het zoals nu (adres bij het
+   kind) en staat het in het rapport.
 
 ### Nog te bepalen
 
