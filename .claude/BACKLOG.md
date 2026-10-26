@@ -11,7 +11,7 @@ WIJZIGINGEN-bestanden blijven kloppen:
   punt *U* (Microsoft 365) heet hier **VU**, want TeamAssist heeft al een *U*
 - **T** + nummer, en de letters **A–AB** — TeamAssist
 
-Stand: YOAssist **v1.17.0**, TeamAssist **0.35.0**
+Stand: YOAssist **v1.17.0**, TeamAssist **0.36.0**
 
 ---
 
@@ -36,7 +36,8 @@ Bijgewerkt bij elke versie. Voor de volledige tekst: zoek de kop verderop
   zie README); zonder blijft alles per mail.
 
 ### Klaar om te bouwen
-- **I1, fase 3e (0.36.0)** — facturatie. Daarna 3f en fase 4 (zie I1).
+- **I1, fase 3f (0.37.0)** — Regio, forfait-afhandeling, agendafeed en
+  externe API, PV's en coaches. Daarna fase 4 (zie I1).
 - **T7** — tabblad Mijn club.
 - **T12** — aanmelden als.
 - **T18, T19** — twee kleine gaten uit de code-audit.
@@ -212,8 +213,9 @@ rapport. Verder:
    - **3d — 0.35.0, afgewerkt: automatisch aanvullen en herinneringen.**
      Avond en ochtend, wie nog niet invulde, het maandagoverzicht voor de
      beheerders. De geplande herinneringen volgen ook `officials_automatisch`.
-   - **3e — 0.36.0: facturatie.** Tarieven, een maand afsluiten met
-     momentopname en correcties, de maandmail.
+   - **3e — 0.36.0, afgewerkt: facturatie.** Tarieven, een maand afsluiten
+     met momentopname en correcties, de maandmail en de verzamelstaat, Mijn
+     vergoeding (ook namens een kind).
    - **3f — 0.37.0: de rest.** Regio (volgsync), forfait-afhandeling,
      agendafeed en externe API (met `yoassist.org/api/kalender/` en
      `/api/extern/`), en de mail aan PV's en coaches bij te weinig
@@ -346,6 +348,7 @@ YOAssist met `ruudcuyvers@…`, vermoedelijk het adres van zijn vader.
 | 0.23.0 | T14 afgewerkt: een volledige backup van de databank als JSON. Beter dan aanvankelijk voorgesteld — geen hardcoded tabellenlijst met een test die drift moet vangen (de YOAssist-aanpak), maar tabellen rechtstreeks uit `sqlite_master` gehaald, wat de hele bugklasse structureel onmogelijk maakt. De kerntest bewijst dat letterlijk: een tabel die pas ná het schrijven van de route wordt aangemaakt, zit er toch in. |
 | 0.24.0 | T16 en T17 afgewerkt. `verwittig()` heeft geen `kanaal`-parameter meer en leest voortaan `kanaal_voorkeur` — mail blijft de terugval zolang push niet bestaat, met een aparte logregel voor wie 'push' koos. Blokken bij Zaalbeheer staan nu gegroepeerd per weekdag als losse blokjes, met bewust neutrale kleuren in plaats van de accentkleur. |
 | 0.25.0 | T15 afgewerkt: opruiming van `logboek` (365 dagen), `taak_runs` (30 dagen), `berichten` (120 dagen), en het definitief verwijderen van een inactieve persoon na 180 dagen. Twee tabellen extra gevonden tijdens het bouwen (`accounts`, `ouder_kind`) die niet in het oorspronkelijke overzicht stonden. Enkel `aanwezigheden` wordt geanonimiseerd in plaats van verwijderd — de enige tabel waar dat structureel kon — wat een schema-heropbouw vroeg, grondig getoetst tegen een nagemaakte bestaande databank. |
+| 0.36.0 | I1 fase 3e: facturatie, backend. De rekenregels van YOAssist (op persoon-id), het voorbeeld vóór het afsluiten met de wedstrijden per official, afsluiten met momentopname en spoor (`officials_vergoeding_verwerkt`, op de GUID van de wedstrijd zoals de migratie ze overzet), correcties op eerder afgesloten maanden — één keer —, een wedstrijd die niet meer bij de bond staat gemeld en niet meegeteld, een categorie zonder tarief blokkeert. De maandmail per official, de verzamelstaat naar `facturatie_ontvangers` (adressen zonder account, via het nieuwe `verwittigExtern`, dat bericht_modus volgt). Tarieven aanpassen (nieuw: in YOAssist enkel via de console). Mijn vergoeding, ook namens een kind. Recht `officials.vergoedingen`: YOADM, ADMIN en FINADM. Geen schemawijziging. 943 tests. |
 | 0.35.0 | I1 fase 3d: automatisch aanvullen en herinneringen, backend. Het planningsalgoritme van YOAssist (zuivere functie: schaarste eerst, eerlijk verdeeld over het seizoen, botsingen vermeden, bestaande aanduidingen blijven) achter `POST /api/admin/officials/automatisch`, standaard een droogloop; wie automatisch aangeduid wordt, krijgt hetzelfde bericht als bij een handmatige aanduiding (in YOAssist niet). Herinnering de avond ervoor (19 u) en de ochtend zelf (7 u), één bericht per persoon, volgens `officials_voorkeuren`, nooit voor een forfait; het weekoverzicht maandag 8 u naar de beheerders; `POST /api/admin/officials/vul-nog-in` voor wie een weekend niets invulde — een YO enkel voor wat hij ziet (U10/U12). De geplande taken volgen `officials_automatisch`. Geen schemawijziging. 930 tests. |
 | 0.34.0 | I1 fase 3c: de woensdagregel, backend. De woensdaglijst van de bond komt per mail binnen (`email()`-handler van de Worker, mime en xlsx uit YOAssist, zonder bibliotheek): afzender en onderwerp nagekeken, het Excel-bestand opgehaald en gelezen (een anders gekleurde cel = aangeduid), gekoppeld aan de eigen thuiswedstrijden vanaf U14 en aan Regio. Woensdag 14 uur verwerkt (in de lijst = 0 of 1, niet in de lijst = 2 volgens de bond; wat automatisch in de lijst kwam en niemand heeft, gaat eruit), anders een waarschuwing; om 20 uur terugval op de API; een latere lijst zet recht; elke avond de avondcontrole. YO+ krijgt de gewone mail, de beheerders (YOADM, ADMIN) het overzicht met elke afwijking. Gmail- en Mailchimp-bevestigingen naar de beheerders. Status: `GET /api/admin/officials/woensdaglijst`. De automatische taken staan uit tot de overstap (`officials_automatisch`). Anders dan YOAssist neemt de API-terugval geen onbekende categorie (G08) meer mee. Geen schemawijziging. 916 tests. |
 | 0.33.0 | I1 fase 3b: de kern van de module Officials, backend. Een eigen sync (één OrgMatchesByGuid voor de club, zoals YOAssist) vult `officials_wedstrijd` voor de thuiswedstrijden van ploegen met officials — ook van ploegen die TeamAssist niet volgt (een eigen rij, zonder taken) — met de scheidsrechters van de bond, het forfait en U10/U12 vanzelf in de lijst; vier keer per dag meteen na de gewone sync. Wat een official ziet en opgeeft (YO enkel U10/U12, namens een kind met de rechten van het kind), een probleem melden, aanduiden met de controles uit YOAssist (lijst, forfait, profiel, plaatsen, 'nee', botsingen), vrijgeven, scope, refs bevestigen, problemen. Geen schemawijziging. 901 tests. |
