@@ -7,8 +7,8 @@
 import { api, testrol, bewaarTestrol } from '../api.js';
 import { el, veilig } from '../hulp.js';
 
-const ROLLEN = ['ADMIN', 'FINADM', 'COORD', 'COACH', 'PLOEGV', 'SPELER', 'OUVO'];
-const CLUBBREED = ['ADMIN', 'FINADM'];
+const ROLLEN = ['ADMIN', 'FINADM', 'YOADM', 'YO', 'YOPLUS', 'COORD', 'COACH', 'PLOEGV', 'SPELER', 'OUVO'];
+const CLUBBREED = ['ADMIN', 'FINADM', 'YOADM', 'YO', 'YOPLUS'];
 
 export function toonTestbalk(gegevens) {
   const keuze = testrol();

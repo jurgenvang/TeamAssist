@@ -1,3 +1,15 @@
+DROP TABLE IF EXISTS officials_vbl_lijsten;
+DROP TABLE IF EXISTS officials_volg_wedstrijden;
+DROP TABLE IF EXISTS officials_volg_clubs;
+DROP TABLE IF EXISTS officials_voorkeuren;
+DROP TABLE IF EXISTS officials_vergoeding_verwerkt;
+DROP TABLE IF EXISTS officials_vergoeding_regels;
+DROP TABLE IF EXISTS officials_maanden;
+DROP TABLE IF EXISTS officials_problemen;
+DROP TABLE IF EXISTS officials_aanduidingen;
+DROP TABLE IF EXISTS officials_beschikbaarheid;
+DROP TABLE IF EXISTS officials_wedstrijd;
+DROP TABLE IF EXISTS officials_categorieen;
 DROP TABLE IF EXISTS taak_runs;
 DROP TABLE IF EXISTS wedstrijdtaken;
 DROP TABLE IF EXISTS wedstrijdselecties;
@@ -61,11 +73,13 @@ CREATE TABLE personen (
   kanaal_voorkeur    TEXT NOT NULL DEFAULT 'mail'
                      CHECK (kanaal_voorkeur IN ('mail', 'push', 'beide')),
   aangemaakt         TEXT NOT NULL DEFAULT (datetime('now')),
-  gewijzigd          TEXT NOT NULL DEFAULT (datetime('now'))
+  gewijzigd          TEXT NOT NULL DEFAULT (datetime('now')),
+  agenda_sleutel     TEXT
 );
 
 CREATE INDEX idx_personen_email ON personen (email);
 CREATE INDEX idx_personen_relguid ON personen (rel_guid);
+CREATE UNIQUE INDEX idx_personen_agenda ON personen (agenda_sleutel);
 
 CREATE TABLE accounts (
   sub                TEXT PRIMARY KEY,
@@ -101,6 +115,7 @@ CREATE TABLE teams (
   bij_bond       INTEGER NOT NULL DEFAULT 1 CHECK (bij_bond IN (0, 1)),
   laatst_gezien  TEXT,
   aangemaakt     TEXT NOT NULL DEFAULT (datetime('now')),
+  officials      INTEGER NOT NULL DEFAULT 1 CHECK (officials IN (0, 1)),
   PRIMARY KEY (guid, seizoen),
   FOREIGN KEY (seizoen) REFERENCES seizoenen (code)
 );
@@ -109,16 +124,16 @@ CREATE TABLE rollen (
   id         INTEGER PRIMARY KEY AUTOINCREMENT,
   persoon_id TEXT NOT NULL,
   rol        TEXT NOT NULL
-             CHECK (rol IN ('ADMIN', 'FINADM', 'COORD', 'COACH', 'PLOEGV')),
+             CHECK (rol IN ('ADMIN', 'FINADM', 'YOADM', 'YO', 'YOPLUS', 'COORD', 'COACH', 'PLOEGV')),
   team_guid  TEXT,
   seizoen    TEXT,
   bron       TEXT NOT NULL DEFAULT 'club' CHECK (bron IN ('club', 'vbl')),
   aangemaakt TEXT NOT NULL DEFAULT (datetime('now')),
   FOREIGN KEY (persoon_id) REFERENCES personen (id),
   CHECK (
-    (rol IN ('ADMIN', 'FINADM') AND team_guid IS NULL AND seizoen IS NULL)
+    (rol IN ('ADMIN', 'FINADM', 'YOADM', 'YO', 'YOPLUS') AND team_guid IS NULL AND seizoen IS NULL)
     OR
-    (rol NOT IN ('ADMIN', 'FINADM') AND team_guid IS NOT NULL AND seizoen IS NOT NULL)
+    (rol IN ('COORD', 'COACH', 'PLOEGV') AND team_guid IS NOT NULL AND seizoen IS NOT NULL)
   )
 );
 
@@ -231,7 +246,10 @@ INSERT INTO instellingen (sleutel, waarde) VALUES
   ('clubnaam', 'AB InBev Leuven Bears'),
   ('club_guid', 'BVBL1125'),
   ('testrol_toegelaten', '0'),
-  ('stille_periodes', '[{"van_dag":"06-01","tot_dag":"08-15"},{"van_dag":"12-28","tot_dag":"01-03"}]');
+  ('stille_periodes', '[{"van_dag":"06-01","tot_dag":"08-15"},{"van_dag":"12-28","tot_dag":"01-03"}]'),
+  ('facturatie_ontvangers', ''),
+  ('forfait_aanduiding', 'vrijgeven'),
+  ('extern_namen', 'initialen');
 
 CREATE TABLE zalen (
   id           TEXT PRIMARY KEY,
@@ -352,6 +370,7 @@ CREATE TABLE wedstrijden (
   laatst_gezien   TEXT,
   selectie_gepubliceerd INTEGER NOT NULL DEFAULT 0 CHECK (selectie_gepubliceerd IN (0, 1)),
   aangemaakt      TEXT NOT NULL DEFAULT (datetime('now')),
+  bron            TEXT NOT NULL DEFAULT 'vbl' CHECK (bron IN ('vbl', 'handmatig')),
   FOREIGN KEY (team_guid, seizoen) REFERENCES teams (guid, seizoen)
 );
 
@@ -430,3 +449,181 @@ CREATE TABLE taak_runs (
 );
 
 CREATE INDEX idx_taak_runs_taak ON taak_runs (taak, gestart);
+
+CREATE TABLE officials_categorieen (
+  code        TEXT PRIMARY KEY,
+  label       TEXT NOT NULL,
+  groep       TEXT NOT NULL,
+  tarief_cent INTEGER NOT NULL,
+  auto_scope  INTEGER NOT NULL DEFAULT 0 CHECK (auto_scope IN (0, 1)),
+  volgorde    INTEGER NOT NULL DEFAULT 0
+);
+
+INSERT INTO officials_categorieen (code, label, groep, tarief_cent, auto_scope, volgorde) VALUES
+  ('G10', 'U10',            'U10U12', 1500, 1, 10),
+  ('G12', 'U12',            'U10U12', 1500, 1, 20),
+  ('M12', 'U12 meisjes',    'U10U12', 1500, 1, 30),
+  ('G14', 'U14',            'U14',    2000, 0, 40),
+  ('M14', 'U14 meisjes',    'U14',    2000, 0, 50),
+  ('J16', 'U16',            'U16',    2000, 0, 60),
+  ('M16', 'U16 meisjes',    'U16',    2000, 0, 70),
+  ('J18', 'U18',            'U18',    2000, 0, 80),
+  ('M19', 'U19 meisjes',    'U19',    2000, 0, 90),
+  ('J21', 'U21',            'U21',    2000, 0, 100),
+  ('HSE', 'Heren senioren', 'SEN',    2500, 0, 110),
+  ('DSE', 'Dames senioren', 'SEN',    2500, 0, 120);
+
+CREATE TABLE officials_wedstrijd (
+  wedstrijd_id        INTEGER PRIMARY KEY,
+  cat_code            TEXT,
+  poule_naam          TEXT,
+  off_namen           TEXT,
+  off_aantal          INTEGER NOT NULL DEFAULT 0,
+  off_gewist          INTEGER NOT NULL DEFAULT 0 CHECK (off_gewist IN (0, 1)),
+  scope               INTEGER NOT NULL DEFAULT 0 CHECK (scope IN (0, 1)),
+  scope_reden         TEXT CHECK (scope_reden IN ('auto', 'admin', 'woensdag')),
+  scope_op            TEXT,
+  scope_uit           INTEGER NOT NULL DEFAULT 0 CHECK (scope_uit IN (0, 1)),
+  refs_bevestigd      INTEGER NOT NULL DEFAULT 0 CHECK (refs_bevestigd IN (0, 1)),
+  refs_bevestigd_door TEXT,
+  refs_bevestigd_op   TEXT,
+  forfait             TEXT CHECK (forfait IN ('thuis', 'uit', 'beide')),
+  bond_officials      INTEGER,
+  hash                TEXT,
+  aangemaakt          TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (wedstrijd_id) REFERENCES wedstrijden (id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_officials_wedstrijd_scope ON officials_wedstrijd (scope);
+
+CREATE TABLE officials_beschikbaarheid (
+  persoon_id   TEXT NOT NULL,
+  wedstrijd_id INTEGER NOT NULL,
+  status       TEXT NOT NULL CHECK (status IN ('ja', 'nee')),
+  gewijzigd    TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (persoon_id, wedstrijd_id),
+  FOREIGN KEY (persoon_id) REFERENCES personen (id),
+  FOREIGN KEY (wedstrijd_id) REFERENCES wedstrijden (id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_officials_beschikbaarheid_wedstrijd ON officials_beschikbaarheid (wedstrijd_id, status);
+
+CREATE TABLE officials_aanduidingen (
+  wedstrijd_id    INTEGER NOT NULL,
+  persoon_id      TEXT NOT NULL,
+  status          TEXT NOT NULL DEFAULT 'toegewezen' CHECK (status IN ('toegewezen', 'vrijgegeven')),
+  toegewezen_door TEXT,
+  toegewezen_op   TEXT NOT NULL DEFAULT (datetime('now')),
+  gewijzigd_op    TEXT,
+  PRIMARY KEY (wedstrijd_id, persoon_id),
+  FOREIGN KEY (wedstrijd_id) REFERENCES wedstrijden (id) ON DELETE CASCADE,
+  FOREIGN KEY (persoon_id) REFERENCES personen (id)
+);
+
+CREATE INDEX idx_officials_aanduidingen_persoon ON officials_aanduidingen (persoon_id, status);
+
+CREATE TABLE officials_problemen (
+  id           INTEGER PRIMARY KEY AUTOINCREMENT,
+  wedstrijd_id INTEGER NOT NULL,
+  persoon_id   TEXT NOT NULL,
+  bericht      TEXT NOT NULL,
+  gemeld_op    TEXT NOT NULL DEFAULT (datetime('now')),
+  afgehandeld  INTEGER NOT NULL DEFAULT 0 CHECK (afgehandeld IN (0, 1)),
+  FOREIGN KEY (wedstrijd_id) REFERENCES wedstrijden (id) ON DELETE CASCADE,
+  FOREIGN KEY (persoon_id) REFERENCES personen (id)
+);
+
+CREATE INDEX idx_officials_problemen_open ON officials_problemen (afgehandeld, gemeld_op);
+
+CREATE TABLE officials_maanden (
+  maand            TEXT PRIMARY KEY,
+  seizoen          TEXT NOT NULL,
+  afgesloten_op    TEXT NOT NULL DEFAULT (datetime('now')),
+  afgesloten_door  TEXT NOT NULL,
+  totaal_cent      INTEGER NOT NULL DEFAULT 0,
+  aantal_officials INTEGER NOT NULL DEFAULT 0,
+  verstuurd_op     TEXT,
+  verstuurd_naar   TEXT
+);
+
+CREATE TABLE officials_vergoeding_regels (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  maand         TEXT NOT NULL,
+  persoon_id    TEXT NOT NULL,
+  naam          TEXT NOT NULL,
+  soort         TEXT NOT NULL DEFAULT 'wedstrijd' CHECK (soort IN ('wedstrijd', 'correctie')),
+  betreft_maand TEXT,
+  cat_code      TEXT NOT NULL,
+  cat_label     TEXT,
+  aantal        INTEGER NOT NULL,
+  tarief_cent   INTEGER NOT NULL,
+  bedrag_cent   INTEGER NOT NULL,
+  FOREIGN KEY (maand) REFERENCES officials_maanden (maand) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_officials_vergoeding_maand ON officials_vergoeding_regels (maand, persoon_id);
+CREATE INDEX idx_officials_vergoeding_persoon ON officials_vergoeding_regels (persoon_id, maand);
+
+CREATE TABLE officials_vergoeding_verwerkt (
+  wedstrijd_guid TEXT NOT NULL,
+  persoon_id     TEXT NOT NULL,
+  maand          TEXT NOT NULL,
+  cat_code       TEXT NOT NULL,
+  tarief_cent    INTEGER NOT NULL,
+  aantal         INTEGER NOT NULL DEFAULT 1,
+  PRIMARY KEY (wedstrijd_guid, persoon_id, maand)
+);
+
+CREATE INDEX idx_officials_verwerkt_persoon ON officials_vergoeding_verwerkt (persoon_id);
+
+CREATE TABLE officials_voorkeuren (
+  persoon_id       TEXT PRIMARY KEY,
+  herinner_avond   INTEGER NOT NULL DEFAULT 1 CHECK (herinner_avond IN (0, 1)),
+  herinner_ochtend INTEGER NOT NULL DEFAULT 1 CHECK (herinner_ochtend IN (0, 1)),
+  gsm_delen        INTEGER NOT NULL DEFAULT 1 CHECK (gsm_delen IN (0, 1)),
+  FOREIGN KEY (persoon_id) REFERENCES personen (id)
+);
+
+CREATE TABLE officials_volg_clubs (
+  guid            TEXT PRIMARY KEY,
+  naam            TEXT,
+  toegevoegd_door TEXT NOT NULL,
+  toegevoegd      TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE officials_volg_wedstrijden (
+  guid           TEXT PRIMARY KEY,
+  club_guid      TEXT NOT NULL,
+  club_naam      TEXT,
+  thuis_naam     TEXT NOT NULL,
+  uit_naam       TEXT NOT NULL,
+  datum          TEXT NOT NULL,
+  uur            TEXT NOT NULL,
+  cat_code       TEXT,
+  vbl_aantal     INTEGER NOT NULL DEFAULT 0,
+  vbl_naam       TEXT,
+  laatst_gezien  TEXT NOT NULL DEFAULT (datetime('now')),
+  bond_officials INTEGER,
+  FOREIGN KEY (club_guid) REFERENCES officials_volg_clubs (guid) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_officials_volg_datum ON officials_volg_wedstrijden (datum, uur);
+CREATE INDEX idx_officials_volg_club ON officials_volg_wedstrijden (club_guid);
+
+CREATE TABLE officials_vbl_lijsten (
+  id           INTEGER PRIMARY KEY AUTOINCREMENT,
+  ontvangen    TEXT NOT NULL DEFAULT (datetime('now')),
+  onderwerp    TEXT,
+  bestand      TEXT,
+  weekend_van  TEXT,
+  weekend_tot  TEXT,
+  aantal_rijen INTEGER,
+  eigen        TEXT,
+  meldingen    TEXT,
+  status       TEXT NOT NULL CHECK (status IN ('ontvangen', 'verwerkt', 'dubbel', 'fout')),
+  fout         TEXT,
+  verwerkt_op  TEXT,
+  volg         TEXT
+);
+
+CREATE INDEX idx_officials_vbl_lijsten_weekend ON officials_vbl_lijsten (weekend_van, status);

@@ -80,6 +80,14 @@ export async function verwijderInactievePersonenOp(db) {
     await db.prepare(`DELETE FROM mededeling_gezien WHERE persoon_id = ?`).bind(id).run();
     // Sinds 0.29.0: de toestellen van de persoon.
     await db.prepare(`DELETE FROM push_abonnementen WHERE persoon_id = ?`).bind(id).run();
+    // Sinds 0.30.0: de module Officials. Beschikbaarheden, aanduidingen,
+    // problemen en voorkeuren gaan mee weg. De vergoedingen blijven staan —
+    // daar is persoon_id bewust geen foreign key, en de naam staat in de regel.
+    await db.prepare(`DELETE FROM officials_beschikbaarheid WHERE persoon_id = ?`).bind(id).run();
+    await db.prepare(`DELETE FROM officials_aanduidingen WHERE persoon_id = ?`).bind(id).run();
+    await db.prepare(`DELETE FROM officials_problemen WHERE persoon_id = ?`).bind(id).run();
+    await db.prepare(`DELETE FROM officials_voorkeuren WHERE persoon_id = ?`).bind(id).run();
+    await db.prepare(`UPDATE officials_aanduidingen SET toegewezen_door = NULL WHERE toegewezen_door = ?`).bind(id).run();
 
     await db.prepare(`UPDATE aanwezigheden SET persoon_id = NULL WHERE persoon_id = ?`).bind(id).run();
     await db.prepare(`UPDATE aanwezigheden SET opgave_door = NULL WHERE opgave_door = ?`).bind(id).run();

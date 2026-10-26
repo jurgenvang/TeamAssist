@@ -202,8 +202,10 @@ export async function teamOntkoppelen(ctx) {
   return json({ persoon_id, team_guid });
 }
 
-const GELDIGE_ROLLEN = ['ADMIN', 'FINADM', 'COORD', 'COACH', 'PLOEGV'];
-const CLUBBREDE_ROLLEN = ['ADMIN', 'FINADM'];
+// YOADM, YO en YOPLUS sinds 0.30.0 (de module Officials): clubbreed, zoals
+// ADMIN en FINADM — een official fluit voor de club, niet voor één ploeg.
+const GELDIGE_ROLLEN = ['ADMIN', 'FINADM', 'YOADM', 'YO', 'YOPLUS', 'COORD', 'COACH', 'PLOEGV'];
+const CLUBBREDE_ROLLEN = ['ADMIN', 'FINADM', 'YOADM', 'YO', 'YOPLUS'];
 
 /**
  * Koppelt een bestaande persoon handmatig aan een rol, met bron 'club'.

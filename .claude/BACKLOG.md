@@ -11,7 +11,7 @@ WIJZIGINGEN-bestanden blijven kloppen:
   punt *U* (Microsoft 365) heet hier **VU**, want TeamAssist heeft al een *U*
 - **T** + nummer, en de letters **A–AB** — TeamAssist
 
-Stand: YOAssist **v1.17.0**, TeamAssist **0.29.0**
+Stand: YOAssist **v1.17.0**, TeamAssist **0.30.0**
 
 ---
 
@@ -35,9 +35,9 @@ Bijgewerkt bij elke versie. Voor de volledige tekst: zoek de kop verderop
   migratie tegen te toetsen.
 
 ### Klaar om te bouwen
-- **I1, fase 2** — het schema van de module Officials en
-  `tools/migreer-yoassist.mjs`. Kan starten; de toets tegen een echte backup
-  wacht op die backup.
+- **I1, fase 2b (0.31.0)** — `tools/migreer-yoassist.mjs`: een
+  YOAssist-backup omzetten naar SQL voor het nieuwe schema. Kan starten; de
+  toets tegen een echte backup wacht op die backup.
 - **T7** — tabblad Mijn club.
 - **T12** — aanmelden als.
 - **T18, T19** — twee kleine gaten uit de code-audit.
@@ -117,29 +117,56 @@ is, zou zich dan twee keer moeten aanmelden.
   bij de migratie niet overgenomen.
 - In Supabase moeten beide adressen bij de Redirect URLs.
 
-### Datamodel (voorstel)
+### Datamodel — **beslist, schema gebouwd in 0.30.0**
 
-- `users` → `personen`. Nieuwe rollen `YO` en `YOPLUS`, clubbreed zoals
-  `ADMIN`; `is_admin` → `ADMIN`; de vergoedingen gaan naar `FINADM`. De CHECK
-  op `rollen` wijzigt — omdat er nog geen echte gegevens zijn, gewoon in het
-  schema.
-- `matches` gaat op in `wedstrijden`. Wat enkel de officials aanbelangt, in
-  een eigen tabel `wedstrijd_officials (wedstrijd_id, scope, scope_reden,
-  scope_uit, refs_vbl, bond_officials, refs_bevestigd, forfait)`, zodat de
-  kerntabel zuiver blijft en de CHECK op `scope_reden` in de module zit.
-- Gaan mee als moduletabellen, met `persoon_id` in plaats van een e-mailadres:
-  `availability`, `assignments`, `problemen`, `afgesloten_maanden`,
-  `vergoeding_regels`, `vergoeding_verwerkt`, `categorieen` (tarieven),
-  `volg_clubs`, `volg_wedstrijden`, `vbl_lijsten`.
-- Samengevoegd met wat TeamAssist al heeft: `ouder_kind`, `logboek`,
-  `berichten`, `teams`, instellingen. `push_abonnementen`, `mededelingen` en
-  `mededeling_gezien` komen er van YOAssist bij.
-- `ploeg_pv` en `ploeg_coaches` (V34) verdwijnen: die mail gaat naar wie de
-  rol `PLOEGV` of `COACH` heeft. Een PV of coach hoeft daarvoor geen account
-  te hebben.
-- De VBL-zoeknaam van V43 wordt `personen.naam_vbl`, dat al bestaat.
-- De backup (`TABELLEN`) en `schema-controle.sql` volgen het nieuwe schema;
-  de test die backup en schema naast elkaar legt, gaat mee.
+**Rollen.** Drie clubbrede rollen erbij: `YO` (Youth Official, U10/U12),
+`YOPLUS` (YO+, ook vanaf U14) en `YOADM`. YOADM beheert de officials —
+aanduiden, woensdagregel, Regio, vergoedingen — zonder beheerder van de hele
+club te zijn (beslist: een nieuwe rol, niet enkel ADMIN). ADMIN mag het ook;
+FINADM ziet de vergoedingen. Vier rechten: `officials.opgeven` (YO, YO+),
+`officials.vanaf_u14` (YO+), `officials.beheren` (YOADM, ADMIN),
+`officials.vergoedingen` (YOADM, ADMIN, FINADM).
+
+**Voor welke ploegen.** Beslist: *hetzelfde als vandaag in YOAssist*. Een eigen
+vlag `teams.officials` (standaard 1, zoals `volgen` in YOAssist), los van
+`teams.gevolgd` — dat zegt of de club de ploeg in TeamAssist beheert. Een ploeg
+kan officials krijgen zonder dat ze in TeamAssist beheerd wordt.
+
+**De tabellen.** Gedeeld: `personen` (+ `agenda_sleutel`), `teams` (+
+`officials`), `wedstrijden` (+ `bron`: 'vbl' of 'handmatig'), `berichten`,
+`mededelingen`, `push_abonnementen`, `ouder_kind`, `logboek`, `instellingen`
+(+ `facturatie_ontvangers`, `forfait_aanduiding`, `extern_namen`). Van de
+module, met voorvoegsel `officials_`: `categorieen` (tarieven),
+`wedstrijd` (scope, scheidsrechters van de bond, forfait — één rij per
+thuiswedstrijd, naast `wedstrijden`), `beschikbaarheid`, `aanduidingen`,
+`problemen`, `maanden`, `vergoeding_regels`, `vergoeding_verwerkt`,
+`voorkeuren` (herinneringen, gsm delen), `volg_clubs`, `volg_wedstrijden`,
+`vbl_lijsten`. In de vergoedingstabellen is `persoon_id` bewust geen foreign
+key: een uitbetaald bedrag blijft staan nadat iemand vertrokken is.
+
+**Wat niet meekomt.** `clubs` (één club), `sync_runs` (TeamAssist heeft
+`taak_runs`), `ploeg_pv`/`ploeg_coaches` (worden rollen `PLOEGV`/`COACH`),
+`push_abonnementen` (hangen aan het oude domein), `users.verborgen_tabs` (komt
+met de schermen in fase 4).
+
+**De migratie (0.31.0) — beslist.** Leest een YOAssist-backup én een
+TeamAssist-backup, en maakt SQL plus een rapport; altijd eerst dat rapport
+(droogloop). Een YOAssist-gebruiker wordt gekoppeld aan een bestaande persoon
+**op e-mailadres, anders op voornaam + achternaam als er precies één kandidaat
+is**; twijfel of geen treffer wordt een nieuwe persoon, en staat in het
+rapport. Verder:
+- `profiel` YO/YO+ → rol `YO`/`YOPLUS`; `is_admin` → rol `YOADM`.
+- `kanaal_mail`/`kanaal_push` → `kanaal_voorkeur` (beide aan = 'beide', enkel
+  push = 'push', anders 'mail' — nooit 'niets').
+- `agenda_sleutel` ongewijzigd overgenomen: de agenda-abonnementen blijven
+  werken (via `yoassist.org/api/kalender/…`, zie *Domein*).
+- `matches` → `wedstrijden` (thuis, op de ploeg van de thuisploeg, in het
+  actieve seizoen; ploegen die nog ontbreken, komen erbij met `gevolgd` = 0)
+  + `officials_wedstrijd`. 'verdwenen' → `bij_bond` = 0.
+- `ploeg_pv`/`ploeg_coaches` → rollen `PLOEGV`/`COACH` met bron 'club'; wie
+  nog geen persoon is, wordt er een, zonder account.
+- `berichten` gaan mee (Mijn berichten blijft gevuld); het logboek enkel wat
+  nog openstaat — de rest blijft in de YOAssist-backup als archief.
 
 ### Fases — één pakket per fase, telkens met zip en delta-zip
 
@@ -158,9 +185,12 @@ is, zou zich dan twee keer moeten aanmelden.
    Tabbladen per stuk uitzetten (YOAssist's `verborgen_tabs`) komt pas
    wanneer de schermen van de module Officials erbij komen; met drie
    tabbladen heeft het nog geen zin.
-2. **Schema van de module Officials**, plus `tools/migreer-yoassist.mjs`: leest
-   een YOAssist-backup (JSON, alle 22 tabellen) en maakt er SQL voor het nieuwe
-   schema van. Getest tegen een echte backup.
+2. **Schema en migratie**, in twee pakketten:
+   - **2a — 0.30.0, afgewerkt**: het schema van de module Officials, de
+     rollen YO/YOPLUS/YOADM en hun rechten. Zie *Datamodel* hierboven.
+   - **2b — 0.31.0**: `tools/migreer-yoassist.mjs`, dat een YOAssist-backup
+     en een TeamAssist-backup leest en er SQL plus een rapport van maakt.
+     Getest tegen een echte backup.
 3. **Backend overzetten**: woensdagregel en woensdaglijst (mail, xlsx),
    aanduiden en botsingen, autotoewijzing, facturatie, Regio, forfait,
    herinneringen, agendafeed en externe API. De tests verhuizen mee naar
@@ -216,6 +246,7 @@ Tot de overstap blijft YOAssist live en krijgt het enkel bugfixes.
 | 0.23.0 | T14 afgewerkt: een volledige backup van de databank als JSON. Beter dan aanvankelijk voorgesteld — geen hardcoded tabellenlijst met een test die drift moet vangen (de YOAssist-aanpak), maar tabellen rechtstreeks uit `sqlite_master` gehaald, wat de hele bugklasse structureel onmogelijk maakt. De kerntest bewijst dat letterlijk: een tabel die pas ná het schrijven van de route wordt aangemaakt, zit er toch in. |
 | 0.24.0 | T16 en T17 afgewerkt. `verwittig()` heeft geen `kanaal`-parameter meer en leest voortaan `kanaal_voorkeur` — mail blijft de terugval zolang push niet bestaat, met een aparte logregel voor wie 'push' koos. Blokken bij Zaalbeheer staan nu gegroepeerd per weekdag als losse blokjes, met bewust neutrale kleuren in plaats van de accentkleur. |
 | 0.25.0 | T15 afgewerkt: opruiming van `logboek` (365 dagen), `taak_runs` (30 dagen), `berichten` (120 dagen), en het definitief verwijderen van een inactieve persoon na 180 dagen. Twee tabellen extra gevonden tijdens het bouwen (`accounts`, `ouder_kind`) die niet in het oorspronkelijke overzicht stonden. Enkel `aanwezigheden` wordt geanonimiseerd in plaats van verwijderd — de enige tabel waar dat structureel kon — wat een schema-heropbouw vroeg, grondig getoetst tegen een nagemaakte bestaande databank. |
+| 0.30.0 | I1 fase 2a: het schema van de module Officials. Rollen `YO`, `YOPLUS` en `YOADM` (clubbreed) met vier rechten `officials.*`; YOADM beheert de officials zonder beheerder van de hele club te zijn. `teams.officials` (los van `gevolgd`, standaard aan zoals in YOAssist), `wedstrijden.bron`, `personen.agenda_sleutel`, en twaalf tabellen `officials_*`. Een test legt de rollen op vijf plaatsen naast elkaar (rechtenlaag, CHECK, koppelroute, twee schermen). Schema: heropbouw van `rollen` (CHECK), drie ALTER's, twaalf CREATE's. 824 tests. |
 | 0.29.0 | I1 fase 1c: pushmeldingen. `verwittig()` volgt `kanaal_voorkeur` echt: mail, push, of beide; wie push koos maar op geen enkel toestel bereikbaar is, krijgt toch mail. Push enkel in de modus *normaal*. Meldingen aan/uit per toestel in Mijn voorkeuren, gemeten op het abonnement van dat toestel, met een testmelding en de iPhone-uitleg. Tikken op een melding opent Mijn berichten. Manifest en een voorlopig icoon, nodig voor 'Zet op beginscherm' en dus voor push op een iPhone. Push-code uit YOAssist overgenomen, nu met een test die een melding echt ontcijfert zoals een browser. Schema: tabel `push_abonnementen` (CREATE). 810 tests. |
 | 0.28.0 | I1 fase 1b: Mijn berichten (ongelezen tot je een bericht aantikt, 'lees meer' met klikbare links, alles gelezen, verwijderen) en het meldingenbolletje op de naam, dat rechtstreeks naar Mijn berichten gaat en zichzelf om de drie minuten ververst. Belangrijk nieuws: één banner tegelijk, met een doelgroep (iedereen, de begeleiding, of één ploeg met spelers, ouders en begeleiding); wie erin zit en een account heeft, krijgt ze ook als bericht — via het batch-endpoint van Resend, honderd per oproep. Onderweg gevonden: een persoon met een wedstrijdtaak (0.26.0) kon nooit verwijderd worden; nu een test die elke foreign key naar `personen` naloopt. `schema-alles-in-een.sql` en `schema-kaal.sql` worden voortaan gegenereerd. Standaardafzender naar `clubassist.org`. Schema: drie kolommen in `berichten` (ALTER), tabellen `mededelingen` en `mededeling_gezien`. 786 tests. |
 | 0.27.0 | I1 fase 1a: de kopbalk en het naammenu van YOAssist. Donkere strook die bovenaan blijft staan, een ingestelde topbalkkleur wint. Dagelijks beheer, Configuratie en Zaalbeheer uit de tabbalk, enkel nog onder Beheer in het naammenu, gebouwd uit dezelfde rechten als de tabbalk. *Kijken als …* in het naammenu, en enkel nog aangeboden als `testrol_toegelaten` aanstaat (`/api/mij` → `testrol_mogelijk`) — tot nu toe beweerde de testbalk soms iets wat de backend stil negeerde. Ook: een test die sinds oktober altijd faalde door een vaste septemberdatum. 746 tests. |

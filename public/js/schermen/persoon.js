@@ -83,7 +83,7 @@ function toonPloegen(ploegen) {
   }
 }
 
-const CLUBBREDE_ROLLEN = ['ADMIN', 'FINADM'];
+const CLUBBREDE_ROLLEN = ['ADMIN', 'FINADM', 'YOADM', 'YO', 'YOPLUS'];
 
 function toonRollen(rollen) {
   el('persoonrollenlijf').innerHTML = rollen

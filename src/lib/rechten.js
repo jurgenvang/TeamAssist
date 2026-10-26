@@ -27,6 +27,12 @@ export const RECHTEN = [
   'speler.uitsluiten',
   'aanwezigheid.opgeven.eigen',
   'aanwezigheid.opgeven.kind',
+  // De module Officials (0.30.0). Allemaal clubbreed: een official fluit voor
+  // de club, niet voor één ploeg.
+  'officials.opgeven',      // eigen beschikbaarheid opgeven (YO, YO+)
+  'officials.vanaf_u14',    // ook wedstrijden vanaf U14 zien (YO+)
+  'officials.beheren',      // aanduiden, woensdagregel, Regio, wedstrijden
+  'officials.vergoedingen', // de vergoedingen van de club bekijken en afsluiten
 ];
 
 // Rechten die clubbreed gelden, los van een ploeg.
@@ -43,6 +49,10 @@ const ADMIN_RECHTEN = [
   'team.aanwezigheid.vaststellen',
   'team.selectie.beheren',
   'speler.uitsluiten',
+  // Een beheerder van de club mag ook de officials beheren. Zelf fluiten
+  // (officials.opgeven) komt niet mee: dat vraagt de rol YO of YO+.
+  'officials.beheren',
+  'officials.vergoedingen',
 ];
 
 // Wat een coach mag, mag een coördinator ook: beiden staan aan het hoofd van de
@@ -61,7 +71,12 @@ const BEGELEIDING_RECHTEN = [
 export const ROLRECHTEN = {
   // Clubbreed
   ADMIN: { bereik: 'globaal', rechten: ADMIN_RECHTEN },
-  FINADM: { bereik: 'globaal', rechten: ['financieel.bekijken'] },
+  FINADM: { bereik: 'globaal', rechten: ['financieel.bekijken', 'officials.vergoedingen'] },
+  // De officials (0.30.0). YOADM beheert ze zonder beheerder van de hele club
+  // te zijn: geen personen, zalen of aanwezigheden.
+  YOADM: { bereik: 'globaal', rechten: ['officials.beheren', 'officials.vergoedingen'] },
+  YO: { bereik: 'globaal', rechten: ['officials.opgeven'] },
+  YOPLUS: { bereik: 'globaal', rechten: ['officials.opgeven', 'officials.vanaf_u14'] },
 
   // Per ploeg
   COORD: { bereik: 'team', rechten: BEGELEIDING_RECHTEN },

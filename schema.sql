@@ -69,11 +69,18 @@ CREATE TABLE personen (
   kanaal_voorkeur    TEXT NOT NULL DEFAULT 'mail'
                      CHECK (kanaal_voorkeur IN ('mail', 'push', 'beide')),
   aangemaakt         TEXT NOT NULL DEFAULT (datetime('now')),
-  gewijzigd          TEXT NOT NULL DEFAULT (datetime('now'))
+  gewijzigd          TEXT NOT NULL DEFAULT (datetime('now')),
+  -- De persoonlijke agendalink (0.30.0, uit YOAssist): een lange, willekeurige
+  -- sleutel in de URL zelf, want een agenda-app kan geen header meesturen.
+  -- Bij de migratie overgenomen zoals hij was, zodat de agenda-abonnementen
+  -- van de officials blijven werken. Uniek via een aparte index: een ALTER
+  -- kan geen UNIQUE toevoegen.
+  agenda_sleutel     TEXT
 );
 
 CREATE INDEX idx_personen_email ON personen (email);
 CREATE INDEX idx_personen_relguid ON personen (rel_guid);
+CREATE UNIQUE INDEX idx_personen_agenda ON personen (agenda_sleutel);
 
 -- ---------------------------------------------------------------------------
 -- Accounts
@@ -134,6 +141,12 @@ CREATE TABLE teams (
   bij_bond       INTEGER NOT NULL DEFAULT 1 CHECK (bij_bond IN (0, 1)),
   laatst_gezien  TEXT,
   aangemaakt     TEXT NOT NULL DEFAULT (datetime('now')),
+  -- Zorgt de club voor officials bij de thuiswedstrijden van deze ploeg?
+  -- (0.30.0, de module Officials.) Bewust los van `gevolgd`: dat zegt of de
+  -- club de ploeg in TeamAssist beheert (spelers, trainingen, aanwezigheden).
+  -- Een ploeg kan officials krijgen zonder dat ze in TeamAssist beheerd
+  -- wordt — zoals vandaag in YOAssist, waar dit `volgen` heette.
+  officials      INTEGER NOT NULL DEFAULT 1 CHECK (officials IN (0, 1)),
   PRIMARY KEY (guid, seizoen),
   FOREIGN KEY (seizoen) REFERENCES seizoenen (code)
 );
@@ -147,20 +160,27 @@ CREATE TABLE teams (
 --
 -- ADMIN en FINADM gelden clubbreed en over seizoenen heen; de andere rollen
 -- gelden voor één ploeg in één seizoen. De CHECK legt dat verschil vast.
+--
+-- Sinds 0.30.0 (I1, de module Officials) drie clubbrede rollen erbij:
+--   YO      Youth Official: geeft beschikbaarheid op voor U10/U12
+--   YOPLUS  YO+: ook vanaf U14, voor de wedstrijden die de club zelf invult
+--   YOADM   beheert de officials — aanduiden, woensdagregel, Regio,
+--           vergoedingen — zonder beheerder van de hele club te zijn
+-- Een CHECK-wijziging, dus een heropbouw van de tabel (migratie-0.30.0.sql).
 CREATE TABLE rollen (
   id         INTEGER PRIMARY KEY AUTOINCREMENT,
   persoon_id TEXT NOT NULL,
   rol        TEXT NOT NULL
-             CHECK (rol IN ('ADMIN', 'FINADM', 'COORD', 'COACH', 'PLOEGV')),
+             CHECK (rol IN ('ADMIN', 'FINADM', 'YOADM', 'YO', 'YOPLUS', 'COORD', 'COACH', 'PLOEGV')),
   team_guid  TEXT,
   seizoen    TEXT,
   bron       TEXT NOT NULL DEFAULT 'club' CHECK (bron IN ('club', 'vbl')),
   aangemaakt TEXT NOT NULL DEFAULT (datetime('now')),
   FOREIGN KEY (persoon_id) REFERENCES personen (id),
   CHECK (
-    (rol IN ('ADMIN', 'FINADM') AND team_guid IS NULL AND seizoen IS NULL)
+    (rol IN ('ADMIN', 'FINADM', 'YOADM', 'YO', 'YOPLUS') AND team_guid IS NULL AND seizoen IS NULL)
     OR
-    (rol NOT IN ('ADMIN', 'FINADM') AND team_guid IS NOT NULL AND seizoen IS NOT NULL)
+    (rol IN ('COORD', 'COACH', 'PLOEGV') AND team_guid IS NOT NULL AND seizoen IS NOT NULL)
   )
 );
 
@@ -355,7 +375,15 @@ INSERT INTO instellingen (sleutel, waarde) VALUES
   -- Vensters waarin de bond de kalender toch herschikt (nieuw seizoen, tweede
   -- ronde). Een wijziging binnen zo'n venster wordt niet gemeld. Formaat:
   -- JSON-lijst van {van_dag, tot_dag} in 'mm-dd'.
-  ('stille_periodes', '[{"van_dag":"06-01","tot_dag":"08-15"},{"van_dag":"12-28","tot_dag":"01-03"}]');
+  ('stille_periodes', '[{"van_dag":"06-01","tot_dag":"08-15"},{"van_dag":"12-28","tot_dag":"01-03"}]'),
+  -- De module Officials (0.30.0, uit YOAssist). Wie de verzamelstaat van de
+  -- vergoedingen krijgt (adressen, door komma's gescheiden; de penningmeester
+  -- hoeft geen gebruiker te zijn), wat er met een eigen aanduiding gebeurt bij
+  -- een forfait ('vrijgeven' of 'melden'), en of de externe API en de
+  -- agendafeed volledige namen tonen of enkel initialen.
+  ('facturatie_ontvangers', ''),
+  ('forfait_aanduiding', 'vrijgeven'),
+  ('extern_namen', 'initialen');
 
 -- ---------------------------------------------------------------------------
 -- Zalen
@@ -539,6 +567,10 @@ CREATE TABLE wedstrijden (
   -- staat, ziet enkel de begeleiding wie erop staat in wedstrijdselecties.
   selectie_gepubliceerd INTEGER NOT NULL DEFAULT 0 CHECK (selectie_gepubliceerd IN (0, 1)),
   aangemaakt      TEXT NOT NULL DEFAULT (datetime('now')),
+  -- 'handmatig': een wedstrijd die een beheerder zelf invoerde (0.30.0, uit
+  -- YOAssist). De synchronisatie laat ze met rust; anders zou ze elke nacht
+  -- als verdwenen gemarkeerd worden, want de bond kent ze niet.
+  bron            TEXT NOT NULL DEFAULT 'vbl' CHECK (bron IN ('vbl', 'handmatig')),
   FOREIGN KEY (team_guid, seizoen) REFERENCES teams (guid, seizoen)
 );
 
@@ -689,3 +721,225 @@ CREATE TABLE taak_runs (
 );
 
 CREATE INDEX idx_taak_runs_taak ON taak_runs (taak, gestart);
+
+-- ===========================================================================
+-- De module Officials (0.30.0, I1 — het vroegere YOAssist)
+-- ===========================================================================
+-- Alles wat enkel de officials aanbelangt, in eigen tabellen met het
+-- voorvoegsel `officials_`. Wat gedeeld is — personen, ploegen, wedstrijden,
+-- berichten, logboek — staat hierboven. Zo raakt een wijziging aan de
+-- aanwezigheden de woensdagregel niet, en omgekeerd.
+--
+-- Een persoon is hier altijd een `persoon_id`, nooit een e-mailadres zoals in
+-- YOAssist: in TeamAssist kan iemand zonder e-mailadres bestaan (een kind dat
+-- een ouder laat invullen), en een adres kan wijzigen.
+
+-- Categorieën en tarieven. Enkel voor de officials: TeamAssist zelf leidt de
+-- categorie af uit de ploeg-GUID en heeft geen tarieven nodig. auto_scope:
+-- wedstrijden van deze categorie komen vanzelf in de aanduidingslijst (U10/U12,
+-- waar de bond nooit scheidsrechters aanduidt).
+CREATE TABLE officials_categorieen (
+  code        TEXT PRIMARY KEY,                -- 'G12', 'J16', 'HSE'
+  label       TEXT NOT NULL,
+  groep       TEXT NOT NULL,
+  tarief_cent INTEGER NOT NULL,
+  auto_scope  INTEGER NOT NULL DEFAULT 0 CHECK (auto_scope IN (0, 1)),
+  volgorde    INTEGER NOT NULL DEFAULT 0
+);
+
+INSERT INTO officials_categorieen (code, label, groep, tarief_cent, auto_scope, volgorde) VALUES
+  ('G10', 'U10',            'U10U12', 1500, 1, 10),
+  ('G12', 'U12',            'U10U12', 1500, 1, 20),
+  ('M12', 'U12 meisjes',    'U10U12', 1500, 1, 30),
+  ('G14', 'U14',            'U14',    2000, 0, 40),
+  ('M14', 'U14 meisjes',    'U14',    2000, 0, 50),
+  ('J16', 'U16',            'U16',    2000, 0, 60),
+  ('M16', 'U16 meisjes',    'U16',    2000, 0, 70),
+  ('J18', 'U18',            'U18',    2000, 0, 80),
+  ('M19', 'U19 meisjes',    'U19',    2000, 0, 90),
+  ('J21', 'U21',            'U21',    2000, 0, 100),
+  ('HSE', 'Heren senioren', 'SEN',    2500, 0, 110),
+  ('DSE', 'Dames senioren', 'SEN',    2500, 0, 120);
+
+-- Wat een wedstrijd voor de officials betekent: of ze in de aanduidingslijst
+-- staat (scope) en waarom, hoeveel scheidsrechters de bond aanduidde, en een
+-- forfait. Eén rij per thuiswedstrijd waarvoor de club officials regelt; de
+-- wedstrijd zelf (datum, uur, zaal, tegenstander) staat in `wedstrijden`.
+--
+-- off_namen: de namen van de scheidsrechters volgens de bond (JSON), na de
+-- wedstrijd gewist (off_gewist) — persoonsgegevens van mensen die geen lid
+-- zijn. bond_officials: het aantal volgens de woensdaglijst, dat wint van de
+-- API als het hoger is. scope_reden heeft een CHECK: een vierde reden vraagt
+-- een heropbouw, maar enkel van deze tabel, niet van `wedstrijden`.
+CREATE TABLE officials_wedstrijd (
+  wedstrijd_id        INTEGER PRIMARY KEY,
+  cat_code            TEXT,
+  poule_naam          TEXT,
+  off_namen           TEXT,
+  off_aantal          INTEGER NOT NULL DEFAULT 0,
+  off_gewist          INTEGER NOT NULL DEFAULT 0 CHECK (off_gewist IN (0, 1)),
+  scope               INTEGER NOT NULL DEFAULT 0 CHECK (scope IN (0, 1)),
+  scope_reden         TEXT CHECK (scope_reden IN ('auto', 'admin', 'woensdag')),
+  scope_op            TEXT,
+  scope_uit           INTEGER NOT NULL DEFAULT 0 CHECK (scope_uit IN (0, 1)),
+  refs_bevestigd      INTEGER NOT NULL DEFAULT 0 CHECK (refs_bevestigd IN (0, 1)),
+  refs_bevestigd_door TEXT,                    -- persoon_id, spoor zonder foreign key
+  refs_bevestigd_op   TEXT,
+  forfait             TEXT CHECK (forfait IN ('thuis', 'uit', 'beide')),
+  bond_officials      INTEGER,
+  hash                TEXT,
+  aangemaakt          TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (wedstrijd_id) REFERENCES wedstrijden (id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_officials_wedstrijd_scope ON officials_wedstrijd (scope);
+
+CREATE TABLE officials_beschikbaarheid (
+  persoon_id   TEXT NOT NULL,
+  wedstrijd_id INTEGER NOT NULL,
+  status       TEXT NOT NULL CHECK (status IN ('ja', 'nee')),
+  gewijzigd    TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (persoon_id, wedstrijd_id),
+  FOREIGN KEY (persoon_id) REFERENCES personen (id),
+  FOREIGN KEY (wedstrijd_id) REFERENCES wedstrijden (id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_officials_beschikbaarheid_wedstrijd ON officials_beschikbaarheid (wedstrijd_id, status);
+
+-- Een vrijgave blijft als rij staan (status 'vrijgegeven'): de facturatie en
+-- het logboek moeten kunnen zien dat iemand er stond.
+CREATE TABLE officials_aanduidingen (
+  wedstrijd_id    INTEGER NOT NULL,
+  persoon_id      TEXT NOT NULL,
+  status          TEXT NOT NULL DEFAULT 'toegewezen' CHECK (status IN ('toegewezen', 'vrijgegeven')),
+  toegewezen_door TEXT,                         -- persoon_id of 'systeem'; leeg na opruiming
+  toegewezen_op   TEXT NOT NULL DEFAULT (datetime('now')),
+  gewijzigd_op    TEXT,
+  PRIMARY KEY (wedstrijd_id, persoon_id),
+  FOREIGN KEY (wedstrijd_id) REFERENCES wedstrijden (id) ON DELETE CASCADE,
+  FOREIGN KEY (persoon_id) REFERENCES personen (id)
+);
+
+CREATE INDEX idx_officials_aanduidingen_persoon ON officials_aanduidingen (persoon_id, status);
+
+-- Een aangeduide official kan zijn beschikbaarheid niet meer wijzigen, wel
+-- een probleem melden.
+CREATE TABLE officials_problemen (
+  id           INTEGER PRIMARY KEY AUTOINCREMENT,
+  wedstrijd_id INTEGER NOT NULL,
+  persoon_id   TEXT NOT NULL,
+  bericht      TEXT NOT NULL,
+  gemeld_op    TEXT NOT NULL DEFAULT (datetime('now')),
+  afgehandeld  INTEGER NOT NULL DEFAULT 0 CHECK (afgehandeld IN (0, 1)),
+  FOREIGN KEY (wedstrijd_id) REFERENCES wedstrijden (id) ON DELETE CASCADE,
+  FOREIGN KEY (persoon_id) REFERENCES personen (id)
+);
+
+CREATE INDEX idx_officials_problemen_open ON officials_problemen (afgehandeld, gemeld_op);
+
+-- Facturatie met momentopnames. Een afgesloten maand ligt vast; wat nadien
+-- verandert, komt als correctieregel in de volgende maand.
+--
+-- In de twee vergoedingstabellen is persoon_id bewust geen foreign key: een
+-- uitbetaald bedrag hoort te blijven staan, ook nadat iemand vertrokken is
+-- en na 180 dagen inactiviteit uit `personen` verdwijnt. De naam staat daarom
+-- in de regel zelf. vergoeding_verwerkt verwijst naar de wedstrijd via haar
+-- GUID, niet via het id, om dezelfde reden.
+CREATE TABLE officials_maanden (
+  maand            TEXT PRIMARY KEY,           -- 'jjjj-mm'
+  seizoen          TEXT NOT NULL,
+  afgesloten_op    TEXT NOT NULL DEFAULT (datetime('now')),
+  afgesloten_door  TEXT NOT NULL,
+  totaal_cent      INTEGER NOT NULL DEFAULT 0,
+  aantal_officials INTEGER NOT NULL DEFAULT 0,
+  verstuurd_op     TEXT,
+  verstuurd_naar   TEXT
+);
+
+CREATE TABLE officials_vergoeding_regels (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  maand         TEXT NOT NULL,
+  persoon_id    TEXT NOT NULL,
+  naam          TEXT NOT NULL,
+  soort         TEXT NOT NULL DEFAULT 'wedstrijd' CHECK (soort IN ('wedstrijd', 'correctie')),
+  betreft_maand TEXT,
+  cat_code      TEXT NOT NULL,
+  cat_label     TEXT,
+  aantal        INTEGER NOT NULL,
+  tarief_cent   INTEGER NOT NULL,
+  bedrag_cent   INTEGER NOT NULL,
+  FOREIGN KEY (maand) REFERENCES officials_maanden (maand) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_officials_vergoeding_maand ON officials_vergoeding_regels (maand, persoon_id);
+CREATE INDEX idx_officials_vergoeding_persoon ON officials_vergoeding_regels (persoon_id, maand);
+
+CREATE TABLE officials_vergoeding_verwerkt (
+  wedstrijd_guid TEXT NOT NULL,
+  persoon_id     TEXT NOT NULL,
+  maand          TEXT NOT NULL,                -- de maand waarin het meetelde
+  cat_code       TEXT NOT NULL,
+  tarief_cent    INTEGER NOT NULL,
+  aantal         INTEGER NOT NULL DEFAULT 1,   -- 1, of -1 na een correctie
+  PRIMARY KEY (wedstrijd_guid, persoon_id, maand)
+);
+
+CREATE INDEX idx_officials_verwerkt_persoon ON officials_vergoeding_verwerkt (persoon_id);
+
+-- Voorkeuren die enkel over de officials gaan. Wie geen rij heeft, krijgt de
+-- standaard: herinneringen aan, gsm-nummer gedeeld met wie samen fluit.
+CREATE TABLE officials_voorkeuren (
+  persoon_id       TEXT PRIMARY KEY,
+  herinner_avond   INTEGER NOT NULL DEFAULT 1 CHECK (herinner_avond IN (0, 1)),
+  herinner_ochtend INTEGER NOT NULL DEFAULT 1 CHECK (herinner_ochtend IN (0, 1)),
+  gsm_delen        INTEGER NOT NULL DEFAULT 1 CHECK (gsm_delen IN (0, 1)),
+  FOREIGN KEY (persoon_id) REFERENCES personen (id)
+);
+
+-- Regio: wedstrijden bij gevolgde, externe clubs met nul of één
+-- scheidsrechter van de bond. Een eigen, lichte synchronisatie.
+CREATE TABLE officials_volg_clubs (
+  guid            TEXT PRIMARY KEY,
+  naam            TEXT,
+  toegevoegd_door TEXT NOT NULL,               -- persoon_id, spoor zonder foreign key
+  toegevoegd      TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE officials_volg_wedstrijden (
+  guid           TEXT PRIMARY KEY,
+  club_guid      TEXT NOT NULL,
+  club_naam      TEXT,
+  thuis_naam     TEXT NOT NULL,
+  uit_naam       TEXT NOT NULL,
+  datum          TEXT NOT NULL,
+  uur            TEXT NOT NULL,
+  cat_code       TEXT,
+  vbl_aantal     INTEGER NOT NULL DEFAULT 0,
+  vbl_naam       TEXT,
+  laatst_gezien  TEXT NOT NULL DEFAULT (datetime('now')),
+  bond_officials INTEGER,
+  FOREIGN KEY (club_guid) REFERENCES officials_volg_clubs (guid) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_officials_volg_datum ON officials_volg_wedstrijden (datum, uur);
+CREATE INDEX idx_officials_volg_club ON officials_volg_wedstrijden (club_guid);
+
+-- De woensdaglijst van de bond, zoals ontvangen per mail. Bewaard, ook als ze
+-- niet te verwerken was: dan staat de reden in `fout`.
+CREATE TABLE officials_vbl_lijsten (
+  id           INTEGER PRIMARY KEY AUTOINCREMENT,
+  ontvangen    TEXT NOT NULL DEFAULT (datetime('now')),
+  onderwerp    TEXT,
+  bestand      TEXT,
+  weekend_van  TEXT,
+  weekend_tot  TEXT,
+  aantal_rijen INTEGER,
+  eigen        TEXT,                           -- JSON: eigen thuiswedstrijden
+  meldingen    TEXT,                           -- JSON: niet te koppelen rijen
+  status       TEXT NOT NULL CHECK (status IN ('ontvangen', 'verwerkt', 'dubbel', 'fout')),
+  fout         TEXT,
+  verwerkt_op  TEXT,
+  volg         TEXT                            -- JSON: Regio
+);
+
+CREATE INDEX idx_officials_vbl_lijsten_weekend ON officials_vbl_lijsten (weekend_van, status);

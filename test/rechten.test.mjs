@@ -31,8 +31,15 @@ const VERWACHT = {
     'team.aanwezigheid.vaststellen',
     'team.selectie.beheren',
     'speler.uitsluiten',
+    'officials.beheren',
+    'officials.vergoedingen',
   ],
-  FINADM: ['financieel.bekijken'],
+  FINADM: ['financieel.bekijken', 'officials.vergoedingen'],
+  // De module Officials (0.30.0). YOADM beheert de officials en niets anders:
+  // geen personen, geen zalen, geen aanwezigheden.
+  YOADM: ['officials.beheren', 'officials.vergoedingen'],
+  YO: ['officials.opgeven'],
+  YOPLUS: ['officials.opgeven', 'officials.vanaf_u14'],
   COORD: [
     'team.bekijken',
     'team.spelers.namen',
@@ -64,7 +71,7 @@ const VERWACHT = {
   OUVO: ['team.bekijken', 'team.spelers.namen', 'aanwezigheid.opgeven.kind'],
 };
 
-const GLOBALE_ROLLEN = ['ADMIN', 'FINADM'];
+const GLOBALE_ROLLEN = ['ADMIN', 'FINADM', 'YOADM', 'YO', 'YOPLUS'];
 
 function metRol(rol) {
   if (GLOBALE_ROLLEN.includes(rol)) {
