@@ -305,6 +305,19 @@ Cloudflare-account valt er niets mee te doen. Als secret of variabele kan het
 overigens niet: een binding wordt bij het deployen opgelost, vóór er iets van
 `env` bestaat.
 
+## YOAssist overzetten (I1)
+
+```
+node tools/migreer-yoassist.mjs yoassist-backup.json teamassist-backup.json            # enkel het rapport
+node tools/migreer-yoassist.mjs yoassist-backup.json teamassist-backup.json --sql uit.sql
+```
+
+Beide backups komen van Beheer → backup in de respectieve app. Lees eerst het
+rapport. Met `--sql` komt er `uit.sql`, en ernaast `uit-1.sql`, `uit-2.sql`, …
+van elk hoogstens 90 kB: die voer je na elkaar uit in de D1-console. Opnieuw
+uitvoeren maakt geen dubbels. Pas bij de overschakeling (fase 5), met verse
+backups.
+
 ## Bij een volgende versie
 
 `schema-controle.sql` wordt gegenereerd uit `schema.sql` en niet met de hand
