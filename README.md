@@ -275,6 +275,15 @@ stilzwijgend iets anders te doen.
 De `alg` uit het token bepaalt nooit welke weg gekozen wordt; dat is precies het
 lek dat je niet wil.
 
+### De externe API (sinds 0.37.0)
+
+```
+npx wrangler secret put EXTERN_API_SLEUTEL          # dezelfde waarde als bij YOAssist
+```
+
+Enkel nodig als een andere toepassing `GET /api/extern/aanduidingen` leest
+(met `Authorization: Bearer <sleutel>`). Zonder antwoordt de route 401.
+
 ### Pushmeldingen (sinds 0.29.0)
 
 ```

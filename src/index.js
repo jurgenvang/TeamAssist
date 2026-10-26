@@ -31,6 +31,10 @@ import {
   facturatieOverzicht, facturatieVoorbeeld, facturatieAfsluiten, facturatieStaat, ontvangersZetten,
   facturatiePerOfficial, tarievenTonen, tariefZetten, mijnVergoeding,
 } from './officials/facturatie.js';
+import {
+  volgClubsTonen, volgClubToevoegen, volgClubWeg, regioTonen, regioSync, regioLeegmaken,
+} from './officials/regio.js';
+import { externeAanduidingen, kalender, agendaLink } from './officials/extern.js';
 import { ontvangMail } from './officials/woensdaglijst.js';
 import {
   berichtenTonen, berichtenOngelezen, berichtGelezen, berichtVerwijderen, mededelingTonen, mededelingWegklikken,
@@ -135,6 +139,19 @@ export const ROUTES = [
   { methode: 'POST', pad: '/api/admin/officials/tarieven', recht: 'officials.vergoedingen', doe: tariefZetten },
   // Mijn vergoeding: wie iets verdiende, ook als hij intussen geen rol meer heeft.
   { methode: 'GET', pad: '/api/officials/vergoeding', doe: mijnVergoeding },
+  // Regio (0.37.0).
+  { methode: 'GET', pad: '/api/admin/officials/volg-clubs', recht: 'officials.beheren', doe: volgClubsTonen },
+  { methode: 'POST', pad: '/api/admin/officials/volg-clubs', recht: 'officials.beheren', doe: volgClubToevoegen },
+  { methode: 'POST', pad: '/api/admin/officials/volg-clubs/weg', recht: 'officials.beheren', doe: volgClubWeg },
+  { methode: 'GET', pad: '/api/admin/officials/regio', recht: 'officials.beheren', doe: regioTonen },
+  { methode: 'POST', pad: '/api/admin/officials/regio/sync', recht: 'officials.beheren', doe: regioSync },
+  { methode: 'POST', pad: '/api/admin/officials/regio/leegmaken', recht: 'officials.beheren', doe: regioLeegmaken },
+  // Van buitenaf lezen (0.37.0). Publiek, maar met een eigen sleutel: in de
+  // header (extern) of in de URL (kalender, want een agenda-app kan geen
+  // header meesturen). Het pad van de kalender bevat de sleutel: een prefix.
+  { methode: 'GET', pad: '/api/extern/aanduidingen', publiek: true, doe: externeAanduidingen },
+  { methode: 'GET', pad: '/api/kalender/', prefix: true, publiek: true, doe: kalender },
+  { methode: 'POST', pad: '/api/officials/agenda', doe: agendaLink },
   // Mijn berichten en de banner: over jezelf, zoals /api/mij. Elke query
   // filtert op de persoon uit het token.
   { methode: 'GET', pad: '/api/berichten', doe: berichtenTonen },
@@ -287,8 +304,16 @@ export const ROUTES = [
   { methode: 'GET', pad: '/api/admin/branding-voorstel', recht: 'systeem.beheren', doe: brandingVoorstel },
 ];
 
+/** Het adres waarheen yoassist.org doorverwijst, of null als het verzoek hier blijft. */
+export function doorverwijzingVoor(url) {
+  const host = url.hostname.toLowerCase();
+  if (host !== 'yoassist.org' && host !== 'www.yoassist.org') return null;
+  if (url.pathname.startsWith('/api/kalender/') || url.pathname.startsWith('/api/extern/')) return null;
+  return `https://teamassist.clubassist.org${url.pathname}${url.search}`;
+}
+
 function zoekRoute(methode, pad) {
-  return ROUTES.find((r) => r.methode === methode && r.pad === pad) ?? null;
+  return ROUTES.find((r) => r.methode === methode && (r.prefix ? pad.startsWith(r.pad) : r.pad === pad)) ?? null;
 }
 
 async function bouwContext(request, env, route) {
@@ -344,6 +369,12 @@ async function bouwContext(request, env, route) {
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+
+    // yoassist.org stuurt door naar de app (I1, Domein), behalve de agendafeed
+    // en de externe API: een agenda-abonnement staat al in iemands agenda, en
+    // niet elke agenda-app volgt een doorverwijzing.
+    const doorverwijzing = doorverwijzingVoor(url);
+    if (doorverwijzing) return Response.redirect(doorverwijzing, 301);
 
     if (!url.pathname.startsWith('/api/')) {
       // Alles wat geen API is, is een statisch bestand.

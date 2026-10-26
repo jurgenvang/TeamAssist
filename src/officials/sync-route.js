@@ -7,6 +7,7 @@ import { logSchrijf } from '../lib/logboek.js';
 import { haalVbl } from '../lib/vbl.js';
 import { instellingLezen } from '../routes/admin/instellingen.js';
 import { maakOfficialsplan, orgMatchesUrl } from './sync.js';
+import { verwerkForfaits } from './forfait.js';
 
 async function lees(db, seizoen) {
   const ploegen = await db
@@ -110,8 +111,8 @@ async function voerUit(db, seizoen, plan) {
 
   const vandaag = new Date().toISOString().slice(0, 10);
   for (const f of plan.nieuweForfaits) {
-    // Wat er met eigen aanduidingen gebeurt, komt in 3f (forfait.js); hier
-    // enkel zichtbaar maken. Voorbije forfaits niet: dat gaf in YOAssist bij de
+    // Wat er met eigen aanduidingen gebeurt, zit in forfait.js; hier enkel
+    // zichtbaar maken. Voorbije forfaits niet: dat gaf in YOAssist bij de
     // eerste ronde een vloed aan openstaande regels.
     if (f.datum >= vandaag) {
       await logSchrijf(db, {
@@ -198,5 +199,13 @@ export async function officialsSync(ctx) {
     wat: 'officials gesynchroniseerd',
     details: JSON.stringify(totalen),
   });
-  return json({ droogloop: false, status: plan.status, melding: plan.melding, totalen: { ...totalen, ...extra } });
+  // Wat er met eigen aanduidingen op een nieuw forfait gebeurt (0.37.0). Pas
+  // na de overstap: tot dan geeft YOAssist ze vrij en verwittigt het, en zou
+  // een official hier een tweede bericht krijgen.
+  let forfaits = null;
+  if (plan.nieuweForfaits.length && (await instellingLezen(db, 'officials_automatisch', '0')) === '1') {
+    const f = await verwerkForfaits(ctx, plan.nieuweForfaits);
+    forfaits = { vrijgegeven: f.vrijgegeven.length, te_bekijken: f.teBekijken.length };
+  }
+  return json({ droogloop: false, status: plan.status, melding: plan.melding, totalen: { ...totalen, ...extra }, forfaits });
 }

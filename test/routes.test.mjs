@@ -38,8 +38,12 @@ test('publieke routes geven geen persoonsgegevens terug', () => {
   // /api/aanmeldlink hoort daarbij omdat wie een link vraagt nog niet aangemeld
   // is; ze geeft wel altijd hetzelfde antwoord terug. /api/branding geeft enkel
   // de huisstijl (clubnaam, kleur, logo) — geen enkel gegeven over personen.
+  // De externe API en de agendafeed (0.37.0) wel, maar enkel met een eigen
+  // sleutel: die controleren ze zelf (officials-regio.test.mjs).
   const publiek = ROUTES.filter((r) => r.publiek).map((r) => r.pad);
-  assert.deepEqual(publiek.sort(), ['/api/aanmeldlink', '/api/branding', '/api/config', '/api/versie']);
+  assert.deepEqual(publiek.sort(), [
+    '/api/aanmeldlink', '/api/branding', '/api/config', '/api/extern/aanduidingen', '/api/kalender/', '/api/versie',
+  ]);
 });
 
 test('een route die geen recht vraagt, doet dat bewust', () => {
@@ -63,6 +67,7 @@ test('een route die geen recht vraagt, doet dat bewust', () => {
       '/api/officials/beschikbaarheid',
       '/api/officials/probleem',
       '/api/officials/vergoeding',
+      '/api/officials/agenda',
       '/api/berichten',
       '/api/berichten/ongelezen',
       '/api/berichten/gelezen',

@@ -47,6 +47,13 @@ export function takenVoorUur(uur, dag) {
   if (uur === 7) taken.push('herinnering-ochtend');
   if (uur === 8 && dag === 1) taken.push('weekoverzicht');
 
+  // Regio (0.37.0): elke ochtend om 5 uur, los van de hoofdcyclus.
+  if (uur === 5) taken.push('regio');
+  // PV's en coaches bij te weinig scheidsrechters: woensdag na de terugval van
+  // de woensdagregel, en donderdag opnieuw als het dan nog niet gelukt is.
+  if (uur === 20 && dag === 3) taken.push('ploegen-woensdag');
+  if (uur === 20 && dag === 4) taken.push('ploegen-donderdag');
+
   // De bestaande supabase-ping, ongewijzigd.
   if (uur === 4) taken.push('ping');
 

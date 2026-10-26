@@ -20,12 +20,15 @@ import { officialsSync } from '../officials/sync-route.js';
 import { vakantiesSync, feestdagenSync } from '../routes/admin/periodes.js';
 import { woensdagOm14, woensdagTerugval, avondcontrole } from '../officials/woensdaglijst.js';
 import { herinner, weekoverzicht } from '../officials/herinneringen.js';
+import { synchroniseerVolgClubs } from '../officials/regio.js';
+import { verwittigPloegen } from '../officials/ploegtekort.js';
 import { instellingLezen } from '../routes/admin/instellingen.js';
 import { json } from './http.js';
 import { kuisLogboekOp, kuisTaakRunsOp, kuisBerichtenOp, verwijderInactievePersonenOp } from './opkuis.js';
 
 const OFFICIALS_AUTOMATISCH = [
   'woensdagregel', 'woensdag-terugval', 'avondcontrole', 'herinnering-avond', 'herinnering-ochtend', 'weekoverzicht',
+  'ploegen-woensdag', 'ploegen-donderdag',
 ];
 
 // wie = null: het systeem, niet een aangemelde persoon (schema.sql, logboek.wie).
@@ -167,6 +170,17 @@ export async function voerGeplandeTakenUit(taken, db, env) {
         await voerTaakUit(db, env, taak, async () => json(await herinner(ctx, { avond })));
       }
       if (taak === 'weekoverzicht') await voerTaakUit(db, env, 'weekoverzicht', async () => json(await weekoverzicht(ctx)));
+      if (taak === 'ploegen-woensdag' || taak === 'ploegen-donderdag') {
+        const ronde = taak === 'ploegen-woensdag' ? 'woensdag' : 'donderdag';
+        await voerTaakUit(db, env, taak, async () => json(await verwittigPloegen(ctx, ronde)));
+      }
+    }
+    // Regio leest enkel bij de bond en verstuurt niets: geen afscherming nodig.
+    if (taak === 'regio') {
+      await voerTaakUit(db, env, 'regio-sync', async () => {
+        const r = await synchroniseerVolgClubs(db);
+        return json(r, r.fouten.length && !r.gevonden ? 502 : 200);
+      });
     }
     if (taak === 'periodes') {
       await voerTaakUit(db, env, 'vakanties-sync', () => vakantiesSync(ctx));

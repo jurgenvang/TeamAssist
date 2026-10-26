@@ -11,7 +11,7 @@ WIJZIGINGEN-bestanden blijven kloppen:
   punt *U* (Microsoft 365) heet hier **VU**, want TeamAssist heeft al een *U*
 - **T** + nummer, en de letters **A–AB** — TeamAssist
 
-Stand: YOAssist **v1.17.0**, TeamAssist **0.36.0**
+Stand: YOAssist **v1.17.0**, TeamAssist **0.37.0**
 
 ---
 
@@ -36,8 +36,9 @@ Bijgewerkt bij elke versie. Voor de volledige tekst: zoek de kop verderop
   zie README); zonder blijft alles per mail.
 
 ### Klaar om te bouwen
-- **I1, fase 3f (0.37.0)** — Regio, forfait-afhandeling, agendafeed en
-  externe API, PV's en coaches. Daarna fase 4 (zie I1).
+- **I1, fase 4** — de schermen van de module Officials (Aanduidingen,
+  Cluboverzicht, Regio, Vergoedingen club, Mijn vergoeding, de beheerdelen),
+  met tabbladen die per stuk uit te zetten zijn. De backend staat volledig.
 - **T7** — tabblad Mijn club.
 - **T12** — aanmelden als.
 - **T18, T19** — twee kleine gaten uit de code-audit.
@@ -216,17 +217,20 @@ rapport. Verder:
    - **3e — 0.36.0, afgewerkt: facturatie.** Tarieven, een maand afsluiten
      met momentopname en correcties, de maandmail en de verzamelstaat, Mijn
      vergoeding (ook namens een kind).
-   - **3f — 0.37.0: de rest.** Regio (volgsync), forfait-afhandeling,
-     agendafeed en externe API (met `yoassist.org/api/kalender/` en
-     `/api/extern/`), en de mail aan PV's en coaches bij te weinig
-     scheidsrechters — nu via de rollen PLOEGV en COACH.
+   - **3f — 0.37.0, afgewerkt: de rest.** Regio (volgsync), forfait-
+     afhandeling, agendafeed en externe API (met `yoassist.org/api/kalender/`
+     en `/api/extern/`, de rest van yoassist.org stuurt door), en de mail aan
+     PV's en coaches bij te weinig scheidsrechters — via de rollen PLOEGV en
+     COACH. Daarmee staat de hele backend van de module.
 4. **Frontend overzetten**, scherm per scherm, als modules.
 5. **Parallel draaien** op een testadres, daarna overschakelen: migratie
    uitvoeren, officials uitnodigen via Supabase, `yoassist.org` laten
    doorverwijzen. Ook: Email Routing van het adres van de woensdaglijst naar
    de TeamAssist-Worker, en `officials_automatisch` aanzetten (Beheer →
    Configuratie) — pas dan lopen woensdagregel, terugval, avondcontrole, de
-   herinneringen en het weekoverzicht.
+   herinneringen, het weekoverzicht, forfaits vrijgeven en de berichten aan
+   PV's en coaches. En de secret `EXTERN_API_SLEUTEL` overnemen van YOAssist,
+   als de externe API gebruikt wordt.
 
 Tot de overstap blijft YOAssist live en krijgt het enkel bugfixes.
 
@@ -348,6 +352,7 @@ YOAssist met `ruudcuyvers@…`, vermoedelijk het adres van zijn vader.
 | 0.23.0 | T14 afgewerkt: een volledige backup van de databank als JSON. Beter dan aanvankelijk voorgesteld — geen hardcoded tabellenlijst met een test die drift moet vangen (de YOAssist-aanpak), maar tabellen rechtstreeks uit `sqlite_master` gehaald, wat de hele bugklasse structureel onmogelijk maakt. De kerntest bewijst dat letterlijk: een tabel die pas ná het schrijven van de route wordt aangemaakt, zit er toch in. |
 | 0.24.0 | T16 en T17 afgewerkt. `verwittig()` heeft geen `kanaal`-parameter meer en leest voortaan `kanaal_voorkeur` — mail blijft de terugval zolang push niet bestaat, met een aparte logregel voor wie 'push' koos. Blokken bij Zaalbeheer staan nu gegroepeerd per weekdag als losse blokjes, met bewust neutrale kleuren in plaats van de accentkleur. |
 | 0.25.0 | T15 afgewerkt: opruiming van `logboek` (365 dagen), `taak_runs` (30 dagen), `berichten` (120 dagen), en het definitief verwijderen van een inactieve persoon na 180 dagen. Twee tabellen extra gevonden tijdens het bouwen (`accounts`, `ouder_kind`) die niet in het oorspronkelijke overzicht stonden. Enkel `aanwezigheden` wordt geanonimiseerd in plaats van verwijderd — de enige tabel waar dat structureel kon — wat een schema-heropbouw vroeg, grondig getoetst tegen een nagemaakte bestaande databank. |
+| 0.37.0 | I1 fase 3f, backend: de rest van de module Officials. Regio: clubs volgen (naam van de bond), een eigen synchronisatie elke ochtend om 5 u (enkel thuis, vanaf U14, wat nog komt; de woensdaglijst blijft staan tenzij de wedstrijd verschoof), tonen met het hoogste van API en lijst en de bron per wedstrijd, leegmaken met droogloop. Forfait: eigen aanduidingen vrijgegeven als het forfait vóór de wedstrijddag gekend is (instelling `forfait_aanduiding`), anders gemeld. De externe API (sleutel in de header) en de agendafeed (sleutel in de URL; anders dan YOAssist in Brusselse tijd met TZID, waar een wedstrijd een of twee uur verschoven stond), met de UID's van YOAssist; `yoassist.org` stuurt door naar `teamassist.clubassist.org`, behalve `/api/kalender/` en `/api/extern/`. PV's en coaches: de rollen PLOEGV en COACH van de ploeg, woensdag en donderdag 20 u, één bericht per persoon. Forfait en PV/coach volgen `officials_automatisch`. Geen schemawijziging. 954 tests. |
 | 0.36.0 | I1 fase 3e: facturatie, backend. De rekenregels van YOAssist (op persoon-id), het voorbeeld vóór het afsluiten met de wedstrijden per official, afsluiten met momentopname en spoor (`officials_vergoeding_verwerkt`, op de GUID van de wedstrijd zoals de migratie ze overzet), correcties op eerder afgesloten maanden — één keer —, een wedstrijd die niet meer bij de bond staat gemeld en niet meegeteld, een categorie zonder tarief blokkeert. De maandmail per official, de verzamelstaat naar `facturatie_ontvangers` (adressen zonder account, via het nieuwe `verwittigExtern`, dat bericht_modus volgt). Tarieven aanpassen (nieuw: in YOAssist enkel via de console). Mijn vergoeding, ook namens een kind. Recht `officials.vergoedingen`: YOADM, ADMIN en FINADM. Geen schemawijziging. 943 tests. |
 | 0.35.0 | I1 fase 3d: automatisch aanvullen en herinneringen, backend. Het planningsalgoritme van YOAssist (zuivere functie: schaarste eerst, eerlijk verdeeld over het seizoen, botsingen vermeden, bestaande aanduidingen blijven) achter `POST /api/admin/officials/automatisch`, standaard een droogloop; wie automatisch aangeduid wordt, krijgt hetzelfde bericht als bij een handmatige aanduiding (in YOAssist niet). Herinnering de avond ervoor (19 u) en de ochtend zelf (7 u), één bericht per persoon, volgens `officials_voorkeuren`, nooit voor een forfait; het weekoverzicht maandag 8 u naar de beheerders; `POST /api/admin/officials/vul-nog-in` voor wie een weekend niets invulde — een YO enkel voor wat hij ziet (U10/U12). De geplande taken volgen `officials_automatisch`. Geen schemawijziging. 930 tests. |
 | 0.34.0 | I1 fase 3c: de woensdagregel, backend. De woensdaglijst van de bond komt per mail binnen (`email()`-handler van de Worker, mime en xlsx uit YOAssist, zonder bibliotheek): afzender en onderwerp nagekeken, het Excel-bestand opgehaald en gelezen (een anders gekleurde cel = aangeduid), gekoppeld aan de eigen thuiswedstrijden vanaf U14 en aan Regio. Woensdag 14 uur verwerkt (in de lijst = 0 of 1, niet in de lijst = 2 volgens de bond; wat automatisch in de lijst kwam en niemand heeft, gaat eruit), anders een waarschuwing; om 20 uur terugval op de API; een latere lijst zet recht; elke avond de avondcontrole. YO+ krijgt de gewone mail, de beheerders (YOADM, ADMIN) het overzicht met elke afwijking. Gmail- en Mailchimp-bevestigingen naar de beheerders. Status: `GET /api/admin/officials/woensdaglijst`. De automatische taken staan uit tot de overstap (`officials_automatisch`). Anders dan YOAssist neemt de API-terugval geen onbekende categorie (G08) meer mee. Geen schemawijziging. 916 tests. |
