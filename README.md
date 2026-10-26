@@ -312,6 +312,16 @@ node tools/migreer-yoassist.mjs yoassist-backup.json teamassist-backup.json     
 node tools/migreer-yoassist.mjs yoassist-backup.json teamassist-backup.json --sql uit.sql
 ```
 
+Een YOAssist-adres dat eigenlijk van een ouder is, zet je in een keuzebestand
+en geef je mee met `--keuzes keuzes.json`:
+
+```json
+{ "ruud@voorbeeld.be": { "ouder": { "voornaam": "Ruud", "achternaam": "Cuyvers" } } }
+```
+
+Het adres gaat dan naar de ouder, het kind blijft zonder adres, en ze worden
+gekoppeld. Het rapport noemt de adressen die er vermoedelijk in horen.
+
 Beide backups komen van Beheer → backup in de respectieve app. Lees eerst het
 rapport. Met `--sql` komt er `uit.sql`, en ernaast `uit-1.sql`, `uit-2.sql`, …
 van elk hoogstens 90 kB: die voer je na elkaar uit in de D1-console. Opnieuw

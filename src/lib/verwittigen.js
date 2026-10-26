@@ -33,6 +33,7 @@
 import { verstuurMail, verstuurMailBatch } from './mailer.js';
 import { stuurPush } from './push.js';
 import { logSchrijf } from './logboek.js';
+import { meelezen, oudersVan } from './namens.js';
 
 async function instelling(db, sleutel) {
   const rij = await db.prepare(`SELECT waarde FROM instellingen WHERE sleutel = ?`).bind(sleutel).first();
@@ -114,15 +115,19 @@ function pushTekst(kort, inhoud) {
  * @returns {{verstuurd, omgeleid?, mail?, push?, reden?}}
  */
 export async function verwittig(ctx, { persoon_id, onderwerp, inhoud, soort = null, kort = null }) {
-  const { db, env } = ctx;
+  const { db } = ctx;
 
   const persoon = await db
-    .prepare(`SELECT email, kanaal_voorkeur FROM personen WHERE id = ?`)
+    .prepare(
+      `SELECT id, voornaam, achternaam, email, kanaal_voorkeur, geboortedatum, ouders_meelezen
+         FROM personen WHERE id = ?`
+    )
     .bind(persoon_id)
     .first();
-  // De terugval op 'mail' is defensief: kanaal_voorkeur is NOT NULL DEFAULT
-  // 'mail', dit pad bestaat enkel voor een rij die buiten de app om veranderde.
-  const voorkeur = persoon?.kanaal_voorkeur || 'mail';
+
+  // Een kind: de ouders krijgen het mee als dat aanstaat (namens.js). Wie
+  // geen ouders heeft, heeft een lege lijst — dan verandert er niets.
+  const ouders = persoon && meelezen(persoon).aan ? await oudersVan(db, persoon_id) : [];
 
   const modus = (await instelling(db, 'bericht_modus')) || 'omleiden';
 
@@ -130,33 +135,82 @@ export async function verwittig(ctx, { persoon_id, onderwerp, inhoud, soort = nu
     await logSchrijf(db, {
       soort: 'beheer',
       wat: 'bericht niet verstuurd (modus uit)',
-      details: `${persoon?.email ?? persoon_id}: ${onderwerp} — ${inhoud}`,
+      details:
+        `${persoon?.email ?? persoon_id}: ${onderwerp} — ${inhoud}` +
+        (ouders.length ? ` (en ${ouders.length} ouder(s))` : ''),
     });
     return { verstuurd: false, reden: 'modus uit' };
   }
 
+  const zelf = await bezorg(ctx, modus, persoon ?? { id: persoon_id }, { onderwerp, inhoud, kort });
+
+  // De kopie: het onderwerp zegt voor wie, en de mail zegt het nog eens bovenaan.
+  // Geen eigen rij in `berichten` — de ouder ziet het bericht van zijn kind in
+  // zijn eigen Mijn berichten (berichten.js), zodat er één exemplaar is.
+  let ouderBereikt = 0;
+  const naam = `${persoon?.voornaam ?? ''} ${persoon?.achternaam ?? ''}`.trim();
+  for (const ouder of ouders) {
+    const kopie = await bezorg(ctx, modus, ouder, {
+      onderwerp: `Voor ${persoon.voornaam || naam}: ${onderwerp}`,
+      inhoud: `Dit bericht is voor ${naam}.\n\n${inhoud}`,
+      kort: kort ? `Voor ${persoon.voornaam || naam}: ${kort}` : null,
+    });
+    if (kopie.verstuurd) ouderBereikt += 1;
+  }
+
+  if (!zelf.verstuurd && !ouderBereikt) {
+    if (zelf.reden === 'geen e-mailadres') {
+      await logSchrijf(db, {
+        soort: 'fout',
+        wat: 'bericht niet verstuurd: geen e-mailadres',
+        details: `${persoon_id}: ${onderwerp}${persoon ? ' — ook geen ouder met een adres' : ''}`,
+        afgehandeld: 0,
+      });
+    }
+    return { verstuurd: false, reden: zelf.reden };
+  }
+
+  if (modus === 'omleiden') return { verstuurd: true, omgeleid: true, ouders: ouderBereikt };
+
+  // modus === 'normaal': aangekomen bij de persoon, bij een ouder, of beide.
+  // Eén rij, bij de persoon zelf — Mijn berichten hoort een bericht niet twee
+  // keer te tonen. `kanaal` zegt wat er bij de persoon zeker aankwam: mail als
+  // die vertrok, anders push; kwam het enkel bij de ouders, dan 'mail'.
+  await db
+    .prepare(`INSERT INTO berichten (persoon_id, kanaal, onderwerp, inhoud, soort, kort) VALUES (?, ?, ?, ?, ?, ?)`)
+    .bind(persoon_id, zelf.mail || !zelf.push ? 'mail' : 'push', onderwerp, inhoud, soort, kort)
+    .run();
+
+  return { verstuurd: true, omgeleid: false, mail: zelf.mail, push: zelf.push, ouders: ouderBereikt };
+}
+
+/**
+ * Eén ontvanger, één bericht: push en/of mail volgens zijn eigen voorkeur, of
+ * omgeleid. Schrijft niets in `berichten` — dat beslist verwittig(), dat weet
+ * voor wie het bericht eigenlijk is.
+ *
+ * @returns {{verstuurd, mail, push, reden?}}
+ */
+async function bezorg(ctx, modus, ontvanger, { onderwerp, inhoud, kort }) {
+  const { db, env } = ctx;
+  // De terugval op 'mail' is defensief: kanaal_voorkeur is NOT NULL DEFAULT
+  // 'mail', dit pad bestaat enkel voor een rij die buiten de app om veranderde.
+  const voorkeur = ontvanger.kanaal_voorkeur || 'mail';
+
   // Eerst push, want of er nog mail moet volgen, hangt ervan af.
   let push = { verstuurd: 0, verlopen: 0, toestellen: 0 };
   if (modus === 'normaal' && (voorkeur === 'push' || voorkeur === 'beide')) {
-    push = await pushNaarToestellen(ctx, persoon_id, { titel: onderwerp, tekst: pushTekst(kort, inhoud) });
+    push = await pushNaarToestellen(ctx, ontvanger.id, { titel: onderwerp, tekst: pushTekst(kort, inhoud) });
   }
   const mailNodig = voorkeur !== 'push' || push.verstuurd === 0;
 
   let mail = false;
   if (mailNodig) {
-    if (!persoon?.email) {
-      if (push.verstuurd === 0) {
-        await logSchrijf(db, {
-          soort: 'fout',
-          wat: 'bericht niet verstuurd: geen e-mailadres',
-          details: `${persoon_id}: ${onderwerp}`,
-          afgehandeld: 0,
-        });
-        return { verstuurd: false, reden: 'geen e-mailadres' };
-      }
+    if (!ontvanger.email) {
+      if (push.verstuurd === 0) return { verstuurd: false, mail: false, push: 0, reden: 'geen e-mailadres' };
     } else {
       const van = (await instelling(db, 'mail_afzender')) || 'TeamAssist <noreply@clubassist.org>';
-      let bestemming = persoon.email;
+      let bestemming = ontvanger.email;
 
       if (modus === 'omleiden') {
         const omleidadres = await instelling(db, 'bericht_omleidadres');
@@ -167,7 +221,7 @@ export async function verwittig(ctx, { persoon_id, onderwerp, inhoud, soort = nu
             details: onderwerp,
             afgehandeld: 0,
           });
-          return { verstuurd: false, reden: 'geen omleidadres' };
+          return { verstuurd: false, mail: false, push: 0, reden: 'geen omleidadres' };
         }
         bestemming = omleidadres;
       }
@@ -182,28 +236,19 @@ export async function verwittig(ctx, { persoon_id, onderwerp, inhoud, soort = nu
           details: `${bestemming}: ${onderwerp} — ${e.message}`,
           afgehandeld: 0,
         });
-        if (push.verstuurd === 0) return { verstuurd: false, reden: e.message };
+        if (push.verstuurd === 0) return { verstuurd: false, mail: false, push: 0, reden: e.message };
       }
 
       if (modus === 'omleiden') {
         await logSchrijf(db, {
           soort: 'beheer',
           wat: 'bericht verstuurd (omgeleid)',
-          details: `voor ${persoon.email}, echt naar ${bestemming}: ${onderwerp}`,
+          details: `voor ${ontvanger.email}, echt naar ${bestemming}: ${onderwerp}`,
         });
-        return { verstuurd: true, omgeleid: true };
+        return { verstuurd: true, mail: true, push: 0 };
       }
     }
   }
-
-  // modus === 'normaal': werkelijk aangekomen bij de echte persoon. Eén rij,
-  // ook bij mail én push — Mijn berichten hoort een bericht niet twee keer
-  // te tonen. `kanaal` zegt wat er zeker aankwam: mail als die vertrok, anders
-  // push.
-  await db
-    .prepare(`INSERT INTO berichten (persoon_id, kanaal, onderwerp, inhoud, soort, kort) VALUES (?, ?, ?, ?, ?, ?)`)
-    .bind(persoon_id, mail ? 'mail' : 'push', onderwerp, inhoud, soort, kort)
-    .run();
 
   if (voorkeur === 'push' && push.verstuurd === 0) {
     // Geen fout — wel zichtbaar maken dat deze persoon push koos en het niet
@@ -211,11 +256,11 @@ export async function verwittig(ctx, { persoon_id, onderwerp, inhoud, soort = nu
     await logSchrijf(db, {
       soort: 'beheer',
       wat: 'bericht via mail, terwijl de voorkeur push is',
-      details: `${persoon_id}: ${onderwerp} — ${push.toestellen ? 'geen toestel bereikbaar' : 'geen toestel ingeschreven'}`,
+      details: `${ontvanger.id}: ${onderwerp} — ${push.toestellen ? 'geen toestel bereikbaar' : 'geen toestel ingeschreven'}`,
     });
   }
 
-  return { verstuurd: true, omgeleid: false, mail, push: push.verstuurd };
+  return { verstuurd: true, mail, push: push.verstuurd };
 }
 
 /**

@@ -7,6 +7,7 @@ import { laadPloegen, synchroniseerPloegen, synchroniseerLeden, downloadSjabloon
 import { bewaarSelectie, publiceerSelectie } from './schermen/aanwezigheid-beheer.js';
 import { zoekPersonen } from './schermen/personen.js';
 import { koppelPersoonscherm } from './schermen/persoon.js';
+import { koppelMeelezen } from './schermen/meelezen.js';
 import { laadInstellingen, haalBrandingvoorstel, downloadBackup } from './schermen/instellingen.js';
 import { toonVoorkeuren, bewaarVoorkeuren, pasDonkereModusToe } from './schermen/voorkeuren.js';
 import { laadMijnOpgaven } from './schermen/mijn-opgaven.js';
@@ -348,6 +349,7 @@ el('diagnoseknop').addEventListener('click', () => toonDiagnose(false));
 el('diagnoseruw').addEventListener('click', () => toonDiagnose(true));
 el('brandingvoorstelknop').addEventListener('click', haalBrandingvoorstel);
 koppelPersoonscherm();
+koppelMeelezen();
 koppelTestrol();
 
 start();

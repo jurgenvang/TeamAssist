@@ -5,6 +5,7 @@
 // uit de request body — namens wie er ingevuld wordt, staat wel in de body,
 // maar wordt tegen ouder_kind gecontroleerd vóór er iets gebeurt.
 
+import { magNamens } from '../lib/namens.js';
 import { json, fout, leesJson } from '../lib/http.js';
 import { magOpgaveZetten, bouwOpgave } from '../lib/aanwezigheidregels.js';
 import { logSchrijf } from '../lib/logboek.js';
@@ -42,11 +43,7 @@ async function controleerNamens(db, aanroeper, voorPersoonId) {
   if (voorPersoonId === aanroeper.id) {
     return { ok: true, hoedanigheid: 'SPELER', doorPersoonId: aanroeper.id };
   }
-  const koppeling = await db
-    .prepare(`SELECT 1 AS ja FROM ouder_kind WHERE ouder_id = ? AND kind_id = ?`)
-    .bind(aanroeper.id, voorPersoonId)
-    .first();
-  if (!koppeling) {
+  if (!(await magNamens(db, aanroeper.id, voorPersoonId))) {
     return { ok: false, status: 403, fout: 'je mag niet namens deze persoon invullen' };
   }
   return { ok: true, hoedanigheid: 'OUVO', doorPersoonId: aanroeper.id };

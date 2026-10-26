@@ -27,6 +27,7 @@ DROP TABLE IF EXISTS mededelingen;
 DROP TABLE IF EXISTS push_abonnementen;
 DROP TABLE IF EXISTS berichten;
 DROP TABLE IF EXISTS logboek;
+DROP TABLE IF EXISTS ouder_toestemming;
 DROP TABLE IF EXISTS ouder_kind;
 DROP TABLE IF EXISTS team_spelers;
 DROP TABLE IF EXISTS rollen;
@@ -74,7 +75,8 @@ CREATE TABLE personen (
                      CHECK (kanaal_voorkeur IN ('mail', 'push', 'beide')),
   aangemaakt         TEXT NOT NULL DEFAULT (datetime('now')),
   gewijzigd          TEXT NOT NULL DEFAULT (datetime('now')),
-  agenda_sleutel     TEXT
+  agenda_sleutel     TEXT,
+  ouders_meelezen    INTEGER CHECK (ouders_meelezen IN (0, 1))
 );
 
 CREATE INDEX idx_personen_email ON personen (email);
@@ -165,6 +167,17 @@ CREATE TABLE ouder_kind (
 );
 
 CREATE INDEX idx_ouder_kind_kind ON ouder_kind (kind_id);
+
+CREATE TABLE ouder_toestemming (
+  kind_id       TEXT NOT NULL,
+  ouder_id      TEXT NOT NULL,
+  gevraagd_op   TEXT NOT NULL DEFAULT (datetime('now')),
+  antwoord      TEXT CHECK (antwoord IN ('ja', 'nee')),
+  beantwoord_op TEXT,
+  PRIMARY KEY (kind_id, ouder_id),
+  FOREIGN KEY (kind_id) REFERENCES personen (id),
+  FOREIGN KEY (ouder_id) REFERENCES personen (id)
+);
 
 CREATE TABLE logboek (
   id          INTEGER PRIMARY KEY AUTOINCREMENT,

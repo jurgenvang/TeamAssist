@@ -84,8 +84,12 @@ export async function toonBerichten() {
           ${b.gelezen ? '' : '<span class="bericht-stip" aria-label="ongelezen"></span>'}
           <strong>${veilig(b.onderwerp)}</strong>
           <span class="klein bericht-tijd">${veilig(datumTekst(b.verzonden))}</span>
-          <button type="button" class="alslink bericht-weg" data-weg="${b.id}" aria-label="Verwijderen">×</button>
+          ${
+            // Een bericht van een kind (0.32.0): verwijderen kan enkel het kind zelf.
+            b.voor ? '' : `<button type="button" class="alslink bericht-weg" data-weg="${b.id}" aria-label="Verwijderen">×</button>`
+          }
         </div>
+        ${b.voor ? `<p class="klein bericht-voor">Voor ${veilig(b.voor)}</p>` : ''}
         <p class="bericht-kort">${veilig(b.kort)}</p>
         ${b.inhoud ? `<div class="bericht-volledig" hidden>${metLinks(b.inhoud)}</div><p class="klein bericht-meer">lees meer</p>` : ''}
       </article>`

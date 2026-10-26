@@ -35,6 +35,7 @@ DROP TABLE IF EXISTS mededelingen;
 DROP TABLE IF EXISTS push_abonnementen;
 DROP TABLE IF EXISTS berichten;
 DROP TABLE IF EXISTS logboek;
+DROP TABLE IF EXISTS ouder_toestemming;
 DROP TABLE IF EXISTS ouder_kind;
 DROP TABLE IF EXISTS team_spelers;
 DROP TABLE IF EXISTS rollen;
@@ -121,7 +122,12 @@ CREATE TABLE personen (
   -- Bij de migratie overgenomen zoals hij was, zodat de agenda-abonnementen
   -- van de officials blijven werken. Uniek via een aparte index: een ALTER
   -- kan geen UNIQUE toevoegen.
-  agenda_sleutel     TEXT
+  agenda_sleutel     TEXT,
+  -- Krijgen de ouders de berichten van dit kind mee (0.32.0)? NULL: de
+  -- standaard volgens de leeftijd (minderjarig aan, meerderjarig uit); 1/0:
+  -- een gemaakte keuze. Een kind zonder e-mailadres krijgt ze altijd mee.
+  -- Zie src/lib/namens.js.
+  ouders_meelezen    INTEGER CHECK (ouders_meelezen IN (0, 1))
 );
 
 CREATE INDEX idx_personen_email ON personen (email);
@@ -271,6 +277,21 @@ CREATE TABLE ouder_kind (
 );
 
 CREATE INDEX idx_ouder_kind_kind ON ouder_kind (kind_id);
+
+-- Een minderjarige die de berichten aan zijn ouders wil uitzetten, heeft de
+-- toestemming van elke ouder nodig (0.32.0). Eén rij per ouder zolang de
+-- vraag openstaat; is ze beslist (iedereen ja, of één nee), dan gaan de rijen
+-- weg en staat de uitkomst in het logboek.
+CREATE TABLE ouder_toestemming (
+  kind_id       TEXT NOT NULL,
+  ouder_id      TEXT NOT NULL,
+  gevraagd_op   TEXT NOT NULL DEFAULT (datetime('now')),
+  antwoord      TEXT CHECK (antwoord IN ('ja', 'nee')),
+  beantwoord_op TEXT,
+  PRIMARY KEY (kind_id, ouder_id),
+  FOREIGN KEY (kind_id) REFERENCES personen (id),
+  FOREIGN KEY (ouder_id) REFERENCES personen (id)
+);
 
 -- ---------------------------------------------------------------------------
 -- Logboek

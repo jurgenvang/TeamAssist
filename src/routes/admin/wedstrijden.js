@@ -131,11 +131,17 @@ async function verwerkPloeg(ctx, ploeg, seizoen, uitvoeren, periodes) {
       .prepare(
         `UPDATE wedstrijden
             SET datum = ?, begin = ?, thuis = ?, tegenstander = ?, locatie_tekst = ?,
-                vbl_acc_guid = ?, wijzigingshash = ?, status = 'gepland',
+                vbl_acc_guid = ?, uitslag = ?, wijzigingshash = ?, status = 'gepland',
                 bij_bond = 1, laatst_gezien = datetime('now')
           WHERE wedstrijd_guid = ? AND team_guid = ?`
       )
-      .bind(w.datum, w.begin, w.thuis ? 1 : 0, w.tegenstander, w.locatie_tekst, w.vbl_acc_guid, w.hash, w.wedstrijd_guid, ploeg.guid)
+      .bind(
+        w.datum, w.begin, w.thuis ? 1 : 0, w.tegenstander, w.locatie_tekst, w.vbl_acc_guid,
+        // Tot 0.32.0 ontbrak de uitslag hier: wijzigde er tegelijk iets anders
+        // (in 0.30.1 bij elke thuiswedstrijd de tegenstander), dan kwam de
+        // uitslag pas een synchronisatie later binnen.
+        w.uitslag, w.hash, w.wedstrijd_guid, ploeg.guid
+      )
       .run();
 
     if (w.meldbaar) {

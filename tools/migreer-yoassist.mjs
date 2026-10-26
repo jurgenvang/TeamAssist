@@ -1,6 +1,10 @@
 // Een YOAssist-backup omzetten naar SQL voor TeamAssist (I1, fase 2b).
 //
-//   node tools/migreer-yoassist.mjs <yoassist-backup.json> <teamassist-backup.json> [--sql uit.sql]
+//   node tools/migreer-yoassist.mjs <yoassist-backup.json> <teamassist-backup.json> [--sql uit.sql] [--keuzes keuzes.json]
+//
+// Het keuzebestand (sinds 0.32.0) zegt per YOAssist-adres dat van een ouder
+// is, wie die ouder is:
+//   { "ruud@voorbeeld.be": { "ouder": { "voornaam": "Ruud", "achternaam": "Cuyvers" } } }
 //
 // Zonder --sql enkel het rapport: wie bij wie terechtkomt, wat er meegaat en
 // wat niet. Altijd eerst dat lezen. Met --sql komt er ook het script voor de
@@ -83,12 +87,60 @@ export function mogelijkOuderadres(email, voornaam, achternaam) {
   return true;
 }
 
-export function koppelPersonen(users, personen) {
+const zelfdeNaam = (p, voornaam, achternaam) =>
+  normaliseerNaam(p.voornaam) === normaliseerNaam(voornaam) &&
+  normaliseerNaam(p.achternaam) === normaliseerNaam(achternaam);
+
+/**
+ * Een YOAssist-adres dat van een ouder is (0.32.0, keuzebestand). Het adres
+ * gaat naar de ouder, het kind blijft zonder adres, en de koppeling wordt
+ * gelegd: zo meldt de ouder zich aan en handelt hij namens het kind, en
+ * krijgt hij de berichten van het kind mee (namens.js).
+ *
+ * De ouder: wie in TeamAssist dat adres al heeft; anders precies één
+ * naamgenoot zonder adres; anders een nieuwe persoon zonder rol.
+ * Het kind: precies één naamgenoot (op naam, nooit op het adres — dat
+ * hoort net bij de ouder); anders een nieuwe persoon.
+ */
+function koppelViaOuder(u, ouder, personen, opEmail) {
+  const email = String(u.email).toLowerCase();
+  let ouderRij = opEmail.get(email);
+  let ouderHoe = 'email';
+  if (!ouderRij) {
+    const kandidaten = personen.filter((p) => !p.email && zelfdeNaam(p, ouder.voornaam, ouder.achternaam));
+    ouderRij = kandidaten.length === 1 ? kandidaten[0] : null;
+    ouderHoe = ouderRij ? 'naam' : 'nieuw';
+  }
+  const kinderen = personen.filter((p) => zelfdeNaam(p, u.voornaam, u.achternaam) && p.id !== ouderRij?.id);
+  const kind = kinderen.length === 1 ? kinderen[0] : null;
+  return {
+    u,
+    persoon_id: kind?.id ?? nieuweId(`kind:${email}`),
+    hoe: kind ? 'naam' : 'nieuw',
+    persoon: kind,
+    zonderAdres: true,
+    ouder: {
+      id: ouderRij?.id ?? nieuweId(email),
+      hoe: ouderHoe,
+      voornaam: ouderRij?.voornaam ?? ouder.voornaam,
+      achternaam: ouderRij?.achternaam ?? ouder.achternaam,
+      email,
+    },
+  };
+}
+
+/**
+ * @param {object} [keuzes]  per YOAssist-adres: { ouder: { voornaam, achternaam } }
+ */
+export function koppelPersonen(users, personen, keuzes = {}) {
   const opEmail = new Map(
     personen.filter((p) => p.email).map((p) => [String(p.email).toLowerCase(), p])
   );
+  const keuzeVan = new Map(Object.entries(keuzes).map(([k, v]) => [k.toLowerCase(), v]));
   return users.map((u) => {
     const email = String(u.email).toLowerCase();
+    const keuze = keuzeVan.get(email);
+    if (keuze?.ouder) return koppelViaOuder(u, keuze.ouder, personen, opEmail);
     const treffer = opEmail.get(email);
     if (treffer) return { u, persoon_id: treffer.id, hoe: 'email', persoon: treffer };
 
@@ -115,7 +167,7 @@ export function koppelPersonen(users, personen) {
  * @param {object} ta   de TeamAssist-backup zoals /api/admin/backup ze geeft
  * @returns {{sql: string, rapport: string, telling: object}}
  */
-export function maakMigratie(yo, ta) {
+export function maakMigratie(yo, ta, keuzes = {}) {
   const g = yo.gegevens ?? {};
   const t = ta.tabellen ?? {};
   const rij = (naam) => g[naam] ?? [];
@@ -133,7 +185,12 @@ export function maakMigratie(yo, ta) {
   if (!seizoen) throw new Error('de TeamAssist-backup heeft geen actief seizoen');
 
   // --- personen ------------------------------------------------------------
-  const koppeling = koppelPersonen(rij('users'), t.personen ?? []);
+  const koppeling = koppelPersonen(rij('users'), t.personen ?? [], keuzes);
+  for (const adres of Object.keys(keuzes)) {
+    if (!rij('users').some((u) => String(u.email).toLowerCase() === adres.toLowerCase())) {
+      meldingen.push(`Het keuzebestand noemt ${adres}, maar die gebruiker staat niet in de YOAssist-backup.`);
+    }
+  }
   const persoonVan = new Map(koppeling.map((k) => [String(k.u.email).toLowerCase(), k.persoon_id]));
   const pid = (email) => (email ? persoonVan.get(String(email).toLowerCase()) ?? null : null);
 
@@ -141,10 +198,21 @@ export function maakMigratie(yo, ta) {
   for (const k of koppeling) {
     const { u } = k;
     const kanaal = kanaalVoorkeur(u);
+    // Een kind met het adres van een ouder: het adres gaat naar de ouder.
+    const eigenAdres = k.zonderAdres ? null : String(u.email).toLowerCase();
+    if (k.ouder) {
+      const o = k.ouder;
+      sql.push(
+        o.hoe === 'nieuw'
+          ? `INSERT OR IGNORE INTO personen (id, voornaam, achternaam, email, naam_bron)` +
+              ` VALUES (${q(o.id)}, ${q(o.voornaam ?? '')}, ${q(o.achternaam ?? '')}, ${q(o.email)}, 'club');`
+          : `UPDATE personen SET email = coalesce(email, ${q(o.email)}), gewijzigd = datetime('now') WHERE id = ${q(o.id)};`
+      );
+    }
     if (k.hoe === 'nieuw') {
       sql.push(
         `INSERT OR IGNORE INTO personen (id, voornaam, achternaam, email, tel_gsm, actief, kanaal_voorkeur, agenda_sleutel, naam_bron)` +
-          ` VALUES (${q(k.persoon_id)}, ${q(u.voornaam ?? '')}, ${q(u.achternaam ?? '')}, ${q(String(u.email).toLowerCase())},` +
+          ` VALUES (${q(k.persoon_id)}, ${q(u.voornaam ?? '')}, ${q(u.achternaam ?? '')}, ${q(eigenAdres)},` +
           ` ${q(u.gsm || null)}, ${u.actief ? 1 : 0}, ${q(kanaal)}, ${q(u.agenda_sleutel || null)}, 'club');`
       );
     } else {
@@ -152,17 +220,22 @@ export function maakMigratie(yo, ta) {
       // agendasleutel en het kanaal komen wel uit YOAssist — daar hangen
       // bestaande agenda-abonnementen en een bewuste keuze aan.
       sql.push(
-        `UPDATE personen SET email = coalesce(email, ${q(String(u.email).toLowerCase())}),` +
+        `UPDATE personen SET email = coalesce(email, ${q(eigenAdres)}),` +
           ` tel_gsm = coalesce(tel_gsm, ${q(u.gsm || null)}),` +
           ` agenda_sleutel = coalesce(agenda_sleutel, ${q(u.agenda_sleutel || null)}),` +
           ` kanaal_voorkeur = ${q(kanaal)}, gewijzigd = datetime('now')` +
           ` WHERE id = ${q(k.persoon_id)};`
       );
     }
-    if (mogelijkOuderadres(u.email, u.voornaam, u.achternaam)) {
+    if (k.ouder) {
+      sql.push(
+        `INSERT OR IGNORE INTO ouder_kind (ouder_id, kind_id) VALUES (${q(k.ouder.id)}, ${q(k.persoon_id)});`
+      );
+    } else if (mogelijkOuderadres(u.email, u.voornaam, u.achternaam)) {
       meldingen.push(
         `${u.voornaam} ${u.achternaam}: het adres ${u.email} is mogelijk dat van een ouder. ` +
-          'Komt het via het personensjabloon ook bij de ouder, dan botst het (personen.email is uniek).'
+          'Komt het via het personensjabloon ook bij de ouder, dan botst het (personen.email is uniek). ' +
+          'Is het van een ouder, zet het dan in een keuzebestand (--keuzes).'
       );
     }
     if (k.twijfel) meldingen.push(`${u.voornaam} ${u.achternaam}: nieuwe persoon, want ${k.twijfel}.`);
@@ -438,9 +511,17 @@ function maakRapport({ yo, ta, seizoen, koppeling, telling, meldingen }) {
   r.push('## Personen', '', '| YOAssist | Rollen | Wordt | Hoe |', '|---|---|---|---|');
   for (const k of koppeling) {
     const rollen = [k.u.profiel === 'YO+' ? 'YOPLUS' : 'YO', ...(k.u.is_admin ? ['YOADM'] : [])].join(', ');
-    const hoe = { email: 'bestaande persoon, op e-mailadres', naam: 'bestaande persoon, op naam (krijgt het e-mailadres)', nieuw: 'nieuwe persoon' }[k.hoe];
+    const hoe = {
+      email: 'bestaande persoon, op e-mailadres',
+      naam: k.zonderAdres ? 'bestaande persoon, op naam' : 'bestaande persoon, op naam (krijgt het e-mailadres)',
+      nieuw: 'nieuwe persoon',
+    }[k.hoe];
     const wie = k.persoon ? `${k.persoon.voornaam} ${k.persoon.achternaam}` : `${k.u.voornaam} ${k.u.achternaam}`;
-    r.push(`| ${k.u.voornaam} ${k.u.achternaam} (${k.u.email}) | ${rollen} | ${wie} — \`${k.persoon_id}\` | ${hoe}${k.twijfel ? ` — ${k.twijfel}` : ''} |`);
+    const viaOuder = k.ouder
+      ? ` — zonder eigen adres; het adres gaat naar ouder ${k.ouder.voornaam} ${k.ouder.achternaam}` +
+        ` (${{ email: 'bestaande persoon, op e-mailadres', naam: 'bestaande persoon, op naam', nieuw: 'nieuwe persoon' }[k.ouder.hoe]})`
+      : '';
+    r.push(`| ${k.u.voornaam} ${k.u.achternaam} (${k.u.email}) | ${rollen} | ${wie} — \`${k.persoon_id}\` | ${hoe}${k.twijfel ? ` — ${k.twijfel}` : ''}${viaOuder} |`);
   }
   r.push('', '## Per tabel', '', '| YOAssist | Rijen | Mee | Niet mee | Waarom niet |', '|---|---|---|---|---|');
   for (const [tabel, c] of Object.entries(telling)) {
@@ -480,14 +561,22 @@ export function deelOp({ kop, opdrachten }, max = 90_000) {
 // delen ernaast: uit-1.sql, uit-2.sql, ... voor de D1-console).
 if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
   const args = process.argv.slice(2);
-  const sqlIdx = args.indexOf('--sql');
-  const sqlPad = sqlIdx >= 0 ? args[sqlIdx + 1] : null;
-  const [yoPad, taPad] = args.filter((a, i) => i !== sqlIdx && i !== sqlIdx + 1);
+  const optie = (naam) => {
+    const i = args.indexOf(naam);
+    return i >= 0 ? args[i + 1] : null;
+  };
+  const sqlPad = optie('--sql');
+  const keuzesPad = optie('--keuzes');
+  const [yoPad, taPad] = args.filter((a, i) => !a.startsWith('--') && !args[i - 1]?.startsWith('--'));
   if (!yoPad || !taPad) {
-    console.error('gebruik: node tools/migreer-yoassist.mjs <yoassist-backup.json> <teamassist-backup.json> [--sql uit.sql]');
+    console.error('gebruik: node tools/migreer-yoassist.mjs <yoassist-backup.json> <teamassist-backup.json> [--sql uit.sql] [--keuzes keuzes.json]');
     process.exit(1);
   }
-  const uit = maakMigratie(JSON.parse(readFileSync(yoPad, 'utf8')), JSON.parse(readFileSync(taPad, 'utf8')));
+  const uit = maakMigratie(
+    JSON.parse(readFileSync(yoPad, 'utf8')),
+    JSON.parse(readFileSync(taPad, 'utf8')),
+    keuzesPad ? JSON.parse(readFileSync(keuzesPad, 'utf8')) : {}
+  );
   process.stdout.write(uit.rapport);
   if (sqlPad) {
     writeFileSync(sqlPad, uit.sql);

@@ -8,6 +8,8 @@
 import { json, fout, leesJson } from '../../lib/http.js';
 import { logSchrijf } from '../../lib/logboek.js';
 import { AANPASBAAR, schoon, controleer, pasPersoonAan } from '../../lib/persoonwijzigen.js';
+import { meelezen, oudersVan, kinderenVan } from '../../lib/namens.js';
+import { rondAfAlsIedereenJa } from '../meelezen.js';
 
 export { AANPASBAAR, controleer };
 
@@ -40,10 +42,23 @@ export async function persoonTonen(ctx) {
     .bind(id, seizoen.code)
     .all();
 
+  // Ouders en kinderen (0.32.0), met bij een kind of de ouders zijn
+  // berichten meekrijgen — dat verklaart waarom een ouder een mail kreeg.
+  const ouders = await oudersVan(db, id);
+  const kinderen = (await kinderenVan(db, id)).map((k) => ({
+    id: k.id,
+    voornaam: k.voornaam,
+    achternaam: k.achternaam,
+    ouders_meelezen: meelezen(k).aan,
+  }));
+
   return json({
     persoon,
     ploegen: ploegen.results ?? [],
     rollen: rollen.results ?? [],
+    ouders: ouders.map((o) => ({ id: o.id, voornaam: o.voornaam, achternaam: o.achternaam })),
+    kinderen,
+    ouders_meelezen: ouders.length ? meelezen(persoon).aan : null,
     aanpasbaar: Object.keys(AANPASBAAR),
   });
 }
@@ -319,4 +334,78 @@ export async function rolOntkoppelen(ctx) {
   });
 
   return json({ persoon_id, rol });
+}
+
+/**
+ * POST /api/admin/persoon/ouder-koppelen  { kind_id, ouder_id }
+ *
+ * Tot 0.32.0 kon een koppeling enkel via het personensjabloon ontstaan; een
+ * official die geen speler is, staat in geen enkel ploegsjabloon. Geen
+ * ketens: wie ouder is, is zelf geen kind, en omgekeerd — zoals de tabel
+ * het altijd al beschreef. Anders zou een grootouder via zijn kind bij de
+ * berichten van een kleinkind kunnen komen.
+ */
+export async function ouderKoppelen(ctx) {
+  const { db, persoon: beheerder, request } = ctx;
+  const { kind_id, ouder_id } = (await leesJson(request)) ?? {};
+  if (!kind_id || !ouder_id) return fout(400, 'kind_id en ouder_id zijn nodig');
+  if (kind_id === ouder_id) return fout(400, 'iemand is niet zijn eigen ouder');
+
+  const bestaan = await db
+    .prepare(`SELECT count(*) AS n FROM personen WHERE id IN (?, ?)`)
+    .bind(kind_id, ouder_id)
+    .first('n');
+  if (bestaan !== 2) return fout(404, 'die persoon bestaat niet');
+
+  const keten = await db
+    .prepare(
+      `SELECT
+         EXISTS (SELECT 1 FROM ouder_kind WHERE kind_id = ?1) AS ouder_is_kind,
+         EXISTS (SELECT 1 FROM ouder_kind WHERE ouder_id = ?2) AS kind_is_ouder`
+    )
+    .bind(ouder_id, kind_id)
+    .first();
+  if (keten.ouder_is_kind) return fout(400, 'die ouder is zelf als kind gekoppeld; ketens kunnen niet');
+  if (keten.kind_is_ouder) return fout(400, 'dat kind is zelf als ouder gekoppeld; ketens kunnen niet');
+
+  await db
+    .prepare(`INSERT INTO ouder_kind (ouder_id, kind_id) VALUES (?, ?) ON CONFLICT DO NOTHING`)
+    .bind(ouder_id, kind_id)
+    .run();
+  await logSchrijf(db, {
+    soort: 'beheer',
+    wie: beheerder.id,
+    wat: 'ouder gekoppeld',
+    details: `${ouder_id} is ouder van ${kind_id}`,
+  });
+  return json({ gekoppeld: true });
+}
+
+/**
+ * POST /api/admin/persoon/ouder-ontkoppelen  { kind_id, ouder_id }
+ *
+ * Wachtte een vraag om toestemming nog op net die ouder, dan valt zijn stem
+ * weg — en hadden alle anderen al ja gezegd, dan is ze daarmee beslist.
+ */
+export async function ouderOntkoppelen(ctx) {
+  const { db, persoon: beheerder, request } = ctx;
+  const { kind_id, ouder_id } = (await leesJson(request)) ?? {};
+  if (!kind_id || !ouder_id) return fout(400, 'kind_id en ouder_id zijn nodig');
+
+  const uit = await db
+    .prepare(`DELETE FROM ouder_kind WHERE ouder_id = ? AND kind_id = ?`)
+    .bind(ouder_id, kind_id)
+    .run();
+  if (!uit.meta?.changes) return fout(404, 'die koppeling bestaat niet');
+
+  await db.prepare(`DELETE FROM ouder_toestemming WHERE kind_id = ? AND ouder_id = ?`).bind(kind_id, ouder_id).run();
+  await rondAfAlsIedereenJa(ctx, kind_id);
+
+  await logSchrijf(db, {
+    soort: 'beheer',
+    wie: beheerder.id,
+    wat: 'ouder ontkoppeld',
+    details: `${ouder_id} niet langer ouder van ${kind_id}`,
+  });
+  return json({ ontkoppeld: true });
 }

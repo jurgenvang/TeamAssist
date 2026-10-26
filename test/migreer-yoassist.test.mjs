@@ -285,3 +285,53 @@ test('een deel breekt nooit midden in een tekst, ook niet bij een heel kleine gr
   }
   assert.ok(delen.some((d) => d.includes('Dag Anna;\nJe fluit zaterdag;')), 'het bericht staat heel in één deel');
 });
+
+// --- het keuzebestand (0.32.0) ------------------------------------------------------
+
+test('een adres van een ouder: het adres gaat naar de ouder, het kind blijft zonder, en ze worden gekoppeld', () => {
+  const { ta, q: db } = taDb();
+  const keuzes = { 'ANNA@example.org': { ouder: { voornaam: 'Paul', achternaam: 'Peeters' } } };
+  const { sql, rapport } = maakMigratie(yoBackup(), ta, keuzes);
+  db.exec(sql);
+
+  const ouder = db.prepare(`SELECT * FROM personen WHERE email = 'anna@example.org'`).get();
+  assert.equal(ouder.voornaam, 'Paul');
+  assert.equal(ouder.id, nieuweId('anna@example.org'));
+  assert.equal(db.prepare(`SELECT email FROM personen WHERE id = 'p-anna'`).get().email, null);
+  assert.ok(db.prepare(`SELECT 1 FROM ouder_kind WHERE ouder_id = ? AND kind_id = 'p-anna'`).get(ouder.id));
+  // De rollen en aanduidingen blijven bij het kind.
+  assert.equal(db.prepare(`SELECT persoon_id FROM rollen WHERE rol = 'YO'`).get().persoon_id, 'p-anna');
+  assert.equal(db.prepare(`SELECT persoon_id FROM officials_aanduidingen`).get().persoon_id, 'p-anna');
+  assert.match(rapport, /Anna Peeters .*het adres gaat naar ouder Paul Peeters \(nieuwe persoon\)/);
+  assert.doesNotMatch(rapport, /Anna Peeters: het adres .* is mogelijk dat van een ouder/);
+
+  // Opnieuw uitvoeren: geen tweede ouder, geen tweede koppeling.
+  db.exec(sql);
+  assert.equal(tel(db, `SELECT count(*) AS n FROM ouder_kind`), 1);
+  assert.deepEqual(db.prepare(`PRAGMA foreign_key_check`).all(), []);
+});
+
+test('een ouder die al in TeamAssist staat, wordt herkend op zijn naam', () => {
+  const { db: d1, q: db } = taDb();
+  db.exec(`INSERT INTO personen (id, voornaam, achternaam) VALUES ('p-paul', 'Paul', 'Peeters')`);
+  const ta = {
+    gemaakt: 'x',
+    tabellen: {
+      seizoenen: db.prepare(`SELECT * FROM seizoenen`).all(),
+      teams: db.prepare(`SELECT * FROM teams`).all(),
+      personen: db.prepare(`SELECT * FROM personen`).all(),
+      wedstrijden: db.prepare(`SELECT * FROM wedstrijden`).all(),
+    },
+  };
+  void d1;
+  const { sql } = maakMigratie(yoBackup(), ta, { 'anna@example.org': { ouder: { voornaam: 'Paul', achternaam: 'Peeters' } } });
+  db.exec(sql);
+  assert.equal(db.prepare(`SELECT email FROM personen WHERE id = 'p-paul'`).get().email, 'anna@example.org');
+  assert.ok(db.prepare(`SELECT 1 FROM ouder_kind WHERE ouder_id = 'p-paul' AND kind_id = 'p-anna'`).get());
+});
+
+test('een keuze voor een adres dat niet in YOAssist staat, staat in het rapport', () => {
+  const { ta } = taDb();
+  const { rapport } = maakMigratie(yoBackup(), ta, { 'niemand@x.be': { ouder: { voornaam: 'A', achternaam: 'B' } } });
+  assert.match(rapport, /niemand@x\.be, maar die gebruiker staat niet in de YOAssist-backup/);
+});

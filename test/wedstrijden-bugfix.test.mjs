@@ -122,3 +122,13 @@ test('de tegenstander alsnog aanvullen werkt de rij bij, maar meldt niets', asyn
   assert.equal(db._sqlite.prepare(`SELECT tegenstander FROM wedstrijden WHERE team_guid = ?`).get(T1).tegenstander, 'ROL B');
   assert.equal(db._sqlite.prepare(`SELECT count(*) AS n FROM logboek WHERE wat LIKE 'wedstrijd gewijzigd%'`).get().n, 0);
 });
+
+test('wijzigt er iets en komt de uitslag tegelijk binnen, dan staat ze er meteen', async () => {
+  const db = zetKlaar();
+  await sync(db, (guid) => (guid === T1 ? [ONDERLING] : []));
+  const gespeeld = { ...ONDERLING, locatie_tekst: 'x', accNaam: 'Andere zaal', gespeeld: 'G', uitslag: ' 60- 55' };
+  await sync(db, (guid) => (guid === T1 ? [gespeeld] : []));
+  const rij = db._sqlite.prepare(`SELECT locatie_tekst, uitslag FROM wedstrijden WHERE team_guid = ?`).get(T1);
+  assert.equal(rij.locatie_tekst, 'Andere zaal');
+  assert.equal(rij.uitslag, '60- 55');
+});

@@ -44,6 +44,7 @@ export async function toonPersoon(id) {
 
   toonPloegen(p.ploegen ?? []);
   toonRollen(p.rollen ?? []);
+  toonFamilie(uitkomst.body);
   await vulTeamkeuze();
 
   el('persoonverwijderen').textContent = p.actief
@@ -117,6 +118,81 @@ function toonRollen(rollen) {
   }
 }
 
+// Ouders en kinderen (0.32.0). Koppelen kon tot dan enkel via het
+// personensjabloon; een official die geen speler is, staat daar niet in.
+function toonFamilie({ ouders = [], kinderen = [], ouders_meelezen }) {
+  const rijen = [
+    ...ouders.map((o) => ({ ...o, is: 'ouder', ouder_id: o.id, kind_id: huidige.id })),
+    ...kinderen.map((k) => ({ ...k, is: 'kind', ouder_id: huidige.id, kind_id: k.id })),
+  ];
+  el('persoonfamilielijf').innerHTML = rijen
+    .map(
+      (r) => `<tr>
+        <td><button type="button" class="alslink" data-persoon-open="${veilig(r.id)}">${veilig(r.voornaam)} ${veilig(r.achternaam)}</button></td>
+        <td class="ploegen">${r.is}${
+          r.is === 'kind' ? (r.ouders_meelezen ? ' — berichten ook naar de ouders' : ' — berichten enkel naar het kind') : ''
+        }</td>
+        <td><button type="button" class="alslink" data-familie-weg data-ouder="${veilig(r.ouder_id)}" data-kind="${veilig(r.kind_id)}">Ontkoppelen</button></td>
+      </tr>`
+    )
+    .join('');
+  el('persoonmeelezen').textContent =
+    ouders_meelezen === null || ouders_meelezen === undefined
+      ? ''
+      : ouders_meelezen
+        ? 'Berichten aan deze persoon gaan ook naar de ouders.'
+        : 'Berichten aan deze persoon gaan enkel naar de persoon zelf.';
+  el('persoonfamilietreffers').innerHTML = '';
+
+  for (const knop of el('persoonfamilielijf').querySelectorAll('[data-persoon-open]')) {
+    knop.addEventListener('click', () => toonPersoon(knop.dataset.persoonOpen));
+  }
+  for (const knop of el('persoonfamilielijf').querySelectorAll('[data-familie-weg]')) {
+    knop.addEventListener('click', async () => {
+      if (!confirm('Deze koppeling tussen ouder en kind verwijderen?')) return;
+      const uit = await api('/api/admin/persoon/ouder-ontkoppelen', 'POST', {
+        ouder_id: knop.dataset.ouder,
+        kind_id: knop.dataset.kind,
+      });
+      if (uit.status === 200) await toonPersoon(huidige.id);
+      else toon('persoonmelding', uit.body?.fout ?? `Fout ${uit.status}`, true);
+    });
+  }
+}
+
+async function zoekFamilie() {
+  const term = el('persoonfamiliezoek').value.trim();
+  if (!term || !huidige) return;
+  const uit = await api(`/api/admin/personen?zoek=${encodeURIComponent(term)}`);
+  if (uit.status !== 200) {
+    toon('persoonmelding', uit.body?.fout ?? `Fout ${uit.status}`, true);
+    return;
+  }
+  const treffers = (uit.body.personen ?? []).filter((p) => p.id !== huidige.id);
+  el('persoonfamilietreffers').innerHTML = treffers.length
+    ? `<table><tbody>${treffers
+        .map(
+          (p) => `<tr>
+            <td>${veilig(p.voornaam)} ${veilig(p.achternaam)}</td>
+            <td><button type="button" class="alslink" data-als="ouder" data-id="${veilig(p.id)}">is ouder</button></td>
+            <td><button type="button" class="alslink" data-als="kind" data-id="${veilig(p.id)}">is kind</button></td>
+          </tr>`
+        )
+        .join('')}</tbody></table>`
+    : '<p class="klein">Niemand gevonden.</p>';
+
+  for (const knop of el('persoonfamilietreffers').querySelectorAll('[data-als]')) {
+    knop.addEventListener('click', async () => {
+      const ander = knop.dataset.id;
+      const body =
+        knop.dataset.als === 'ouder' ? { ouder_id: ander, kind_id: huidige.id } : { ouder_id: huidige.id, kind_id: ander };
+      const res = await api('/api/admin/persoon/ouder-koppelen', 'POST', body);
+      if (res.status === 200) await toonPersoon(huidige.id);
+      else toon('persoonmelding', res.body?.fout ?? `Fout ${res.status}`, true);
+    });
+  }
+}
+
 async function vulTeamkeuze() {
   const uit = await api('/api/admin/teams');
   if (uit.status !== 200) return;
@@ -151,6 +227,7 @@ async function bewaar() {
 
 export function koppelPersoonscherm() {
   el('persoonbewaren').addEventListener('click', bewaar);
+  el('persoonfamiliezoeken').addEventListener('click', zoekFamilie);
   el('persoonteamkoppelen').addEventListener('click', async () => {
     if (!huidige) return;
     const team_guid = el('persoonteamkeuze').value;

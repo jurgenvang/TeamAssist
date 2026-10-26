@@ -54,6 +54,10 @@ test('een route die geen recht vraagt, doet dat bewust', () => {
     [
       '/api/mij',
       '/api/mij/voorkeuren',
+      // Over jezelf of een eigen kind; de route controleert ouder_kind zelf.
+      '/api/meelezen',
+      '/api/meelezen',
+      '/api/meelezen/antwoord',
       '/api/berichten',
       '/api/berichten/ongelezen',
       '/api/berichten/gelezen',

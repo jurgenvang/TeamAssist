@@ -556,6 +556,14 @@
         <button type="button" class="stil" id="meldingenuit" hidden>Uitzetten op dit toestel</button>
       </form>
       <div id="meldingenmelding" class="melding" hidden></div>
+
+      <!-- Berichten ook naar de ouders (0.32.0); gevuld door meelezen.js -->
+      <div id="meelezen" hidden>
+        <h3>Berichten aan je ouders</h3>
+        <div id="meelezenzelf"></div>
+        <div id="meelezenkinderen"></div>
+        <div id="meelezenmelding" class="melding" hidden></div>
+      </div>
     </section>
 
     <!-- Detail van één persoon, over de tabbladen heen -->
@@ -593,6 +601,18 @@
         <select id="persoonrolteam" hidden></select>
         <button type="button" class="stil" id="persoonrolkoppelen">Koppelen</button>
       </form>
+
+      <h3>Ouders en kinderen</h3>
+      <p class="klein" id="persoonmeelezen"></p>
+      <table>
+        <thead><tr><th>Naam</th><th>Is</th><th></th></tr></thead>
+        <tbody id="persoonfamilielijf"></tbody>
+      </table>
+      <form>
+        <input type="search" id="persoonfamiliezoek" placeholder="Zoek een persoon om te koppelen">
+        <button type="button" class="stil" id="persoonfamiliezoeken">Zoeken</button>
+      </form>
+      <div id="persoonfamilietreffers"></div>
 
       <form>
         <button type="button" id="persoonbewaren">Bewaren</button>

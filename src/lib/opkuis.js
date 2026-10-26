@@ -82,6 +82,8 @@ export async function verwijderInactievePersonenOp(db) {
     await db.prepare(`DELETE FROM accounts WHERE persoon_id = ?`).bind(id).run();
     await db.prepare(`DELETE FROM team_spelers WHERE persoon_id = ?`).bind(id).run();
     await db.prepare(`DELETE FROM rollen WHERE persoon_id = ?`).bind(id).run();
+    // Sinds 0.32.0: een openstaande vraag om toestemming, als kind of als ouder.
+    await db.prepare(`DELETE FROM ouder_toestemming WHERE ouder_id = ? OR kind_id = ?`).bind(id, id).run();
     await db.prepare(`DELETE FROM ouder_kind WHERE ouder_id = ? OR kind_id = ?`).bind(id, id).run();
     await db.prepare(`DELETE FROM wedstrijdselecties WHERE persoon_id = ?`).bind(id).run();
     await db.prepare(`DELETE FROM berichten WHERE persoon_id = ?`).bind(id).run();

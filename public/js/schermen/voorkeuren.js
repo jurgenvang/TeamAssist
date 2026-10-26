@@ -10,6 +10,7 @@
 import { api } from '../api.js';
 import { el, toon } from '../hulp.js';
 import { toonMeldingenstatus } from './meldingen.js';
+import { toonMeelezen } from './meelezen.js';
 
 const OPSLAG_MODUS = 'teamassist.donkere_modus';
 
@@ -34,6 +35,7 @@ export function toonVoorkeuren(persoon) {
   el('voorkeurenmelding').hidden = true;
   el('voorkeuren').hidden = false;
   toonMeldingenstatus();
+  toonMeelezen();
 }
 
 export async function bewaarVoorkeuren() {

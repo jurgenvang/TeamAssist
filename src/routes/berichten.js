@@ -6,6 +6,7 @@
 
 import { json, fout, leesJson } from '../lib/http.js';
 import { inDoelgroep } from '../lib/doelgroep.js';
+import { meelezenSql } from '../lib/namens.js';
 
 const KORT_MAX = 160;
 
@@ -19,14 +20,28 @@ export function korteRegel(kort, inhoud) {
   return bron.length > KORT_MAX ? `${bron.slice(0, KORT_MAX - 1).trimEnd()}…` : bron;
 }
 
+/**
+ * Welke berichten iemand ziet: de zijne, plus die van elk kind waarvan de
+ * ouders meelezen (0.32.0, namens.js). Een kind dat het uitzette — een
+ * meerderjarige, of een minderjarige met toestemming — verdwijnt ook uit het
+ * overzicht van zijn ouders, ook met zijn oudere berichten.
+ */
+function zichtbaarVoor(param = '?1') {
+  return `(b.persoon_id = ${param}
+    OR b.persoon_id IN (SELECT ok.kind_id FROM ouder_kind ok JOIN personen p ON p.id = ok.kind_id
+                         WHERE ok.ouder_id = ${param} AND ${meelezenSql('p')}))`;
+}
+
 /** GET /api/berichten — wat ik ontving, nieuwste eerst. */
 export async function berichtenTonen(ctx) {
   const { db, persoon } = ctx;
   const rijen = await db
     .prepare(
-      `SELECT id, soort, onderwerp, kort, inhoud, verzonden, gelezen_op
-         FROM berichten WHERE persoon_id = ?
-        ORDER BY id DESC LIMIT 100`
+      `SELECT b.id, b.persoon_id, b.soort, b.onderwerp, b.kort, b.inhoud, b.verzonden, b.gelezen_op,
+              k.voornaam AS kind_voornaam, k.achternaam AS kind_achternaam
+         FROM berichten b JOIN personen k ON k.id = b.persoon_id
+        WHERE ${zichtbaarVoor('?1')}
+        ORDER BY b.id DESC LIMIT 100`
     )
     .bind(persoon.id)
     .all();
@@ -42,6 +57,9 @@ export async function berichtenTonen(ctx) {
       inhoud: String(r.inhoud ?? '').trim() && String(r.inhoud).trim() !== kort ? r.inhoud : null,
       verzonden: r.verzonden,
       gelezen: Boolean(r.gelezen_op),
+      // Een bericht van een kind: voor wie het eigenlijk was. Verwijderen kan
+      // enkel het kind zelf.
+      voor: r.persoon_id === persoon.id ? null : `${r.kind_voornaam} ${r.kind_achternaam}`.trim(),
     };
   });
   return json({ ongelezen: berichten.filter((b) => !b.gelezen).length, berichten });
@@ -51,7 +69,7 @@ export async function berichtenTonen(ctx) {
 export async function berichtenOngelezen(ctx) {
   const { db, persoon } = ctx;
   const n = await db
-    .prepare(`SELECT count(*) AS n FROM berichten WHERE persoon_id = ? AND gelezen_op IS NULL`)
+    .prepare(`SELECT count(*) AS n FROM berichten b WHERE ${zichtbaarVoor('?1')} AND b.gelezen_op IS NULL`)
     .bind(persoon.id)
     .first('n');
   return json({ ongelezen: n ?? 0 });
@@ -63,7 +81,7 @@ export async function berichtGelezen(ctx) {
   const body = (await leesJson(request)) ?? {};
   if (body.alles === true) {
     const res = await db
-      .prepare(`UPDATE berichten SET gelezen_op = datetime('now') WHERE persoon_id = ? AND gelezen_op IS NULL`)
+      .prepare(`UPDATE berichten AS b SET gelezen_op = datetime('now') WHERE ${zichtbaarVoor('?1')} AND b.gelezen_op IS NULL`)
       .bind(persoon.id)
       .run();
     return json({ gewijzigd: res.meta?.changes ?? 0 });
@@ -71,8 +89,8 @@ export async function berichtGelezen(ctx) {
   const id = Number(body.id);
   if (!Number.isInteger(id)) return fout(400, 'id ontbreekt');
   const res = await db
-    .prepare(`UPDATE berichten SET gelezen_op = datetime('now') WHERE id = ? AND persoon_id = ? AND gelezen_op IS NULL`)
-    .bind(id, persoon.id)
+    .prepare(`UPDATE berichten AS b SET gelezen_op = datetime('now') WHERE b.id = ?2 AND ${zichtbaarVoor('?1')} AND b.gelezen_op IS NULL`)
+    .bind(persoon.id, id)
     .run();
   return json({ gewijzigd: res.meta?.changes ?? 0 });
 }

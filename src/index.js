@@ -18,6 +18,7 @@ import { voerGeplandeTakenUit } from './lib/geplandetaken.js';
 import { logSchrijf } from './lib/logboek.js';
 import { mij } from './routes/mij.js';
 import { voorkeurenBewaren } from './routes/voorkeuren.js';
+import { meelezenTonen, meelezenZetten, meelezenAntwoord } from './routes/meelezen.js';
 import {
   berichtenTonen, berichtenOngelezen, berichtGelezen, berichtVerwijderen, mededelingTonen, mededelingWegklikken,
 } from './routes/berichten.js';
@@ -29,7 +30,10 @@ import { vblDiagnose } from './routes/admin/vbl-diagnose.js';
 import { teamsLijst, teamsSync, teamGevolgd } from './routes/admin/teams.js';
 import { ledenSync } from './routes/admin/leden.js';
 import { teamLeden, personenZoeken } from './routes/admin/bekijken.js';
-import { persoonTonen, persoonBewaren, persoonActief, teamKoppelen, teamOntkoppelen, rolKoppelen, rolOntkoppelen } from './routes/admin/persoon.js';
+import {
+  persoonTonen, persoonBewaren, persoonActief, teamKoppelen, teamOntkoppelen, rolKoppelen, rolOntkoppelen,
+  ouderKoppelen, ouderOntkoppelen,
+} from './routes/admin/persoon.js';
 import { instellingenTonen, instellingBewaren, instellingLezen } from './routes/admin/instellingen.js';
 import { backupExporteren } from './routes/admin/backup.js';
 import {
@@ -85,6 +89,11 @@ export const ROUTES = [
 
   { methode: 'GET', pad: '/api/mij', doe: mij },
   { methode: 'POST', pad: '/api/mij/voorkeuren', doe: voorkeurenBewaren },
+  // Berichten ook naar de ouders (0.32.0): over jezelf of een eigen kind;
+  // dat het een eigen kind is, controleert de route tegen ouder_kind.
+  { methode: 'GET', pad: '/api/meelezen', doe: meelezenTonen },
+  { methode: 'POST', pad: '/api/meelezen', doe: meelezenZetten },
+  { methode: 'POST', pad: '/api/meelezen/antwoord', doe: meelezenAntwoord },
   // Mijn berichten en de banner: over jezelf, zoals /api/mij. Elke query
   // filtert op de persoon uit het token.
   { methode: 'GET', pad: '/api/berichten', doe: berichtenTonen },
@@ -150,6 +159,8 @@ export const ROUTES = [
   { methode: 'POST', pad: '/api/admin/persoon/team-ontkoppelen', recht: 'personen.beheren', doe: teamOntkoppelen },
   { methode: 'POST', pad: '/api/admin/persoon/rol-koppelen', recht: 'personen.beheren', doe: rolKoppelen },
   { methode: 'POST', pad: '/api/admin/persoon/rol-ontkoppelen', recht: 'personen.beheren', doe: rolOntkoppelen },
+  { methode: 'POST', pad: '/api/admin/persoon/ouder-koppelen', recht: 'personen.beheren', doe: ouderKoppelen },
+  { methode: 'POST', pad: '/api/admin/persoon/ouder-ontkoppelen', recht: 'personen.beheren', doe: ouderOntkoppelen },
 
   { methode: 'GET', pad: '/api/admin/instellingen', recht: 'systeem.beheren', doe: instellingenTonen },
   { methode: 'POST', pad: '/api/admin/instellingen', recht: 'systeem.beheren', doe: instellingBewaren },

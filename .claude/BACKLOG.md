@@ -11,7 +11,7 @@ WIJZIGINGEN-bestanden blijven kloppen:
   punt *U* (Microsoft 365) heet hier **VU**, want TeamAssist heeft al een *U*
 - **T** + nummer, en de letters **A–AB** — TeamAssist
 
-Stand: YOAssist **v1.17.0**, TeamAssist **0.31.0**
+Stand: YOAssist **v1.17.0**, TeamAssist **0.32.0**
 
 ---
 
@@ -21,6 +21,8 @@ Bijgewerkt bij elke versie. Voor de volledige tekst: zoek de kop verderop
 (`### T7`, `### V43`, `## I1`, ...).
 
 ### Wacht op een actie van Jurgen
+- **0.32.0** — `migratie-0.32.0.sql` uitvoeren in de D1-console; daarna gaat
+  `main` vooruit (eerst de migratie, dan de push).
 - **AA** — een droogloop op de echte Worker (`POST /api/admin/periodes/sync`)
   om de OpenHolidays-fix te bevestigen.
 - **AB** — `{{ .Token }}` in de Magic Link-mailsjabloon van Supabase.
@@ -33,8 +35,9 @@ Bijgewerkt bij elke versie. Voor de volledige tekst: zoek de kop verderop
   zie README); zonder blijft alles per mail.
 
 ### Klaar om te bouwen
-- **I1, fase 3** — de backend van YOAssist overzetten, in zes pakketten
-  (3a–3f, zie I1). 3a (ouder en kind) wacht nog op de details van punt 4.
+- **I1, fase 3b (0.33.0)** — de kern van de module Officials: de
+  wedstrijdsync vult `officials_wedstrijd`, beschikbaarheid, aanduiden,
+  botsingen, problemen. Daarna 3c–3f (zie I1).
 - **T7** — tabblad Mijn club.
 - **T12** — aanmelden als.
 - **T18, T19** — twee kleine gaten uit de code-audit.
@@ -195,8 +198,8 @@ rapport. Verder:
 3. **Backend overzetten**, in zes pakketten — **beslist** (Jurgen, 26
    oktober 2026). Elk pakket enkel backend en tests; de schermen komen in
    fase 4. De tests van YOAssist verhuizen mee naar `node:sqlite`.
-   - **3a — 0.32.0: ouder en kind duidelijk.** Zie *Ouder en kind* hieronder.
-     Eerst, omdat aanduidingen, berichten en de migratie erop steunen.
+   - **3a — 0.32.0, afgewerkt: ouder en kind.** Zie *Ouder en kind*
+     hieronder.
    - **3b — 0.33.0: de kern.** De wedstrijdsync vult ook
      `officials_wedstrijd` (scope U10/U12 automatisch, scheidsrechters van de
      bond, forfait); hoeveel officials nodig, botsingen, beschikbaarheid
@@ -220,7 +223,7 @@ rapport. Verder:
 
 Tot de overstap blijft YOAssist live en krijgt het enkel bugfixes.
 
-### Ouder en kind — **beslist** (Jurgen, 26 oktober 2026), op de details van punt 4 na
+### Ouder en kind — **beslist** (Jurgen, 26 oktober 2026), **gebouwd in 0.32.0**
 
 Waarom nu: een deel van de officials is minderjarig, en in YOAssist vult een
 ouder vaak in voor zijn kind. De migratie toonde het al: Max Cuyvers staat in
@@ -261,7 +264,7 @@ YOAssist met `ruudcuyvers@…`, vermoedelijk het adres van zijn vader.
    - **Meerderjarig: standaard uit.** Het kind kan het zelf aanzetten (en
      weer uitzetten), zonder iemand te vragen.
 
-   Voorstel voor de details, **nog te bevestigen**:
+   De details, **bevestigd**:
    - **Minderjarig volgt uit `geboortedatum`.** Is die onbekend, dan geldt het
      kind als minderjarig: liever een bericht te veel bij een ouder dan een
      minderjarige die stil van de lijst verdwijnt.
@@ -338,6 +341,7 @@ YOAssist met `ruudcuyvers@…`, vermoedelijk het adres van zijn vader.
 | 0.23.0 | T14 afgewerkt: een volledige backup van de databank als JSON. Beter dan aanvankelijk voorgesteld — geen hardcoded tabellenlijst met een test die drift moet vangen (de YOAssist-aanpak), maar tabellen rechtstreeks uit `sqlite_master` gehaald, wat de hele bugklasse structureel onmogelijk maakt. De kerntest bewijst dat letterlijk: een tabel die pas ná het schrijven van de route wordt aangemaakt, zit er toch in. |
 | 0.24.0 | T16 en T17 afgewerkt. `verwittig()` heeft geen `kanaal`-parameter meer en leest voortaan `kanaal_voorkeur` — mail blijft de terugval zolang push niet bestaat, met een aparte logregel voor wie 'push' koos. Blokken bij Zaalbeheer staan nu gegroepeerd per weekdag als losse blokjes, met bewust neutrale kleuren in plaats van de accentkleur. |
 | 0.25.0 | T15 afgewerkt: opruiming van `logboek` (365 dagen), `taak_runs` (30 dagen), `berichten` (120 dagen), en het definitief verwijderen van een inactieve persoon na 180 dagen. Twee tabellen extra gevonden tijdens het bouwen (`accounts`, `ouder_kind`) die niet in het oorspronkelijke overzicht stonden. Enkel `aanwezigheden` wordt geanonimiseerd in plaats van verwijderd — de enige tabel waar dat structureel kon — wat een schema-heropbouw vroeg, grondig getoetst tegen een nagemaakte bestaande databank. |
+| 0.32.0 | I1 fase 3a: ouder en kind. Berichten aan een kind gaan ook naar zijn ouders: altijd zonder eigen adres, standaard bij een minderjarige (uitzetten pas met toestemming van elke ouder), standaard niet bij een meerderjarige (die beslist zelf); onbekende geboortedatum telt als minderjarig. Eén rij in `berichten`, bij het kind; de ouder ziet ze in zijn eigen Mijn berichten met 'voor …'. De schakelaar en de vragen bij Mijn voorkeuren; ouders en kinderen koppelen in het persoonsscherm (geen ketens). Eén gedeelde controle `namens.js`. De migratie kent een keuzebestand voor YOAssist-adressen van een ouder. Ook: een gewijzigde wedstrijd kreeg haar uitslag pas een sync later. Schema: `personen.ouders_meelezen` (ALTER), tabel `ouder_toestemming` (CREATE). 878 tests. |
 | 0.31.0 | I1 fase 2b: `tools/migreer-yoassist.mjs`. Leest een YOAssist- en een TeamAssist-backup en maakt een rapport (wie bij wie terechtkomt, per tabel wat meegaat en waarom niet, aandachtspunten zoals een mogelijk ouderadres) plus SQL, in delen voor de D1-console, op een grens tussen opdrachten. Personen op e-mail, anders op naam bij precies één kandidaat zonder ander adres; wedstrijden via (guid, ploeg), niet via id; alles opnieuw uit te voeren zonder dubbels. Getoetst tegen de echte backups: 9 officials, 210 wedstrijden, alle rijen terecht, geen foreign-keyfout. Geen schemawijziging. 853 tests. |
 | 0.30.1 | Bugfixes uit het logboek van de echte Worker. *Backup downloaden* gaf een 500 op de interne D1-tabel `_cf_KV`; die wordt overgeslagen, en een onleesbare tabel houdt de rest niet meer tegen (`problemen`). De Supabase-ping faalde een maand ongemerkt (project gepauzeerd): bij de tweede mislukking na elkaar van elke geplande taak nu een bericht aan de ADMINs, daarna wekelijks; de laatste geslaagde run per taak blijft bij de opruiming. De wedstrijdsync faalde op een wedstrijd tussen twee eigen ploegen (nu één rij per ploeg) en op een gekende wedstrijd zonder uur (oud moment blijft); de tegenstander bleef leeg bij elke thuiswedstrijd (`uTNaam` i.p.v. `tUNaam`). Schema: heropbouw van `wedstrijden` (UNIQUE op guid + ploeg), met de zes verwijzende tabellen apart gezet en teruggezet. 843 tests. |
 | 0.30.0 | I1 fase 2a: het schema van de module Officials. Rollen `YO`, `YOPLUS` en `YOADM` (clubbreed) met vier rechten `officials.*`; YOADM beheert de officials zonder beheerder van de hele club te zijn. `teams.officials` (los van `gevolgd`, standaard aan zoals in YOAssist), `wedstrijden.bron`, `personen.agenda_sleutel`, en twaalf tabellen `officials_*`. Een test legt de rollen op vijf plaatsen naast elkaar (rechtenlaag, CHECK, koppelroute, twee schermen). Schema: heropbouw van `rollen` (CHECK), drie ALTER's, twaalf CREATE's. 824 tests. |
