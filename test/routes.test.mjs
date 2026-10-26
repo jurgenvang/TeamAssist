@@ -68,6 +68,8 @@ test('een route die geen recht vraagt, doet dat bewust', () => {
       '/api/officials/probleem',
       '/api/officials/vergoeding',
       '/api/officials/agenda',
+      '/api/officials/voorkeuren',
+      '/api/officials/voorkeuren',
       '/api/berichten',
       '/api/berichten/ongelezen',
       '/api/berichten/gelezen',

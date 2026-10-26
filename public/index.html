@@ -46,6 +46,7 @@
         <button type="button" role="menuitem" id="naammenu-testrol" hidden>Kijken als …</button>
         <div class="naammenu-scheiding" id="naammenu-scheiding" hidden></div>
         <button type="button" role="menuitem" id="naammenu-berichten">Mijn berichten</button>
+        <button type="button" role="menuitem" id="naammenu-vergoeding" hidden>Mijn vergoeding</button>
         <button type="button" role="menuitem" id="naammenu-voorkeuren">Mijn voorkeuren</button>
         <button type="button" role="menuitem" id="naammenu-afmelden">Afmelden</button>
       </div>
@@ -94,6 +95,12 @@
     </div>
 
     <nav id="navigatie" hidden></nav>
+
+    <!-- Aanduidingen: het scherm van een official (0.38.0) -->
+    <section id="tab-aanduidingen" hidden>
+      <div id="aanduidingennamens"></div>
+      <div id="aanduidingenlijst"></div>
+    </section>
 
     <!-- Overzicht -->
     <section id="tab-mij" hidden>
@@ -514,6 +521,14 @@
       <div id="berichtenlijst"></div>
     </section>
 
+    <!-- Mijn vergoeding, bereikbaar via het naammenu (0.38.0) -->
+    <section id="vergoedingscherm" hidden>
+      <h2>Mijn vergoeding</h2>
+      <div id="vergoedingnamens"></div>
+      <div id="vergoedinglijst"></div>
+      <form><button type="button" class="stil" id="vergoedingsluiten">Sluiten</button></form>
+    </section>
+
     <!-- Mijn voorkeuren, bereikbaar via het naammenu -->
     <section id="voorkeuren" hidden>
       <h2>Mijn voorkeuren</h2>
@@ -556,6 +571,29 @@
         <button type="button" class="stil" id="meldingenuit" hidden>Uitzetten op dit toestel</button>
       </form>
       <div id="meldingenmelding" class="melding" hidden></div>
+
+      <!-- Voor officials (0.38.0); gevuld door officials-voorkeuren.js -->
+      <div id="officialsvoorkeuren" hidden>
+        <h3>Als official</h3>
+        <div id="officialsvoorkeurennamens"></div>
+        <label class="vinkje"><input type="checkbox" id="herinneravond"> Herinnering de avond voor ik fluit</label>
+        <label class="vinkje"><input type="checkbox" id="herinnerochtend"> Herinnering de ochtend zelf</label>
+        <label class="vinkje"><input type="checkbox" id="gsmdelen"> Mijn gsm-nummer tonen aan wie samen met mij fluit</label>
+        <form>
+          <button type="button" id="officialsvoorkeurenbewaren">Bewaren</button>
+          <button type="button" class="stil" id="agendalinkknop">Agendalink</button>
+        </form>
+        <div id="agendalink" hidden>
+          <p class="klein">
+            Voeg deze link toe als abonnement in Google Agenda, Apple Kalender of Outlook. Je
+            agenda toont dan de wedstrijden die je fluit. Een agenda-app ververst zo'n
+            abonnement pas na enkele uren, nooit meteen.
+          </p>
+          <p id="agendalinktekst"></p>
+          <form><button type="button" class="stil" id="agendalinknieuw">Nieuwe link maken</button></form>
+        </div>
+        <div id="officialsvoorkeurenmelding" class="melding" hidden></div>
+      </div>
 
       <!-- Berichten ook naar de ouders (0.32.0); gevuld door meelezen.js -->
       <div id="meelezen" hidden>

@@ -22,6 +22,9 @@ import { toonTestbalk, vulTestrolkeuze, koppelTestrol } from './schermen/testrol
 import { startTeller, ververTeller, toonBerichten, allesGelezen, toonMededeling, mededelingWegklikken } from './schermen/berichten.js';
 import { laadMededelingBeheer, koppelMededelingBeheer } from './schermen/mededeling-beheer.js';
 import { zetMeldingenAan, zetMeldingenUit, stuurTestmelding, luisterNaarServiceWorker } from './schermen/meldingen.js';
+import { zetOfficialsPersonen, laadAanduidingen, koppelAanduidingen } from './schermen/aanduidingen.js';
+import { toonMijnVergoeding } from './schermen/mijn-vergoeding.js';
+import { toonOfficialsVoorkeuren, koppelOfficialsVoorkeuren } from './schermen/officials-voorkeuren.js';
 
 function toonAanmelden() {
   el('aanmelden').hidden = false;
@@ -30,6 +33,9 @@ function toonAanmelden() {
 
 let huidigeKies = null;
 let huidigePersoon = null;
+// Official zelf, of ouder van een official: dan horen Aanduidingen, Mijn
+// vergoeding en de officials-voorkeuren erbij (0.38.0).
+let metOfficials = false;
 
 function toonApp(gegevens) {
   el('aanmelden').hidden = true;
@@ -80,9 +86,18 @@ function toonApp(gegevens) {
     laadMijnOpgaven();
   }
 
+  const isOfficial = 'officials.opgeven' in rechten;
+  const kinderen = gegevens.officials_kinderen ?? [];
+  metOfficials = isOfficial || kinderen.length > 0;
+  zetOfficialsPersonen(gegevens.persoon, isOfficial, kinderen);
+  el('naammenu-vergoeding').hidden = !metOfficials;
+
   // Elk tabblad laadt pas wanneer het geopend wordt: dat scheelt oproepen voor
   // schermen die iemand nooit bekijkt.
   huidigeKies = bouwNavigatie(rechten, (tab) => {
+    if (tab === 'aanduidingen') {
+      laadAanduidingen();
+    }
     if (tab === 'ploegen') {
       laadPloegen();
       laadZalen(); // vult de zaalkeuze voor het reeksformulier
@@ -97,7 +112,7 @@ function toonApp(gegevens) {
       laadZalen();
       laadPeriodes();
     }
-  });
+  }, { ouderVanOfficial: kinderen.length > 0 });
 
   bouwBeheermenu(rechten, gegevens.testrol_mogelijk === true);
 
@@ -294,6 +309,15 @@ koppelMededelingBeheer();
 el('naammenu-voorkeuren').addEventListener('click', () => {
   sluitNaammenu();
   if (huidigePersoon) toonVoorkeuren(huidigePersoon);
+  toonOfficialsVoorkeuren(metOfficials);
+});
+
+el('naammenu-vergoeding').addEventListener('click', () => {
+  sluitNaammenu();
+  toonMijnVergoeding();
+});
+el('vergoedingsluiten').addEventListener('click', () => {
+  el('vergoedingscherm').hidden = true;
 });
 
 el('naammenu-afmelden').addEventListener('click', () => {
@@ -350,6 +374,8 @@ el('diagnoseruw').addEventListener('click', () => toonDiagnose(true));
 el('brandingvoorstelknop').addEventListener('click', haalBrandingvoorstel);
 koppelPersoonscherm();
 koppelMeelezen();
+koppelAanduidingen();
+koppelOfficialsVoorkeuren();
 koppelTestrol();
 
 start();

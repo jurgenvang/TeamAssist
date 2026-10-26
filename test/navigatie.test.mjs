@@ -21,9 +21,22 @@ const { TABBLADEN, zichtbareTabbladen, tabbalkTabbladen, menuTabbladen } = await
 
 const J16 = 'BVBL1125J16  2';
 
-test('een beheerder ziet alle tabbladen', () => {
+test('een beheerder ziet alle tabbladen, behalve dat van een official', () => {
+  // Beheerder zijn maakt nog geen official: wie fluit, heeft de rol YO of YO+.
   const rechten = bouwRechten({ rollen: [{ rol: 'ADMIN', team_guid: null }] }).overzicht();
-  assert.deepEqual(zichtbareTabbladen(rechten).map((t) => t.id), TABBLADEN.map((t) => t.id));
+  assert.deepEqual(
+    zichtbareTabbladen(rechten).map((t) => t.id),
+    TABBLADEN.map((t) => t.id).filter((id) => id !== 'aanduidingen')
+  );
+});
+
+test('een official ziet Aanduidingen vooraan; een ouder van een official ook', () => {
+  const yo = bouwRechten({ rollen: [{ rol: 'YO', team_guid: null }] }).overzicht();
+  assert.deepEqual(tabbalkTabbladen(yo).map((t) => t.id), ['aanduidingen', 'mij']);
+  const ouder = bouwRechten().overzicht();
+  assert.deepEqual(tabbalkTabbladen(ouder).map((t) => t.id), ['mij']);
+  assert.deepEqual(tabbalkTabbladen(ouder, { ouderVanOfficial: true }).map((t) => t.id), ['aanduidingen', 'mij']);
+  assert.deepEqual(menuTabbladen(ouder, { ouderVanOfficial: true }), [], 'geen beheer voor een ouder');
 });
 
 test('een coach ziet geen beheer en geen personen', () => {

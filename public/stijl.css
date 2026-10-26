@@ -458,3 +458,40 @@ textarea {
   color: var(--inkt);
 }
 .vinkje { display: flex; gap: .4rem; align-items: center; margin: .5rem 0; font-size: .92rem; }
+
+/* Module Officials (0.38.0): het scherm Aanduidingen, zoals in YOAssist —
+   een kaart per wedstrijd met de datum links, en de rand die zegt wat je
+   antwoordde. Enkel de bestaande kleurvariabelen, zodat donker vanzelf werkt. */
+.teller { padding: .6rem .8rem; border-radius: var(--radius); background: var(--vlak); }
+.teller.open b { color: #b45309; font-size: 1.2rem; }
+.teller.klaar b { color: #15803d; }
+.aantal { font-size: .8rem; color: var(--gedempt); font-weight: normal; }
+.dag-kop { margin: 1rem 0 .3rem; font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; color: var(--gedempt); }
+.wed { display: flex; gap: .8rem; padding: .7rem; margin: .5rem 0; border: 1px solid var(--lijn);
+  border-left: 4px solid var(--lijn); border-radius: var(--radius); }
+.wed[data-status="ja"] { border-left-color: #16a34a; }
+.wed[data-status="nee"] { border-left-color: #9ca3af; }
+.wed[data-toegewezen="1"] { border-left-color: #2563eb; }
+.wed-datum { display: flex; flex-direction: column; align-items: center; min-width: 3rem; font-size: .8rem; color: var(--gedempt); }
+.wed-datum b { font-size: 1.4rem; color: var(--inkt); line-height: 1.1; }
+.wed-lijf { flex: 1; min-width: 0; }
+.wed-ploegen { overflow-wrap: anywhere; }
+.wed-meta a { color: inherit; }
+.uitslag, .forfait-label, .cat { font-size: .78rem; padding: 0 .35rem; border-radius: 4px; background: var(--vlak); border: 1px solid var(--lijn); margin-left: .3rem; }
+.forfait-label { border-color: #b45309; }
+.wed-refs { display: flex; flex-wrap: wrap; gap: .3rem .5rem; margin: .4rem 0; font-size: .88rem; }
+.vbl-regel { width: 100%; color: var(--gedempt); }
+.ref-plaats { padding: .1rem .45rem; border-radius: 4px; border: 1px solid var(--lijn); }
+.ref-plaats.leeg { border-style: dashed; color: var(--gedempt); }
+.ref-plaats.ik { font-weight: 600; }
+.ref-nr { font-size: .72rem; margin-right: .3rem; color: var(--gedempt); }
+.wed-acties { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; margin-top: .4rem; }
+/* Klein en naast elkaar, en enkel de gekozen knop gevuld: zo zie je in één
+   oogopslag wat je antwoordde. */
+.wed-acties button { padding: .3rem .75rem; font-size: .88rem; width: auto; margin: 0; }
+.keuze { background: transparent; color: var(--inkt); border: 1px solid var(--lijn); }
+.keuze[data-keuze="ja"][aria-pressed="true"] { background: #16a34a; border-color: #16a34a; color: #fff; }
+.keuze[data-keuze="nee"][aria-pressed="true"] { background: #6b7280; border-color: #6b7280; color: #fff; }
+.aangeduid-merk { font-weight: 600; color: #2563eb; }
+.gaat-niet-door { color: var(--gedempt); margin: .4rem 0 0; }
+.maandblok { border-top: 1px solid var(--lijn); padding-top: .4rem; }

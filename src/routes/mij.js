@@ -54,6 +54,26 @@ async function ploegenVan(db, persoonId, seizoen, alles) {
   return rijen.results ?? [];
 }
 
+/**
+ * De kinderen van deze ouder die Youth Official zijn (0.38.0). Daarmee toont
+ * het scherm Aanduidingen en Mijn vergoeding ook aan een ouder die zelf geen
+ * official is — hij vult in namens zijn kind (namens.js).
+ */
+async function officialsKinderen(db, ouderId) {
+  const r = await db
+    .prepare(
+      `SELECT DISTINCT p.id, p.voornaam, p.achternaam
+         FROM ouder_kind ok
+         JOIN personen p ON p.id = ok.kind_id AND p.actief = 1
+         JOIN rollen r ON r.persoon_id = p.id AND r.rol IN ('YO', 'YOPLUS')
+        WHERE ok.ouder_id = ?
+        ORDER BY p.voornaam, p.achternaam`
+    )
+    .bind(ouderId)
+    .all();
+  return (r.results ?? []).map((k) => ({ id: k.id, naam: `${k.voornaam} ${k.achternaam}`.trim() }));
+}
+
 export async function mij(ctx) {
   const { db, persoon, rechten, seizoen } = ctx;
   const zietAlles = rechten.ploegenMet('team.bekijken') === '*';
@@ -86,5 +106,6 @@ export async function mij(ctx) {
     ploegen,
     rechten: rechten.overzicht(),
     testrol_mogelijk: testrolMogelijk,
+    officials_kinderen: await officialsKinderen(db, persoon.id),
   });
 }

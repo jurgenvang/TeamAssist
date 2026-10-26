@@ -35,6 +35,7 @@ import {
   volgClubsTonen, volgClubToevoegen, volgClubWeg, regioTonen, regioSync, regioLeegmaken,
 } from './officials/regio.js';
 import { externeAanduidingen, kalender, agendaLink } from './officials/extern.js';
+import { officialsVoorkeurenTonen, officialsVoorkeurenBewaren } from './officials/voorkeuren.js';
 import { ontvangMail } from './officials/woensdaglijst.js';
 import {
   berichtenTonen, berichtenOngelezen, berichtGelezen, berichtVerwijderen, mededelingTonen, mededelingWegklikken,
@@ -152,6 +153,8 @@ export const ROUTES = [
   { methode: 'GET', pad: '/api/extern/aanduidingen', publiek: true, doe: externeAanduidingen },
   { methode: 'GET', pad: '/api/kalender/', prefix: true, publiek: true, doe: kalender },
   { methode: 'POST', pad: '/api/officials/agenda', doe: agendaLink },
+  { methode: 'GET', pad: '/api/officials/voorkeuren', doe: officialsVoorkeurenTonen },
+  { methode: 'POST', pad: '/api/officials/voorkeuren', doe: officialsVoorkeurenBewaren },
   // Mijn berichten en de banner: over jezelf, zoals /api/mij. Elke query
   // filtert op de persoon uit het token.
   { methode: 'GET', pad: '/api/berichten', doe: berichtenTonen },

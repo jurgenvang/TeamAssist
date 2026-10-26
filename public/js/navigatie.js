@@ -10,6 +10,10 @@
 import { el } from './hulp.js';
 
 export const TABBLADEN = [
+  // Module Officials (0.38.0). Vooraan: voor een official is dit het werk van
+  // elke dag, zoals in YOAssist. Ook voor een ouder van een official, die zelf
+  // geen recht heeft maar namens zijn kind invult (`ouder: true`).
+  { id: 'aanduidingen', naam: 'Aanduidingen', recht: 'officials.opgeven', ouder: true },
   { id: 'mij', naam: 'Overzicht', recht: null },
   { id: 'ploegen', naam: 'Ploegen', recht: 'team.bekijken' },
   { id: 'personen', naam: 'Personen', recht: 'personen.beheren' },
@@ -28,22 +32,29 @@ export const TABBLADEN = [
   { id: 'zaalbeheer', naam: 'Zaalbeheer', recht: 'systeem.beheren', inMenu: true },
 ];
 
-export function zichtbareTabbladen(rechten) {
-  return TABBLADEN.filter((t) => !t.recht || Object.hasOwn(rechten ?? {}, t.recht));
+/**
+ * @param {object} rechten   uit /api/mij
+ * @param {{ouderVanOfficial?: boolean}} [extra]  een ouder van een official
+ *   ziet de tabbladen met `ouder: true`, ook zonder het recht zelf
+ */
+export function zichtbareTabbladen(rechten, { ouderVanOfficial = false } = {}) {
+  return TABBLADEN.filter(
+    (t) => !t.recht || Object.hasOwn(rechten ?? {}, t.recht) || (t.ouder && ouderVanOfficial)
+  );
 }
 
 /** Wat in de tabbalk komt; de rest opent via het naammenu. */
-export function tabbalkTabbladen(rechten) {
-  return zichtbareTabbladen(rechten).filter((t) => !t.inMenu);
+export function tabbalkTabbladen(rechten, extra) {
+  return zichtbareTabbladen(rechten, extra).filter((t) => !t.inMenu);
 }
 
 /** Wat onder Beheer in het naammenu komt, in de volgorde van TABBLADEN. */
-export function menuTabbladen(rechten) {
-  return zichtbareTabbladen(rechten).filter((t) => t.inMenu);
+export function menuTabbladen(rechten, extra) {
+  return zichtbareTabbladen(rechten, extra).filter((t) => t.inMenu);
 }
 
-export function bouwNavigatie(rechten, bijWissel) {
-  const tabs = tabbalkTabbladen(rechten);
+export function bouwNavigatie(rechten, bijWissel, extra) {
+  const tabs = tabbalkTabbladen(rechten, extra);
   const nav = el('navigatie');
 
   nav.innerHTML = tabs
