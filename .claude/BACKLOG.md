@@ -34,8 +34,7 @@ Bijgewerkt bij elke versie. Voor de volledige tekst: zoek de kop verderop
 
 ### Klaar om te bouwen
 - **I1, fase 3** — de backend van YOAssist overzetten, in zes pakketten
-  (3a–3f, zie I1). Wacht op bevestiging van die opdeling en van *Ouder en
-  kind*.
+  (3a–3f, zie I1). 3a (ouder en kind) wacht nog op de details van punt 4.
 - **T7** — tabblad Mijn club.
 - **T12** — aanmelden als.
 - **T18, T19** — twee kleine gaten uit de code-audit.
@@ -193,8 +192,8 @@ rapport. Verder:
      **Nog niet uitvoeren:** het script hoort bij de overschakeling (fase 5),
      met een verse backup van dat moment — YOAssist blijft tot dan live, en
      wat nu overgezet wordt, is dan verouderd.
-3. **Backend overzetten**, in zes pakketten — **voorstel, nog te
-   bevestigen**. Elk pakket enkel backend en tests; de schermen komen in
+3. **Backend overzetten**, in zes pakketten — **beslist** (Jurgen, 26
+   oktober 2026). Elk pakket enkel backend en tests; de schermen komen in
    fase 4. De tests van YOAssist verhuizen mee naar `node:sqlite`.
    - **3a — 0.32.0: ouder en kind duidelijk.** Zie *Ouder en kind* hieronder.
      Eerst, omdat aanduidingen, berichten en de migratie erop steunen.
@@ -221,7 +220,7 @@ rapport. Verder:
 
 Tot de overstap blijft YOAssist live en krijgt het enkel bugfixes.
 
-### Ouder en kind — **voorstel, nog te bevestigen**
+### Ouder en kind — **beslist** (Jurgen, 26 oktober 2026), op de details van punt 4 na
 
 Waarom nu: een deel van de officials is minderjarig, en in YOAssist vult een
 ouder vaak in voor zijn kind. De migratie toonde het al: Max Cuyvers staat in
@@ -241,7 +240,7 @@ YOAssist met `ruudcuyvers@…`, vermoedelijk het adres van zijn vader.
   maken. En `verwittig()` naar een kind zonder adres verstuurt niets — enkel
   een foutregel in het logboek.
 
-**Voorstel (3a):**
+**Beslist (3a):**
 1. **De official is altijd het kind zelf.** De rol YO/YOPLUS, de
    beschikbaarheden, aanduidingen en de vergoeding staan op de persoon van
    het kind, nooit op de ouder.
@@ -252,11 +251,40 @@ YOAssist met `ruudcuyvers@…`, vermoedelijk het adres van zijn vader.
 3. **Een kind heeft geen fictief adres meer nodig.** Zonder eigen adres meldt
    het kind zich niet aan; de ouder doet alles. Met een eigen adres kunnen
    kind en ouder allebei.
-4. **Berichten aan een kind zonder adres gaan naar zijn ouders** (elke ouder
-   met een adres). Mijn berichten bewaart ze bij het kind; de ouder ziet ze
-   als hij namens het kind kijkt. Heeft het kind een eigen adres, dan enkel
-   naar het kind. Dit geldt voor de hele app, niet enkel de officials — het
-   dicht ook het gat bij een gepubliceerde selectie.
+4. **Berichten aan een kind gaan ook naar zijn ouders, met een schakelaar
+   per kind.** Geldt voor de hele app, niet enkel de officials — het dicht
+   ook het gat bij een gepubliceerde selectie.
+   - **Een kind zonder eigen adres:** altijd naar de ouders, er is geen
+     schakelaar — anders komt het bericht nergens aan.
+   - **Minderjarig: standaard aan.** Het kind kan het uitzetten, maar pas
+     als **elke** ouder toestemming gaf. Tot dan blijft het aan.
+   - **Meerderjarig: standaard uit.** Het kind kan het zelf aanzetten (en
+     weer uitzetten), zonder iemand te vragen.
+
+   Voorstel voor de details, **nog te bevestigen**:
+   - **Minderjarig volgt uit `geboortedatum`.** Is die onbekend, dan geldt het
+     kind als minderjarig: liever een bericht te veel bij een ouder dan een
+     minderjarige die stil van de lijst verdwijnt.
+   - **De toestemming vragen:** het kind zet de schakelaar uit; elke ouder
+     krijgt een bericht met de vraag, en antwoordt in de app. Zodra iedereen
+     ja zei, gaat het uit. Eén nee, en het blijft aan; het kind krijgt bericht.
+   - **Een ouder kan het bij een minderjarige altijd weer aanzetten**, zonder
+     het kind te vragen. Een ouder die er later bijkomt, wordt niet gevraagd
+     (de toestemming blijft gelden), maar kan het dus wel weer aanzetten.
+   - **Bij 18 jaar verandert er niets vanzelf.** De stand blijft zoals ze was;
+     vanaf dan kan het kind ze zelf uitzetten, zonder toestemming. Stil
+     ophouden met de ouders te verwittigen op een verjaardag zou verrassen.
+   - **Waar de ouder het ziet:** het bericht staat één keer in `berichten`,
+     bij het kind. De ouder ziet het in zijn eigen Mijn berichten, met
+     'voor Max' erbij, en het telt mee in zijn bolletje. De mail aan de ouder
+     zegt in het onderwerp voor wie het is.
+   - **Kanaal:** elke ouder volgens zijn eigen `kanaal_voorkeur`.
+   - **Belangrijk nieuws** (`verwittigVelen`) krijgt geen kopie: de ouders
+     zitten daar al zelf in de doelgroep.
+   - **Schema:** `personen.ouders_meelezen` (NULL = de standaard volgens de
+     leeftijd, 1/0 = een gemaakte keuze; ALTER) en een tabel
+     `ouder_toestemming` (kind, ouder, gevraagd op, antwoord, beantwoord op;
+     CREATE). Geen DROP.
 5. **Het persoonsscherm toont ouders en kinderen**, en een beheerder kan er
    een koppeling maken of weghalen. Niet enkel via het sjabloon: een official
    die geen speler is, staat niet in een ploegsjabloon.
