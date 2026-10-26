@@ -3,6 +3,11 @@
 // Per gevolgde ploeg wordt TeamMatchesByGuid opgehaald, thuis en uit — anders
 // dan YOAssist, dat enkel thuiswedstrijden nodig heeft. Standaard een
 // droogloop.
+//
+// Een rij per wedstrijd én ploeg: een wedstrijd tussen twee eigen ploegen
+// staat er twee keer, één keer thuis en één keer uit, elk met eigen selectie
+// en taken. Elke UPDATE hier filtert daarom ook op team_guid — enkel op
+// wedstrijd_guid zou de andere ploeg mee overschrijven.
 
 import { json, fout } from '../../lib/http.js';
 import { logSchrijf } from '../../lib/logboek.js';
@@ -128,9 +133,9 @@ async function verwerkPloeg(ctx, ploeg, seizoen, uitvoeren, periodes) {
             SET datum = ?, begin = ?, thuis = ?, tegenstander = ?, locatie_tekst = ?,
                 vbl_acc_guid = ?, wijzigingshash = ?, status = 'gepland',
                 bij_bond = 1, laatst_gezien = datetime('now')
-          WHERE wedstrijd_guid = ?`
+          WHERE wedstrijd_guid = ? AND team_guid = ?`
       )
-      .bind(w.datum, w.begin, w.thuis ? 1 : 0, w.tegenstander, w.locatie_tekst, w.vbl_acc_guid, w.hash, w.wedstrijd_guid)
+      .bind(w.datum, w.begin, w.thuis ? 1 : 0, w.tegenstander, w.locatie_tekst, w.vbl_acc_guid, w.hash, w.wedstrijd_guid, ploeg.guid)
       .run();
 
     if (w.meldbaar) {
@@ -146,20 +151,25 @@ async function verwerkPloeg(ctx, ploeg, seizoen, uitvoeren, periodes) {
 
   for (const w of plan.uitslag_bijgewerkt) {
     await db
-      .prepare(`UPDATE wedstrijden SET uitslag = ?, laatst_gezien = datetime('now') WHERE wedstrijd_guid = ?`)
-      .bind(w.uitslag, w.wedstrijd_guid)
+      .prepare(`UPDATE wedstrijden SET uitslag = ?, laatst_gezien = datetime('now') WHERE wedstrijd_guid = ? AND team_guid = ?`)
+      .bind(w.uitslag, w.wedstrijd_guid, ploeg.guid)
       .run();
   }
 
-  for (const w of plan.ongewijzigd) {
+  // Een onvolledige wedstrijd (datum of uur weg bij de bond) is wel gezien:
+  // ze houdt haar gekende moment, maar telt niet als verdwenen.
+  for (const w of [...plan.ongewijzigd, ...plan.onvolledig]) {
     await db
-      .prepare(`UPDATE wedstrijden SET laatst_gezien = datetime('now') WHERE wedstrijd_guid = ?`)
-      .bind(w.wedstrijd_guid)
+      .prepare(`UPDATE wedstrijden SET laatst_gezien = datetime('now') WHERE wedstrijd_guid = ? AND team_guid = ?`)
+      .bind(w.wedstrijd_guid, ploeg.guid)
       .run();
   }
 
   for (const w of plan.verdwenen) {
-    await db.prepare(`UPDATE wedstrijden SET bij_bond = 0 WHERE wedstrijd_guid = ?`).bind(w.wedstrijd_guid).run();
+    await db
+      .prepare(`UPDATE wedstrijden SET bij_bond = 0 WHERE wedstrijd_guid = ? AND team_guid = ?`)
+      .bind(w.wedstrijd_guid, ploeg.guid)
+      .run();
   }
 
   return { ploeg: ploeg.guid, naam: ploeg.naam, ...plan };
@@ -192,6 +202,7 @@ export async function wedstrijdenSync(ctx) {
   const totalen = {
     nieuw: tel('nieuw'), gewijzigd: tel('gewijzigd'), ongewijzigd: tel('ongewijzigd'),
     uitslag_bijgewerkt: tel('uitslag_bijgewerkt'), verdwenen: tel('verdwenen'),
+    onvolledig: tel('onvolledig'),
   };
 
   if (uitvoeren) {

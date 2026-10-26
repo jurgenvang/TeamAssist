@@ -30,7 +30,7 @@ function zetKlaarZonderPloeg() {
 
 const VBL_WEDSTRIJDEN = [
   {
-    guid: 'W1', tTGUID: T1, tTNaam: 'J16 B', uTGUID: 'BVBL1053J16  1', uTNaam: 'Gastploeg',
+    guid: 'W1', tTGUID: T1, tTNaam: 'J16 B', tUGUID: 'BVBL1053J16  1', tUNaam: 'Gastploeg',
     datumString: '12-09-2026', beginTijd: '10.30', accGUID: 'ACC1', accNaam: 'Sporthal A',
     gespeeld: 'N', wedOff: [],
   },
@@ -123,6 +123,35 @@ test('twee mislukkingen na elkaar geven een tweede logregel, nu onafgehandeld', 
   assert.equal(logregels[1].afgehandeld, 0);
 });
 
+test('een synchronisatie die twee keer na elkaar mislukt, verwittigt de beheerders', async () => {
+  // Sinds 0.30.1: niet enkel het logboek. Daar zat de fout bij DSE 1 en
+  // ROL 2 in oktober 2026 wekenlang zonder dat iemand ze zag.
+  const db = zetKlaarMetPloeg();
+  db._sqlite.exec(`
+    INSERT INTO personen (id, voornaam, achternaam, email) VALUES ('p-adm', 'Ad', 'Min', 'adm@example.org');
+    INSERT INTO rollen (persoon_id, rol) VALUES ('p-adm', 'ADMIN');
+    UPDATE instellingen SET waarde = 'normaal' WHERE sleutel = 'bericht_modus';
+  `);
+  const mails = [];
+  const oude = globalThis.fetch;
+  globalThis.fetch = async (url, opties) => {
+    if (String(url).includes('resend.com')) {
+      mails.push(JSON.parse(opties.body));
+      return new Response(JSON.stringify({ id: 'm' }), { status: 200 });
+    }
+    return new Response('serverfout', { status: 500 });
+  };
+  try {
+    await voerGeplandeTakenUit(['wedstrijden'], db, env);
+    assert.equal(mails.length, 0, 'één keer is nog geen alarm');
+    await voerGeplandeTakenUit(['wedstrijden'], db, env);
+  } finally {
+    globalThis.fetch = oude;
+  }
+  assert.equal(mails.length, 1);
+  assert.match(mails[0].subject, /wedstrijden-sync mislukt al 2 keer/);
+});
+
 test('een derde, geslaagde run na twee mislukkingen telt niet meer als twee-op-twee', async () => {
   const db = zetKlaarMetPloeg();
   const oude = globalThis.fetch;
@@ -209,8 +238,10 @@ test('logboekregels van een automatische synchronisatie hebben wie = null, niet 
 test('opkuis draait zonder een actief seizoen — opruiming hangt daar niet van af', async () => {
   const db = maakDb(); // geen seizoen ingevoegd
   db._sqlite.exec(`
-    INSERT INTO taak_runs (taak, geeindigd, status) VALUES ('iets', datetime('now', '-40 days'), 'ok');
+    INSERT INTO taak_runs (taak, geeindigd, status) VALUES ('iets', datetime('now', '-40 days'), 'fout');
   `);
+  // Een mislukte run, geen geslaagde: de laatste 'ok' van een taak blijft
+  // sinds 0.30.1 altijd staan (zie opkuis.test.mjs).
   await voerGeplandeTakenUit(['opkuis'], db, env);
   assert.equal(db._sqlite.prepare(`SELECT count(*) AS n FROM taak_runs WHERE taak = 'iets'`).get().n, 0);
 });

@@ -13,8 +13,16 @@
 // dichtgaat op een moment dat niemand verwacht.
 
 import { logSchrijf } from './logboek.js';
+import { alarmeerBijHerhaling } from './taakalarm.js';
 
 export const PING_TAAK = 'supabase-ping';
+
+// Status 530 of een time-out: het project is zo goed als zeker gepauzeerd, en
+// dan raakt niemand nog binnen — ook de beheerder niet. Vandaar de uitleg in
+// het bericht zelf: in de app kijken gaat dan niet.
+export const UITLEG_GEPAUZEERD =
+  'Zolang dit faalt, kan niemand aanmelden. Meestal is het Supabase-project ' +
+  'gepauzeerd: open het in het Supabase-dashboard en kies Restore project.';
 
 export async function pingSupabase(env, fetcher = fetch) {
   const basis = String(env.SUPABASE_URL || '').replace(/\/+$/, '');
@@ -40,9 +48,9 @@ export async function pingSupabase(env, fetcher = fetch) {
 
 /**
  * Voert de ping uit en houdt bij hoe het ging. Bij twee opeenvolgende
- * mislukkingen hoort er bericht naar de beheerders te gaan; dat kanaal bestaat
- * pas in fase 5, dus voorlopig komt het als onafgehandelde regel in het logboek
- * — die blijft staan tot iemand ze wegzet.
+ * mislukkingen een onafgehandelde regel in het logboek én, sinds 0.30.1, een
+ * bericht aan de beheerders (taakalarm.js). Tot dan bleef het bij het logboek,
+ * en faalde de ping een maand lang zonder dat iemand het zag.
  */
 export async function voerPingUit(db, env, fetcher = fetch) {
   const uitslag = await pingSupabase(env, fetcher);
@@ -74,6 +82,7 @@ export async function voerPingUit(db, env, fetcher = fetch) {
       details: uitslag.melding,
       afgehandeld: tweeKeerFout ? 0 : 1,
     });
+    await alarmeerBijHerhaling({ db, env }, PING_TAAK, uitslag.melding, UITLEG_GEPAUZEERD);
   }
 
   return uitslag;

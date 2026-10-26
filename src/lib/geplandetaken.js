@@ -11,6 +11,7 @@
 // beheerder ernaar hoefde te klikken.
 
 import { logSchrijf } from './logboek.js';
+import { alarmeerBijHerhaling } from './taakalarm.js';
 import { actiefSeizoen } from './seizoen.js';
 import { teamsSync } from '../routes/admin/teams.js';
 import { ledenSync } from '../routes/admin/leden.js';
@@ -46,7 +47,7 @@ function heeftMislukteploeg(body) {
   return Array.isArray(body?.ploegen) && body.ploegen.some((p) => p?.status === 'fout');
 }
 
-async function voerTaakUit(db, taaknaam, fn) {
+async function voerTaakUit(db, env, taaknaam, fn) {
   let uitslag;
   try {
     const res = await fn();
@@ -65,7 +66,7 @@ async function voerTaakUit(db, taaknaam, fn) {
     uitslag = { ok: false, melding: String(e?.message || e) };
   }
 
-  return registreerUitslag(db, taaknaam, uitslag);
+  return registreerUitslag(db, env, taaknaam, uitslag);
 }
 
 /**
@@ -73,7 +74,7 @@ async function voerTaakUit(db, taaknaam, fn) {
  * functie die het aantal geraakte rijen teruggeeft. Zelfde registratie als
  * hierboven, andere vorm van aanroep.
  */
-async function voerOpkuisFunctieUit(db, taaknaam, fn) {
+async function voerOpkuisFunctieUit(db, env, taaknaam, fn) {
   let uitslag;
   try {
     const aantal = await fn(db);
@@ -81,10 +82,10 @@ async function voerOpkuisFunctieUit(db, taaknaam, fn) {
   } catch (e) {
     uitslag = { ok: false, melding: String(e?.message || e) };
   }
-  return registreerUitslag(db, taaknaam, uitslag);
+  return registreerUitslag(db, env, taaknaam, uitslag);
 }
 
-async function registreerUitslag(db, taaknaam, uitslag) {
+async function registreerUitslag(db, env, taaknaam, uitslag) {
   await db
     .prepare(`INSERT INTO taak_runs (taak, geeindigd, status, melding) VALUES (?, datetime('now'), ?, ?)`)
     .bind(taaknaam, uitslag.ok ? 'ok' : 'fout', uitslag.melding)
@@ -104,6 +105,8 @@ async function registreerUitslag(db, taaknaam, uitslag) {
       details: uitslag.melding,
       afgehandeld: tweeKeerFout ? 0 : 1,
     });
+    // Sinds 0.30.1 ook een bericht aan de beheerders, niet enkel het logboek.
+    await alarmeerBijHerhaling({ db, env }, taaknaam, uitslag.melding);
   }
 
   return uitslag;
@@ -119,10 +122,10 @@ export async function voerGeplandeTakenUit(taken, db, env) {
   // Opruiming hangt niet af van een actief seizoen — dit loopt ook door
   // vóór een club haar eerste seizoen heeft ingesteld.
   if (taken.includes('opkuis')) {
-    await voerOpkuisFunctieUit(db, 'opkuis-logboek', kuisLogboekOp);
-    await voerOpkuisFunctieUit(db, 'opkuis-taak_runs', kuisTaakRunsOp);
-    await voerOpkuisFunctieUit(db, 'opkuis-berichten', kuisBerichtenOp);
-    await voerOpkuisFunctieUit(db, 'opkuis-personen', verwijderInactievePersonenOp);
+    await voerOpkuisFunctieUit(db, env, 'opkuis-logboek', kuisLogboekOp);
+    await voerOpkuisFunctieUit(db, env, 'opkuis-taak_runs', kuisTaakRunsOp);
+    await voerOpkuisFunctieUit(db, env, 'opkuis-berichten', kuisBerichtenOp);
+    await voerOpkuisFunctieUit(db, env, 'opkuis-personen', verwijderInactievePersonenOp);
   }
 
   const overige = taken.filter((t) => t !== 'opkuis');
@@ -134,12 +137,12 @@ export async function voerGeplandeTakenUit(taken, db, env) {
   const ctx = { db, env, persoon: SYSTEEM_PERSOON, seizoen, request: verzoek() };
 
   for (const taak of overige) {
-    if (taak === 'wedstrijden') await voerTaakUit(db, 'wedstrijden-sync', () => wedstrijdenSync(ctx));
-    if (taak === 'teams') await voerTaakUit(db, 'teams-sync', () => teamsSync(ctx));
-    if (taak === 'leden') await voerTaakUit(db, 'leden-sync', () => ledenSync(ctx));
+    if (taak === 'wedstrijden') await voerTaakUit(db, env, 'wedstrijden-sync', () => wedstrijdenSync(ctx));
+    if (taak === 'teams') await voerTaakUit(db, env, 'teams-sync', () => teamsSync(ctx));
+    if (taak === 'leden') await voerTaakUit(db, env, 'leden-sync', () => ledenSync(ctx));
     if (taak === 'periodes') {
-      await voerTaakUit(db, 'vakanties-sync', () => vakantiesSync(ctx));
-      await voerTaakUit(db, 'feestdagen-sync', () => feestdagenSync(ctx));
+      await voerTaakUit(db, env, 'vakanties-sync', () => vakantiesSync(ctx));
+      await voerTaakUit(db, env, 'feestdagen-sync', () => feestdagenSync(ctx));
     }
   }
 }

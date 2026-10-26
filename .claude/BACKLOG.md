@@ -11,7 +11,7 @@ WIJZIGINGEN-bestanden blijven kloppen:
   punt *U* (Microsoft 365) heet hier **VU**, want TeamAssist heeft al een *U*
 - **T** + nummer, en de letters **A–AB** — TeamAssist
 
-Stand: YOAssist **v1.17.0**, TeamAssist **0.30.0**
+Stand: YOAssist **v1.17.0**, TeamAssist **0.30.1**
 
 ---
 
@@ -21,6 +21,8 @@ Bijgewerkt bij elke versie. Voor de volledige tekst: zoek de kop verderop
 (`### T7`, `### V43`, `## I1`, ...).
 
 ### Wacht op een actie van Jurgen
+- **0.30.1** — `migratie-0.30.1.sql` uitvoeren in de D1-console (na die van
+  0.28.0–0.30.0, als die nog niet gebeurd zijn).
 - **AA** — een droogloop op de echte Worker (`POST /api/admin/periodes/sync`)
   om de OpenHolidays-fix te bevestigen.
 - **AB** — `{{ .Token }}` in de Magic Link-mailsjabloon van Supabase.
@@ -246,6 +248,7 @@ Tot de overstap blijft YOAssist live en krijgt het enkel bugfixes.
 | 0.23.0 | T14 afgewerkt: een volledige backup van de databank als JSON. Beter dan aanvankelijk voorgesteld — geen hardcoded tabellenlijst met een test die drift moet vangen (de YOAssist-aanpak), maar tabellen rechtstreeks uit `sqlite_master` gehaald, wat de hele bugklasse structureel onmogelijk maakt. De kerntest bewijst dat letterlijk: een tabel die pas ná het schrijven van de route wordt aangemaakt, zit er toch in. |
 | 0.24.0 | T16 en T17 afgewerkt. `verwittig()` heeft geen `kanaal`-parameter meer en leest voortaan `kanaal_voorkeur` — mail blijft de terugval zolang push niet bestaat, met een aparte logregel voor wie 'push' koos. Blokken bij Zaalbeheer staan nu gegroepeerd per weekdag als losse blokjes, met bewust neutrale kleuren in plaats van de accentkleur. |
 | 0.25.0 | T15 afgewerkt: opruiming van `logboek` (365 dagen), `taak_runs` (30 dagen), `berichten` (120 dagen), en het definitief verwijderen van een inactieve persoon na 180 dagen. Twee tabellen extra gevonden tijdens het bouwen (`accounts`, `ouder_kind`) die niet in het oorspronkelijke overzicht stonden. Enkel `aanwezigheden` wordt geanonimiseerd in plaats van verwijderd — de enige tabel waar dat structureel kon — wat een schema-heropbouw vroeg, grondig getoetst tegen een nagemaakte bestaande databank. |
+| 0.30.1 | Bugfixes uit het logboek van de echte Worker. *Backup downloaden* gaf een 500 op de interne D1-tabel `_cf_KV`; die wordt overgeslagen, en een onleesbare tabel houdt de rest niet meer tegen (`problemen`). De Supabase-ping faalde een maand ongemerkt (project gepauzeerd): bij de tweede mislukking na elkaar van elke geplande taak nu een bericht aan de ADMINs, daarna wekelijks; de laatste geslaagde run per taak blijft bij de opruiming. De wedstrijdsync faalde op een wedstrijd tussen twee eigen ploegen (nu één rij per ploeg) en op een gekende wedstrijd zonder uur (oud moment blijft); de tegenstander bleef leeg bij elke thuiswedstrijd (`uTNaam` i.p.v. `tUNaam`). Schema: heropbouw van `wedstrijden` (UNIQUE op guid + ploeg), met de zes verwijzende tabellen apart gezet en teruggezet. 843 tests. |
 | 0.30.0 | I1 fase 2a: het schema van de module Officials. Rollen `YO`, `YOPLUS` en `YOADM` (clubbreed) met vier rechten `officials.*`; YOADM beheert de officials zonder beheerder van de hele club te zijn. `teams.officials` (los van `gevolgd`, standaard aan zoals in YOAssist), `wedstrijden.bron`, `personen.agenda_sleutel`, en twaalf tabellen `officials_*`. Een test legt de rollen op vijf plaatsen naast elkaar (rechtenlaag, CHECK, koppelroute, twee schermen). Schema: heropbouw van `rollen` (CHECK), drie ALTER's, twaalf CREATE's. 824 tests. |
 | 0.29.0 | I1 fase 1c: pushmeldingen. `verwittig()` volgt `kanaal_voorkeur` echt: mail, push, of beide; wie push koos maar op geen enkel toestel bereikbaar is, krijgt toch mail. Push enkel in de modus *normaal*. Meldingen aan/uit per toestel in Mijn voorkeuren, gemeten op het abonnement van dat toestel, met een testmelding en de iPhone-uitleg. Tikken op een melding opent Mijn berichten. Manifest en een voorlopig icoon, nodig voor 'Zet op beginscherm' en dus voor push op een iPhone. Push-code uit YOAssist overgenomen, nu met een test die een melding echt ontcijfert zoals een browser. Schema: tabel `push_abonnementen` (CREATE). 810 tests. |
 | 0.28.0 | I1 fase 1b: Mijn berichten (ongelezen tot je een bericht aantikt, 'lees meer' met klikbare links, alles gelezen, verwijderen) en het meldingenbolletje op de naam, dat rechtstreeks naar Mijn berichten gaat en zichzelf om de drie minuten ververst. Belangrijk nieuws: één banner tegelijk, met een doelgroep (iedereen, de begeleiding, of één ploeg met spelers, ouders en begeleiding); wie erin zit en een account heeft, krijgt ze ook als bericht — via het batch-endpoint van Resend, honderd per oproep. Onderweg gevonden: een persoon met een wedstrijdtaak (0.26.0) kon nooit verwijderd worden; nu een test die elke foreign key naar `personen` naloopt. `schema-alles-in-een.sql` en `schema-kaal.sql` worden voortaan gegenereerd. Standaardafzender naar `clubassist.org`. Schema: drie kolommen in `berichten` (ALTER), tabellen `mededelingen` en `mededeling_gezien`. 786 tests. |

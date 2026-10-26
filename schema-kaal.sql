@@ -353,7 +353,7 @@ CREATE INDEX idx_trainingen_reeks ON trainingen (reeks_id);
 
 CREATE TABLE wedstrijden (
   id              INTEGER PRIMARY KEY AUTOINCREMENT,
-  wedstrijd_guid  TEXT NOT NULL UNIQUE,
+  wedstrijd_guid  TEXT NOT NULL,
   team_guid       TEXT NOT NULL,
   seizoen         TEXT NOT NULL,
   datum           TEXT NOT NULL,
@@ -371,7 +371,8 @@ CREATE TABLE wedstrijden (
   selectie_gepubliceerd INTEGER NOT NULL DEFAULT 0 CHECK (selectie_gepubliceerd IN (0, 1)),
   aangemaakt      TEXT NOT NULL DEFAULT (datetime('now')),
   bron            TEXT NOT NULL DEFAULT 'vbl' CHECK (bron IN ('vbl', 'handmatig')),
-  FOREIGN KEY (team_guid, seizoen) REFERENCES teams (guid, seizoen)
+  FOREIGN KEY (team_guid, seizoen) REFERENCES teams (guid, seizoen),
+  UNIQUE (wedstrijd_guid, team_guid)
 );
 
 CREATE INDEX idx_wedstrijden_team ON wedstrijden (team_guid, seizoen, datum);

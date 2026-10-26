@@ -12,7 +12,7 @@ const persoon = { id: 'p-admin' };
 
 const VBL_ANTWOORD = [
   {
-    guid: 'W1', tTGUID: T1, tTNaam: 'J16 B', uTGUID: 'BVBL1053J16  1', uTNaam: 'Gastploeg',
+    guid: 'W1', tTGUID: T1, tTNaam: 'J16 B', tUGUID: 'BVBL1053J16  1', tUNaam: 'Gastploeg',
     datumString: '12-09-2026', beginTijd: '10.30', accGUID: 'ACC1', accNaam: 'Sporthal A',
     gespeeld: 'N', wedOff: [],
   },
@@ -110,7 +110,7 @@ test('een verdwenen wedstrijd blijft bestaan met bij_bond = 0', async () => {
   // niet aan en de verdwenen rij wordt wel gemarkeerd.
   const db = zetKlaar();
   const zesRijen = Array.from({ length: 6 }, (_, i) => ({
-    guid: `W${i + 1}`, tTGUID: T1, tTNaam: 'J16 B', uTGUID: 'X', uTNaam: 'Gast',
+    guid: `W${i + 1}`, tTGUID: T1, tTNaam: 'J16 B', tUGUID: 'X', tUNaam: 'Gast',
     datumString: `1${i}-09-2026`, beginTijd: '10.30', accGUID: 'ACC1', accNaam: 'Sporthal A',
     gespeeld: 'N', wedOff: [],
   }));
@@ -287,7 +287,7 @@ test('elk taakslot start onbezet (persoon_id NULL)', async () => {
 test('een uitwedstrijd krijgt tablet + ploegafgevaardigde, geen klok', async () => {
   const db = zetKlaar();
   const uitAntwoord = () =>
-    new Response(JSON.stringify([{ ...VBL_ANTWOORD[0], tTGUID: 'ANDER', uTGUID: T1 }]), { status: 200 });
+    new Response(JSON.stringify([{ ...VBL_ANTWOORD[0], tTGUID: 'ANDER', tUGUID: T1 }]), { status: 200 });
   await sync(db, '?uitvoeren=1', uitAntwoord);
   const taken = db._sqlite.prepare(`SELECT taak FROM wedstrijdtaken ORDER BY taak`).all().map((r) => r.taak);
   assert.deepEqual(taken, ['ploegafgevaardigde', 'tablet']);

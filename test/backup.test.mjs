@@ -96,3 +96,48 @@ test('het tijdstip van de backup zelf staat mee in het bestand', async () => {
   assert.ok(body.gemaakt);
   assert.ok(!Number.isNaN(new Date(body.gemaakt).getTime()));
 });
+
+// --- de interne tabel van D1 (0.30.1) ---------------------------------------
+//
+// Op de echte Worker gaf 'Backup downloaden' een 500: D1 zet zelf een tabel
+// `_cf_KV` in sqlite_master en weigert elke lezing ervan. Hier nagebootst met
+// een databank die op die tabel exact zo weigert.
+
+function alsD1(db) {
+  db._sqlite.exec(`CREATE TABLE _cf_KV (key TEXT PRIMARY KEY, value BLOB)`);
+  const prepare = db.prepare;
+  return {
+    ...db,
+    prepare: (sql) => {
+      if (/"_cf_KV"/.test(sql)) throw new Error('D1_ERROR: not authorized to use function: _cf_KV: SQLITE_AUTH');
+      return prepare(sql);
+    },
+  };
+}
+
+test('de interne tabel _cf_KV van D1 laat de backup niet mislukken en zit er niet in', async () => {
+  const db = alsD1(zetKlaar());
+  const res = await backupExporteren({ db });
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.ok(!('_cf_KV' in body.tabellen));
+  assert.ok('personen' in body.tabellen);
+  assert.deepEqual(body.problemen, []);
+});
+
+test('een tabel die niet te lezen is, staat bij de problemen; de rest komt gewoon mee', async () => {
+  const db = zetKlaar();
+  const prepare = db.prepare;
+  const stuk = {
+    ...db,
+    prepare: (sql) => {
+      if (/"berichten"/.test(sql)) throw new Error('kapot');
+      return prepare(sql);
+    },
+  };
+  const res = await backupExporteren({ db: stuk });
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.deepEqual(body.problemen, [{ tabel: 'berichten', reden: 'kapot' }]);
+  assert.equal(body.tabellen.personen.length, 1);
+});

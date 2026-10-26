@@ -24,10 +24,20 @@ export async function kuisLogboekOp(db) {
   return uit.meta?.changes ?? 0;
 }
 
-/** Puur operationeel — bedoeld om een patroon te herkennen, geen archief. */
+/**
+ * Puur operationeel — bedoeld om een patroon te herkennen, geen archief.
+ *
+ * De laatste geslaagde run van elke taak blijft altijd staan, hoe oud ook
+ * (0.30.1). Zonder die regel was na een maand stilte niet meer te zien
+ * wanneer de supabase-ping voor het laatst lukte — en dus niet of hij ooit
+ * gewerkt had. Dezelfde regel als YOAssist voor de laatste syncronde (V33).
+ */
 export async function kuisTaakRunsOp(db) {
   const uit = await db
-    .prepare(`DELETE FROM taak_runs WHERE geeindigd < datetime('now', ?)`)
+    .prepare(
+      `DELETE FROM taak_runs WHERE geeindigd < datetime('now', ?)
+          AND id NOT IN (SELECT max(id) FROM taak_runs WHERE status = 'ok' GROUP BY taak)`
+    )
     .bind(`-${TAAK_RUNS_DAGEN} days`)
     .run();
   return uit.meta?.changes ?? 0;

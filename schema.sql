@@ -548,7 +548,9 @@ CREATE INDEX idx_trainingen_reeks ON trainingen (reeks_id);
 -- bewust niet in de hash: die komt vanzelf binnen en is geen wijziging.
 CREATE TABLE wedstrijden (
   id              INTEGER PRIMARY KEY AUTOINCREMENT,
-  wedstrijd_guid  TEXT NOT NULL UNIQUE,
+  -- Niet uniek op zich: een wedstrijd tussen twee eigen ploegen staat er
+  -- twee keer, één rij per ploeg (0.30.1). Uniek is de combinatie, hieronder.
+  wedstrijd_guid  TEXT NOT NULL,
   team_guid       TEXT NOT NULL,
   seizoen         TEXT NOT NULL,
   datum           TEXT NOT NULL,                  -- 'jjjj-mm-dd'
@@ -571,7 +573,8 @@ CREATE TABLE wedstrijden (
   -- YOAssist). De synchronisatie laat ze met rust; anders zou ze elke nacht
   -- als verdwenen gemarkeerd worden, want de bond kent ze niet.
   bron            TEXT NOT NULL DEFAULT 'vbl' CHECK (bron IN ('vbl', 'handmatig')),
-  FOREIGN KEY (team_guid, seizoen) REFERENCES teams (guid, seizoen)
+  FOREIGN KEY (team_guid, seizoen) REFERENCES teams (guid, seizoen),
+  UNIQUE (wedstrijd_guid, team_guid)
 );
 
 CREATE INDEX idx_wedstrijden_team ON wedstrijden (team_guid, seizoen, datum);

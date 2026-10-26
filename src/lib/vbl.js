@@ -126,15 +126,31 @@ export function leesPloegen(data, clubGuid) {
  *
  * `guid` van de ploeg zelf bepaalt thuis of uit: staat de ploeg-GUID in
  * `tTGUID`, dan is het een thuiswedstrijd.
+ *
+ * De uitploeg heet `tUGUID`/`tUNaam` — zo leest YOAssist ze al jaren uit echte
+ * antwoorden. Tot 0.30.1 stond hier `uTNaam`, een veld dat niet bestaat: bij
+ * elke thuiswedstrijd bleef de tegenstander leeg.
+ *
+ * Een wedstrijd waarin de ploeg thuis noch uit speelt, valt eruit:
+ * TeamMatchesByGuid mengt competities, en zo'n rij zou anders als
+ * uitwedstrijd tegen de thuisploeg verschijnen. Ontbreekt `tUGUID`, dan
+ * blijft de oude aanname gelden (niet thuis = uit) — liever een wedstrijd te
+ * veel dan een echte uitwedstrijd die stil verdwijnt.
  */
 export function leesWedstrijden(data, ploegGuid) {
   const records = Array.isArray(data) ? data : [data];
+  const zelf = String(ploegGuid ?? '').trim();
   return records
     .filter((w) => w && w.guid)
+    .filter((w) => {
+      const uit = String(w.tUGUID ?? '').trim();
+      return String(w.tTGUID ?? '').trim() === zelf || !uit || uit === zelf;
+    })
     .map((w) => ({
       wedstrijd_guid: w.guid,
-      thuis: w.tTGUID === ploegGuid,
-      tegenstander: w.tTGUID === ploegGuid ? w.uTNaam ?? null : w.tTNaam ?? null,
+      thuis: String(w.tTGUID ?? '').trim() === zelf,
+      tegenstander:
+        String(w.tTGUID ?? '').trim() === zelf ? w.tUNaam?.trim() || null : w.tTNaam?.trim() || null,
       datum_ruw: w.datumString ?? null,
       begin_ruw: w.beginTijd ?? null,
       locatie_tekst: w.accNaam ?? null,

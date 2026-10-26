@@ -89,3 +89,95 @@ test('een geslaagde ping na een mislukte zet de teller terug', async () => {
   const rij = db._sqlite.prepare(`SELECT * FROM logboek ORDER BY id DESC LIMIT 1`).get();
   assert.equal(rij.afgehandeld, 1, 'na een geslaagde ping telt de reeks opnieuw');
 });
+
+// --- de beheerders verwittigen (0.30.1) -------------------------------------
+//
+// De ping faalde in september en oktober 2026 een maand lang elke nacht, en
+// niemand merkte het: het stond enkel in het logboek.
+
+function metBeheerder() {
+  const db = metSeizoen();
+  db._sqlite.exec(`
+    INSERT INTO personen (id, voornaam, achternaam, email) VALUES ('p-adm', 'Ad', 'Min', 'adm@example.org');
+    INSERT INTO personen (id, voornaam, achternaam, email) VALUES ('p-coach', 'Co', 'Ach', 'coach@example.org');
+    INSERT INTO rollen (persoon_id, rol) VALUES ('p-adm', 'ADMIN');
+    UPDATE instellingen SET waarde = 'normaal' WHERE sleutel = 'bericht_modus';
+  `);
+  return db;
+}
+
+/** Vangt de mails naar Resend op; de ping zelf gaat via de eigen fetcher. */
+async function metMails(fn) {
+  const mails = [];
+  const oude = globalThis.fetch;
+  globalThis.fetch = async (url, opties) => {
+    if (String(url).includes('resend.com')) mails.push(JSON.parse(opties.body));
+    return new Response(JSON.stringify({ id: 'm' }), { status: 200 });
+  };
+  try {
+    await fn();
+  } finally {
+    globalThis.fetch = oude;
+  }
+  return mails;
+}
+
+const ENV_MET_MAIL = { ...ENV, RESEND_API_KEY: 're_test' };
+
+test('één mislukte ping verwittigt nog niemand', async () => {
+  const db = metBeheerder();
+  const mails = await metMails(() => voerPingUit(db, ENV_MET_MAIL, faalt));
+  assert.equal(mails.length, 0);
+});
+
+test('bij de tweede mislukking na elkaar krijgt elke beheerder een mail, met wat hij kan doen', async () => {
+  const db = metBeheerder();
+  const mails = await metMails(async () => {
+    await voerPingUit(db, ENV_MET_MAIL, faalt);
+    await voerPingUit(db, ENV_MET_MAIL, faalt);
+  });
+  assert.equal(mails.length, 1, 'enkel de ADMIN, niet de coach');
+  assert.equal(mails[0].to, 'adm@example.org');
+  assert.match(mails[0].subject, /supabase-ping/);
+  assert.match(mails[0].text, /Restore project/);
+  assert.match(mails[0].text, /status 500/);
+});
+
+test('blijft het mislukken, dan niet elke nacht opnieuw een mail, wel na een week', async () => {
+  const db = metBeheerder();
+  const eerste = await metMails(async () => {
+    for (let i = 0; i < 5; i++) await voerPingUit(db, ENV_MET_MAIL, faalt);
+  });
+  assert.equal(eerste.length, 1);
+
+  // Het vorige alarm een week terugzetten in de tijd.
+  db._sqlite.exec(`UPDATE logboek SET tijdstip = datetime('now', '-8 days') WHERE wat LIKE '%beheerders verwittigd'`);
+  const later = await metMails(() => voerPingUit(db, ENV_MET_MAIL, faalt));
+  assert.equal(later.length, 1);
+});
+
+test('na een geslaagde ping geeft een nieuwe reeks meteen weer een alarm', async () => {
+  const db = metBeheerder();
+  const mails = await metMails(async () => {
+    await voerPingUit(db, ENV_MET_MAIL, faalt);
+    await voerPingUit(db, ENV_MET_MAIL, faalt);
+    await voerPingUit(db, ENV_MET_MAIL, lukt);
+    await voerPingUit(db, ENV_MET_MAIL, faalt);
+    await voerPingUit(db, ENV_MET_MAIL, faalt);
+  });
+  assert.equal(mails.length, 2);
+});
+
+test('een alarm dat zelf mislukt, laat de ping niet ontploffen', async () => {
+  const db = metBeheerder();
+  const oude = globalThis.fetch;
+  globalThis.fetch = async () => { throw new Error('Resend onbereikbaar'); };
+  try {
+    await voerPingUit(db, ENV_MET_MAIL, faalt);
+    const uit = await voerPingUit(db, ENV_MET_MAIL, faalt);
+    assert.equal(uit.ok, false);
+  } finally {
+    globalThis.fetch = oude;
+  }
+  assert.ok(db._sqlite.prepare(`SELECT 1 FROM logboek WHERE wat = 'bericht versturen mislukt'`).get());
+});

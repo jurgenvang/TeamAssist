@@ -69,6 +69,7 @@ export function maakWedstrijdplan(gevonden, bestaand, periodes = STANDAARD_STILL
   const ongewijzigd = [];
   const uitslagBijgewerkt = [];
   const onleesbareDatums = [];
+  const onvolledig = [];
 
   for (const ruw of gevonden) {
     const w = verwerkVblRij(ruw);
@@ -77,6 +78,16 @@ export function maakWedstrijdplan(gevonden, bestaand, periodes = STANDAARD_STILL
     const oud = bestaandOpGuid.get(w.wedstrijd_guid);
     if (!oud) {
       nieuw.push(w);
+      continue;
+    }
+
+    // De bond haalt soms datum of uur weg bij een wedstrijd die we al kennen
+    // (meestal: wordt verplaatst, nieuw moment nog niet gekend). Overschrijven
+    // kan niet — beide kolommen zijn NOT NULL, en tot 0.30.1 liet dat de hele
+    // ploeg mislukken — en de wedstrijd als verdwenen zetten zou erger zijn.
+    // Dus: het gekende moment blijft staan tot de bond een nieuw doorgeeft.
+    if (!w.datum || !w.begin) {
+      onvolledig.push({ ...w, was: oud });
       continue;
     }
 
@@ -90,7 +101,16 @@ export function maakWedstrijdplan(gevonden, bestaand, periodes = STANDAARD_STILL
       continue;
     }
 
-    const meldbaar = w.datum ? !inStillePeriode(w.datum, periodes) : true;
+    // Tot 0.30.1 bleef de tegenstander bij elke thuiswedstrijd leeg (een
+    // verkeerde veldnaam, zie vbl.js). Dat nu aanvullen is geen wijziging die
+    // iemand moet horen: anders kreeg de begeleiding bij de eerste sync een
+    // bericht per thuiswedstrijd.
+    const enkelAangevuld =
+      !oud.tegenstander &&
+      oud.datum === w.datum && oud.begin === w.begin &&
+      (oud.locatie_tekst ?? null) === (w.locatie_tekst ?? null) &&
+      Boolean(oud.thuis) === Boolean(w.thuis);
+    const meldbaar = enkelAangevuld ? false : w.datum ? !inStillePeriode(w.datum, periodes) : true;
     gewijzigd.push({ ...w, was: oud, meldbaar });
   }
 
@@ -107,6 +127,7 @@ export function maakWedstrijdplan(gevonden, bestaand, periodes = STANDAARD_STILL
     verdwenen: teVeelWeg ? [] : verdwenen,
     genegeerd_verdwenen: teVeelWeg ? verdwenen : [],
     onleesbare_datums: onleesbareDatums,
+    onvolledig,
     status: teVeelWeg ? 'deels' : 'ok',
     melding: teVeelWeg
       ? `${verdwenen.length} van ${bestaand.length} wedstrijden ontbraken; er is niets ` +

@@ -69,6 +69,27 @@ test('taak_runs ouder dan 30 dagen wordt verwijderd, jonger blijft staan', async
   assert.equal(db._sqlite.prepare(`SELECT count(*) AS n FROM taak_runs`).get().n, 1);
 });
 
+test('de laatste geslaagde run van een taak blijft staan, hoe oud ook', async () => {
+  // Zo bleek in oktober 2026 niet meer na te gaan wanneer de supabase-ping
+  // voor het laatst lukte: alles van vóór de maand mislukkingen was gewist.
+  const db = zetKlaar();
+  db._sqlite.exec(`
+    INSERT INTO taak_runs (taak, geeindigd, status) VALUES ('supabase-ping', ${dagenGeleden(60)}, 'ok');
+    INSERT INTO taak_runs (taak, geeindigd, status, melding) VALUES ('supabase-ping', ${dagenGeleden(59)}, 'ok', 'laatste ok');
+    INSERT INTO taak_runs (taak, geeindigd, status) VALUES ('supabase-ping', ${dagenGeleden(40)}, 'fout');
+    INSERT INTO taak_runs (taak, geeindigd, status) VALUES ('supabase-ping', ${dagenGeleden(1)}, 'fout');
+    INSERT INTO taak_runs (taak, geeindigd, status) VALUES ('teams-sync', ${dagenGeleden(45)}, 'ok');
+  `);
+  const aantal = await kuisTaakRunsOp(db);
+  assert.equal(aantal, 2, 'enkel de oudere ok en de oude fout van de ping');
+  const over = db._sqlite.prepare(`SELECT taak, status, melding FROM taak_runs ORDER BY id`).all().map((r) => ({ ...r }));
+  assert.deepEqual(over, [
+    { taak: 'supabase-ping', status: 'ok', melding: 'laatste ok' },
+    { taak: 'supabase-ping', status: 'fout', melding: null },
+    { taak: 'teams-sync', status: 'ok', melding: null },
+  ]);
+});
+
 // --- berichten --------------------------------------------------------------
 
 test('berichten ouder dan 120 dagen wordt verwijderd, jonger blijft staan', async () => {

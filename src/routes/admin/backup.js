@@ -13,9 +13,15 @@
 
 import { fout } from '../../lib/http.js';
 
+// D1 zet zelf een tabel `_cf_KV` in sqlite_master, maar weigert elke lezing
+// ervan ('not authorized'). Tot 0.30.1 liet die ene tabel de hele backup
+// mislukken met een 500. Ze hoort niet bij onze gegevens.
 export async function alleTabellen(db) {
   const rijen = await db
-    .prepare(`SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'`)
+    .prepare(
+      `SELECT name FROM sqlite_master
+        WHERE type = 'table' AND substr(name, 1, 7) <> 'sqlite_' AND substr(name, 1, 4) <> '_cf_'`
+    )
     .all();
   return (rijen.results ?? []).map((r) => r.name);
 }
@@ -26,16 +32,23 @@ export async function backupExporteren(ctx) {
   if (!tabellen.length) return fout(500, 'geen enkele tabel gevonden — dit hoort niet te gebeuren');
 
   const backup = {};
+  // Eén onleesbare tabel mag de rest niet tegenhouden: een backup met een gat
+  // dat erin vermeld staat, is beter dan geen backup. Zoals in YOAssist.
+  const problemen = [];
   for (const naam of tabellen) {
     // Tabelnamen kunnen niet als gebonden parameter meegegeven worden in SQL;
     // ze komen hier rechtstreeks uit sqlite_master, nooit van een aanroeper,
     // dus dat is veilig — het is altijd een naam die de databank zelf net gaf.
-    const rijen = await db.prepare(`SELECT * FROM "${naam}"`).all();
-    backup[naam] = rijen.results ?? [];
+    try {
+      const rijen = await db.prepare(`SELECT * FROM "${naam}"`).all();
+      backup[naam] = rijen.results ?? [];
+    } catch (e) {
+      problemen.push({ tabel: naam, reden: String(e?.message || e) });
+    }
   }
 
   const datum = new Date().toISOString().slice(0, 10);
-  return new Response(JSON.stringify({ gemaakt: new Date().toISOString(), tabellen: backup }, null, 2), {
+  return new Response(JSON.stringify({ gemaakt: new Date().toISOString(), problemen, tabellen: backup }, null, 2), {
     status: 200,
     headers: {
       'content-type': 'application/json',
