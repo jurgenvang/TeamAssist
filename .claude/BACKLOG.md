@@ -11,7 +11,7 @@ WIJZIGINGEN-bestanden blijven kloppen:
   punt *U* (Microsoft 365) heet hier **VU**, want TeamAssist heeft al een *U*
 - **T** + nummer, en de letters **A–AB** — TeamAssist
 
-Stand: YOAssist **v1.17.0**, TeamAssist **0.38.0**
+Stand: YOAssist **v1.17.0**, TeamAssist **0.39.0**
 
 ---
 
@@ -36,9 +36,9 @@ Bijgewerkt bij elke versie. Voor de volledige tekst: zoek de kop verderop
   zie README); zonder blijft alles per mail.
 
 ### Klaar om te bouwen
-- **I1, fase 4b (0.39.0)** — het Cluboverzicht met aanduiden. Daarna 4c
-  (Vergoedingen club), 4d (Regio en de beheerdelen) en 4e (tabbladen per
-  stuk uitzetten — schemawijziging, eerst de migratie).
+- **I1, fase 4c (0.40.0)** — Vergoedingen club en de tarieven. Daarna 4d
+  (Regio en de beheerdelen) en 4e (tabbladen per stuk uitzetten —
+  schemawijziging, eerst de migratie).
 - **T7** — tabblad Mijn club.
 - **T12** — aanmelden als.
 - **T18, T19** — twee kleine gaten uit de code-audit.
@@ -228,9 +228,9 @@ rapport. Verder:
      (ook voor een ouder van een official, die namens zijn kind invult),
      Mijn vergoeding, en bij Mijn voorkeuren de herinneringen, gsm delen en
      de agendalink.
-   - **4b — 0.39.0: het Cluboverzicht** met aanduiden, vrijgeven, scope,
-     refs bevestigd, automatisch aanvullen, vul nog in, problemen, voorbije
-     wedstrijden.
+   - **4b — 0.39.0, afgewerkt: het Cluboverzicht** met aanduiden,
+     vrijgeven, scope, refs bevestigd, automatisch aanvullen, vul nog in,
+     problemen, voorbije wedstrijden.
    - **4c — 0.40.0: Vergoedingen club** en de tarieven.
    - **4d — 0.41.0: Regio en de beheerdelen** (woensdaglijst, synchroniseren,
      instellingen van de module).
@@ -365,6 +365,7 @@ YOAssist met `ruudcuyvers@…`, vermoedelijk het adres van zijn vader.
 | 0.23.0 | T14 afgewerkt: een volledige backup van de databank als JSON. Beter dan aanvankelijk voorgesteld — geen hardcoded tabellenlijst met een test die drift moet vangen (de YOAssist-aanpak), maar tabellen rechtstreeks uit `sqlite_master` gehaald, wat de hele bugklasse structureel onmogelijk maakt. De kerntest bewijst dat letterlijk: een tabel die pas ná het schrijven van de route wordt aangemaakt, zit er toch in. |
 | 0.24.0 | T16 en T17 afgewerkt. `verwittig()` heeft geen `kanaal`-parameter meer en leest voortaan `kanaal_voorkeur` — mail blijft de terugval zolang push niet bestaat, met een aparte logregel voor wie 'push' koos. Blokken bij Zaalbeheer staan nu gegroepeerd per weekdag als losse blokjes, met bewust neutrale kleuren in plaats van de accentkleur. |
 | 0.25.0 | T15 afgewerkt: opruiming van `logboek` (365 dagen), `taak_runs` (30 dagen), `berichten` (120 dagen), en het definitief verwijderen van een inactieve persoon na 180 dagen. Twee tabellen extra gevonden tijdens het bouwen (`accounts`, `ouder_kind`) die niet in het oorspronkelijke overzicht stonden. Enkel `aanwezigheden` wordt geanonimiseerd in plaats van verwijderd — de enige tabel waar dat structureel kon — wat een schema-heropbouw vroeg, grondig getoetst tegen een nagemaakte bestaande databank. |
+| 0.39.0 | I1 fase 4b: het Cluboverzicht. Tabblad voor wie de officials beheert (YOADM, ADMIN), met de backend erbij (`GET /api/admin/officials/overzicht`, uit YOAssist: de thuiswedstrijden met de scheidsrechters van de bond, wie kan, wie niet en wie aangeduid is; cijfers over de twee eerstvolgende volledige weekends; voorbije wedstrijden vanaf de vorige maand op vraag, die nooit meetellen). Op het scherm: tegels die ook filteren, groepen *Aandacht nodig*, *U10/U12*, *Overige*, *Voorbij*; aanduiden door op een naam te tikken (wie 'nee' zei of botst: na bevestiging), iemand anders aanduiden, vrijgeven, in of uit de lijst, 'er komen twee refs', de gemelde problemen, automatisch aanvullen (eerst het voorstel), de herinnering voor wie nog niet invulde. In Chromium bekeken tegen de echte handlers. Geen schemawijziging. 968 tests. |
 | 0.38.0 | I1 fase 4a: het scherm van een official. Tabblad *Aanduidingen*, vooraan voor wie official is — en voor een ouder van een official, die namens zijn kind invult (keuze bovenaan; `/api/mij` meldt nu `officials_kinderen`). Zoals in YOAssist: drie secties (aangeduid, nog te beantwoorden — deze en volgende maand, de rest op vraag —, beantwoord), de indeling vast per bezoek, de teller die meteen meetelt, REF1/REF2 met bellen en WhatsApp bij wie samen fluit, de scheidsrechters van de bond, forfait, probleem melden. *Mijn vergoeding* in het naammenu. Bij Mijn voorkeuren de herinneringen, gsm delen en de agendalink (nieuwe routes `GET/POST /api/officials/voorkeuren`). In Chromium bekeken met een nep-API. Geen schemawijziging. 964 tests. |
 | 0.37.0 | I1 fase 3f, backend: de rest van de module Officials. Regio: clubs volgen (naam van de bond), een eigen synchronisatie elke ochtend om 5 u (enkel thuis, vanaf U14, wat nog komt; de woensdaglijst blijft staan tenzij de wedstrijd verschoof), tonen met het hoogste van API en lijst en de bron per wedstrijd, leegmaken met droogloop. Forfait: eigen aanduidingen vrijgegeven als het forfait vóór de wedstrijddag gekend is (instelling `forfait_aanduiding`), anders gemeld. De externe API (sleutel in de header) en de agendafeed (sleutel in de URL; anders dan YOAssist in Brusselse tijd met TZID, waar een wedstrijd een of twee uur verschoven stond), met de UID's van YOAssist; `yoassist.org` stuurt door naar `teamassist.clubassist.org`, behalve `/api/kalender/` en `/api/extern/`. PV's en coaches: de rollen PLOEGV en COACH van de ploeg, woensdag en donderdag 20 u, één bericht per persoon. Forfait en PV/coach volgen `officials_automatisch`. Geen schemawijziging. 954 tests. |
 | 0.36.0 | I1 fase 3e: facturatie, backend. De rekenregels van YOAssist (op persoon-id), het voorbeeld vóór het afsluiten met de wedstrijden per official, afsluiten met momentopname en spoor (`officials_vergoeding_verwerkt`, op de GUID van de wedstrijd zoals de migratie ze overzet), correcties op eerder afgesloten maanden — één keer —, een wedstrijd die niet meer bij de bond staat gemeld en niet meegeteld, een categorie zonder tarief blokkeert. De maandmail per official, de verzamelstaat naar `facturatie_ontvangers` (adressen zonder account, via het nieuwe `verwittigExtern`, dat bericht_modus volgt). Tarieven aanpassen (nieuw: in YOAssist enkel via de console). Mijn vergoeding, ook namens een kind. Recht `officials.vergoedingen`: YOADM, ADMIN en FINADM. Geen schemawijziging. 943 tests. |

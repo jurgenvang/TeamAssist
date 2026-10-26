@@ -495,3 +495,31 @@ textarea {
 .aangeduid-merk { font-weight: 600; color: #2563eb; }
 .gaat-niet-door { color: var(--gedempt); margin: .4rem 0 0; }
 .maandblok { border-top: 1px solid var(--lijn); padding-top: .4rem; }
+
+/* Cluboverzicht (0.39.0). Een kaart per wedstrijd, met links een kleur die
+   zegt hoe het ervoor staat: aandacht nodig, compleet, of buiten de lijst. */
+.tegels { display: grid; grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr)); gap: .4rem; margin: .5rem 0; }
+.tegel { display: flex; flex-direction: column; align-items: flex-start; padding: .5rem .7rem; margin: 0;
+  background: var(--vlak); color: var(--inkt); border: 1px solid var(--lijn); text-align: left; }
+.tegel b { font-size: 1.3rem; }
+.tegel span { font-size: .8rem; color: var(--gedempt); }
+.tegel.let b { color: #b45309; }
+.tegel[aria-pressed="true"] { border-color: var(--inkt); }
+.ov { padding: .6rem .7rem; margin: .4rem 0; border: 1px solid var(--lijn); border-left: 4px solid var(--lijn); border-radius: var(--radius); }
+.ov.probleem { border-left-color: #dc2626; }
+.ov.compleet { border-left-color: #16a34a; }
+.ov.buiten { opacity: .7; }
+.ov.voorbij { background: var(--vlak); }
+.ov-kop { overflow-wrap: anywhere; }
+.ov-regel { display: flex; flex-wrap: wrap; gap: .3rem; align-items: center; margin: .3rem 0; }
+.ov-label { min-width: 3.5rem; font-size: .75rem; text-transform: uppercase; color: var(--gedempt); }
+.ov-actie { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .3rem; }
+.chip { display: inline-block; padding: .05rem .5rem; border-radius: 999px; border: 1px solid var(--lijn);
+  font-size: .85rem; background: var(--achtergrond); color: var(--inkt); margin: 0; width: auto; }
+.chip.ja { border-color: #16a34a; }
+.chip.nee { border-color: #9ca3af; color: var(--gedempt); }
+.chip.geen { border-style: dashed; color: var(--gedempt); }
+.chip.klik { cursor: pointer; }
+button.mini { padding: .1rem .5rem; font-size: .8rem; width: auto; margin: 0; background: transparent; color: var(--inkt); border: 1px solid var(--lijn); }
+.probleem-melding { padding: .4rem .6rem; margin: .3rem 0; border-left: 3px solid #dc2626; background: var(--vlak); }
+.voorstel { padding: .6rem .8rem; border: 1px solid var(--lijn); border-radius: var(--radius); margin: .5rem 0; }

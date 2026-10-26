@@ -36,6 +36,7 @@ import {
 } from './officials/regio.js';
 import { externeAanduidingen, kalender, agendaLink } from './officials/extern.js';
 import { officialsVoorkeurenTonen, officialsVoorkeurenBewaren } from './officials/voorkeuren.js';
+import { clubOverzicht } from './officials/overzicht.js';
 import { ontvangMail } from './officials/woensdaglijst.js';
 import {
   berichtenTonen, berichtenOngelezen, berichtGelezen, berichtVerwijderen, mededelingTonen, mededelingWegklikken,
@@ -118,6 +119,7 @@ export const ROUTES = [
   { methode: 'POST', pad: '/api/officials/beschikbaarheid', doe: beschikbaarheidZetten },
   { methode: 'POST', pad: '/api/officials/probleem', doe: probleemMelden },
   { methode: 'POST', pad: '/api/admin/officials/sync', recht: 'officials.beheren', doe: officialsSync },
+  { methode: 'GET', pad: '/api/admin/officials/overzicht', recht: 'officials.beheren', doe: clubOverzicht },
   { methode: 'GET', pad: '/api/admin/officials/kandidaten', recht: 'officials.beheren', doe: kandidatenTonen },
   { methode: 'POST', pad: '/api/admin/officials/aanduiden', recht: 'officials.beheren', doe: aanduiden },
   { methode: 'POST', pad: '/api/admin/officials/vrijgeven', recht: 'officials.beheren', doe: vrijgeven },

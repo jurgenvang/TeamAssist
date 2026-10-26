@@ -15,6 +15,9 @@ export const TABBLADEN = [
   // geen recht heeft maar namens zijn kind invult (`ouder: true`).
   { id: 'aanduidingen', naam: 'Aanduidingen', recht: 'officials.opgeven', ouder: true },
   { id: 'mij', naam: 'Overzicht', recht: null },
+  // Het cluboverzicht van de officials (0.39.0): in de tabbalk, zoals in
+  // YOAssist — een YOADM werkt er dagelijks in.
+  { id: 'cluboverzicht', naam: 'Cluboverzicht', recht: 'officials.beheren' },
   { id: 'ploegen', naam: 'Ploegen', recht: 'team.bekijken' },
   { id: 'personen', naam: 'Personen', recht: 'personen.beheren' },
   // De beheerschermen staan enkel onder Beheer in het naammenu, niet in de

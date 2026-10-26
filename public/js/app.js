@@ -25,6 +25,7 @@ import { zetMeldingenAan, zetMeldingenUit, stuurTestmelding, luisterNaarServiceW
 import { zetOfficialsPersonen, laadAanduidingen, koppelAanduidingen } from './schermen/aanduidingen.js';
 import { toonMijnVergoeding } from './schermen/mijn-vergoeding.js';
 import { toonOfficialsVoorkeuren, koppelOfficialsVoorkeuren } from './schermen/officials-voorkeuren.js';
+import { laadCluboverzicht, koppelCluboverzicht } from './schermen/cluboverzicht.js';
 
 function toonAanmelden() {
   el('aanmelden').hidden = false;
@@ -97,6 +98,9 @@ function toonApp(gegevens) {
   huidigeKies = bouwNavigatie(rechten, (tab) => {
     if (tab === 'aanduidingen') {
       laadAanduidingen();
+    }
+    if (tab === 'cluboverzicht') {
+      laadCluboverzicht();
     }
     if (tab === 'ploegen') {
       laadPloegen();
@@ -375,6 +379,7 @@ el('brandingvoorstelknop').addEventListener('click', haalBrandingvoorstel);
 koppelPersoonscherm();
 koppelMeelezen();
 koppelAanduidingen();
+koppelCluboverzicht();
 koppelOfficialsVoorkeuren();
 koppelTestrol();
 
