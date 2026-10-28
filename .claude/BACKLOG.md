@@ -35,7 +35,13 @@ Bijgewerkt bij elke versie. Voor de volledige tekst: zoek de kop verderop
 - **I1** — de VAPID-secrets bij de Worker zetten (`node tools/maak-vapid.mjs`,
   zie README); zonder blijft alles per mail.
 
+- **V44** — de tekst (of de ruwe mail) van de woensdagmail van 28 oktober
+  2026 zonder link, om een lege lijst te herkennen (zie V44).
+
 ### Klaar om te bouwen
+- **V44** — bug: een woensdaglijst zonder wedstrijden (geen link) geeft een
+  vals alarm en om 20 uur een verkeerde terugval op de API. In YOAssist
+  (live) én TeamAssist. Zodra de mailtekst er is.
 - **I1, fase 4c (0.40.0)** — Vergoedingen club en de tarieven. Daarna 4d
   (Regio en de beheerdelen) en 4e (tabbladen per stuk uitzetten —
   schemawijziging, eerst de migratie).
@@ -1359,6 +1365,23 @@ Twee wegen, nog te kiezen:
 ---
 
 ## Officials (YOAssist) — openstaand
+
+### V44 — Bug: een woensdaglijst zonder wedstrijden wordt als fout gelezen
+**Gemeld 28 oktober 2026.** Zijn er geen wedstrijden zonder scheidsrechter,
+dan stuurt de bond de woensdagmail zonder link naar een Excel-bestand, met in
+de tekst dat er geen zijn. YOAssist (live) en TeamAssist lezen dat als een
+fout: vals alarm aan de beheerders, om 14 uur 'nog niet binnen', en om 20 uur
+de terugval op de API, die wedstrijden in de lijst zet en de YO+'ers
+verwittigt terwijl de bond alles gedekt had. Beschreven in de README van
+TeamAssist (*Gekende fouten*).
+
+Voorstel voor de fix: herkennen aan de tekst in de mail en bewaren als een
+lege lijst (`aantal_rijen` 0, status 'ontvangen'); verwerken zoals altijd —
+niets erbij, wat automatisch in de lijst kwam en niemand heeft eruit, en elke
+eigen thuiswedstrijd vanaf U14 'de bond voorziet twee' (ook Regio). Enkel bij
+die tekst: een mail zonder link en zonder die tekst blijft een fout, want dan
+veranderde de bond de vorm. Eerst in YOAssist (bugfix, live), dan dezelfde
+regel in TeamAssist. **Nodig:** de precieze tekst uit de mail van 28 oktober.
 
 ### V32 — Pushmelding tikken op smartphone: uitzoeken of het echt naar Mijn berichten gaat
 **Nog uit te zoeken, geen bug bevestigd.** Ontstaan uit een vraag of tikken op

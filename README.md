@@ -314,6 +314,48 @@ Cloudflare-account valt er niets mee te doen. Als secret of variabele kan het
 overigens niet: een binding wordt bij het deployen opgelost, vóór er iets van
 `env` bestaat.
 
+## De app achter clubassist.org
+
+Er verandert niets aan de code: alles gebeurt in Cloudflare, Supabase en
+Resend. Het workers.dev-adres blijft werken, dus overstappen kan in stappen.
+
+1. **Het domein in Cloudflare.** Gekocht bij Cloudflare: het staat er al.
+   Elders gekocht: *Add a domain*, en bij de registrar de nameservers op die
+   van Cloudflare zetten. Wachten tot het op *Active* staat.
+2. **De Worker aan `teamassist.clubassist.org`.** Workers & Pages →
+   `teamassist` → Settings → Domains & Routes → Add → *Custom domain* →
+   `teamassist.clubassist.org`. Cloudflare maakt het DNS-record en het
+   certificaat zelf. In het dashboard, niet in `wrangler.toml`: dan blijft
+   de deploy vanaf GitHub zoals ze is.
+3. **`clubassist.org` zelf stuurt door** (I1: 301 naar de app).
+   - DNS → Records: voor `clubassist.org` een record via Cloudflare (oranje
+     wolkje), bv. `AAAA` naar `100::`. Zonder record komt het verzoek nooit
+     bij Cloudflare aan.
+   - Rules → Redirect Rules: *Hostname equals* `clubassist.org` (en eventueel
+     `www.clubassist.org`) → *Dynamic*,
+     `concat("https://teamassist.clubassist.org", http.request.uri.path)`,
+     301, *Preserve query string* aan.
+4. **Supabase** (Authentication → URL Configuration): *Site URL* op
+   `https://teamassist.clubassist.org`, en bij *Redirect URLs*
+   `https://teamassist.clubassist.org/**` erbij. De workers.dev-regel mag
+   blijven staan. Vergeten: de aanmeldlink gaat stil naar het oude adres
+   (zie *Supabase opzetten*).
+5. **Resend**: Domains → Add domain → `clubassist.org`, de DNS-records laten
+   zetten (*Auto configure* met Cloudflare) of zelf toevoegen, en wachten tot
+   *Verified*. Tot dan weigert Resend mail vanaf `noreply@clubassist.org`.
+6. **Pushmeldingen** hangen aan het adres: op het nieuwe adres zet iedereen
+   ze één keer opnieuw aan; op een iPhone ook de app opnieuw op het
+   beginscherm zetten, vanaf het nieuwe adres.
+7. **Controleren**: `https://teamassist.clubassist.org` openen en een
+   aanmeldlink vragen — wijst de link naar het nieuwe adres, dan klopt stap 4.
+   `https://clubassist.org` moet doorsturen.
+
+**Nog niet:** `yoassist.org` aan deze Worker hangen. Vanaf dan stuurt
+TeamAssist alles van `yoassist.org` door, behalve `/api/kalender/` en
+`/api/extern/` — en is YOAssist onbereikbaar terwijl het nog live is. Dat
+hoort bij de overstap (fase 5), samen met Email Routing voor de woensdaglijst
+en `officials_automatisch`.
+
 ## YOAssist overzetten (I1)
 
 ```
@@ -432,6 +474,33 @@ ongeldig.
 **Een link die niet meer werkt.** Elke link is eenmalig en vervalt na een uur.
 Een fout daarover verschijnt nu op het aanmeldscherm in plaats van stilzwijgend
 het formulier opnieuw te tonen.
+
+## Gekende fouten
+
+### Woensdaglijst zonder link: vals alarm, en een verkeerde terugval (V44)
+
+Zijn er in een weekend **geen** wedstrijden zonder scheidsrechter, dan stuurt
+Basketbal Vlaanderen de woensdagmail wel, maar zonder link naar een
+Excel-bestand: in de tekst staat dat er geen wedstrijden zonder
+scheidsrechter zijn. Zo op 28 oktober 2026.
+
+Zowel YOAssist (`src/lib/woensdaglijst.js`) als TeamAssist
+(`src/officials/woensdaglijst.js`) zien dat als een fout ('Geen link naar een
+Excel-bestand gevonden in de mail'). Gevolgen:
+
+1. de beheerders krijgen 'Woensdaglijst kon niet verwerkt worden';
+2. de lijst telt niet als ontvangen, dus om 14 uur volgt 'nog niet binnen';
+3. om 20 uur valt de app terug op de API: elke thuiswedstrijd vanaf U14 waar
+   de API nog geen twee scheidsrechters toont, komt in de aanduidingslijst,
+   en de YO+'ers krijgen daarover bericht — terwijl de bond net alles
+   gedekt had.
+
+Tot de fix: na zo'n mail om 20 uur in het cluboverzicht nakijken wat er met
+reden 'woensdag' in de lijst kwam, en het eruit halen. Wat de juiste
+verwerking is: een lege lijst — niets in de lijst zetten, en elke eigen
+thuiswedstrijd van dat weekend vanaf U14 krijgt 'de bond voorziet twee'.
+Daarvoor is de precieze tekst uit de mail nodig, om ze te herkennen zonder
+een echte fout (een gewijzigde mail) ook als 'leeg' te lezen.
 
 ## Wat er nog niet is
 
