@@ -467,3 +467,50 @@ test('de planner, en de afscherming tot de overstap', async () => {
   assert.deepEqual(runs(), ['woensdag-terugval']);
   assert.equal(rij(db, 'API0').scope, 1, 'aan: de terugval loopt');
 });
+
+test('V44: alle wedstrijden gedekt — een mail zonder link is een lege lijst', async () => {
+  // De tekst zoals de bond hem op 28 oktober 2026 stuurde, met de dubbele
+  // spatie en de regelbreuk erin.
+  const LEEG_TEKST = '** Beste official\n\n0 wedstrijden met één of zonder officials\n\n\n' +
+    'Alle wedstrijden zijn  dit weekend van officials voorzien. Bij eventuele wijzigingen zal rechtstreeks  ' +
+    'contact opgenomen worden met de thuisploeg.\n';
+  assert.deepEqual(herkenMail(leesMail(bouwMail({ link: null, inhoud: LEEG_TEKST }))), { soort: 'lijst', link: null, leeg: true });
+  assert.equal(herkenMail(leesMail(bouwMail({
+    link: null, inhoud: 'Beste official', htmlInhoud: '<p>Alle wedstrijden zijn&nbsp;dit weekend<br>van officials voorzien.</p>',
+  }))).leeg, true, 'ook enkel in de HTML, met een <br> in de zin');
+  assert.equal(herkenMail(leesMail(bouwMail({ link: null }))).leeg, false);
+
+  const db = nieuweDb();
+  const ctx = ctxVan(db);
+  wed(db, 'API0', ZA, '09:00', `${B} J16 A`);
+  wed(db, 'AUTO', ZO, '11:00', `${B} J18 B`, { cat: 'J18', scope: 1, reden: 'woensdag' });
+  wed(db, 'BEZET', ZO, '13:00', `${B} J18 C`, { cat: 'J18', scope: 1, reden: 'woensdag', officials: ['plus'] });
+  db._sqlite.exec(`
+    INSERT INTO officials_volg_clubs (guid, naam, toegevoegd_door) VALUES ('BVBL9999', 'Andere Club', 'baas');
+    INSERT INTO officials_volg_wedstrijden (guid, club_guid, club_naam, thuis_naam, uit_naam, datum, uur, cat_code, vbl_aantal)
+      VALUES ('V_ZA', 'BVBL9999', 'Andere Club', 'Andere Club U16 A', 'Gast', '${ZA}', '10:00', 'J16', 0);
+  `);
+  let r;
+  let mails = await metFetch(null, async () => { r = await ontvangMail(ctx, bouwMail({ link: null, inhoud: LEEG_TEKST }), { nu: VOOR_14 }); });
+  assert.equal(r.soort, 'ontvangen', 'geen fout');
+  assert.equal(mails.length, 0, 'geen foutmail');
+  const l = db._sqlite.prepare(`SELECT weekend_van, weekend_tot, aantal_rijen, status FROM officials_vbl_lijsten`).get();
+  assert.deepEqual([l.weekend_van, l.weekend_tot, l.aantal_rijen, l.status], [ZA, ZO, 0, 'ontvangen']);
+
+  mails = await metFetch(null, async () => { r = await woensdagOm14(ctx, OM_14); });
+  assert.equal(r.soort, 'verwerkt', 'geen "nog niet binnen"');
+  assert.equal(r.resultaat.toegevoegd.length, 0);
+  assert.equal(rij(db, 'AUTO').scope, 0, 'automatisch erin, niemand op: eruit');
+  assert.equal(rij(db, 'BEZET').scope, 1, 'met een aanduiding: blijft');
+  assert.equal(rij(db, 'API0').bond_officials, 2);
+  assert.equal(db._sqlite.prepare(`SELECT bond_officials AS b FROM officials_volg_wedstrijden WHERE guid = 'V_ZA'`).get().b, 2, 'ook Regio');
+  assert.equal(aan(mails, 'plus@club.be').length, 0, 'YO+ krijgt niets');
+
+  await metFetch(null, async () => { r = await woensdagTerugval(ctx, OM_20); });
+  assert.equal(r.soort, 'niet-nodig', 'om 20 uur geen terugval op de API');
+  assert.equal(rij(db, 'API0').scope, 0);
+
+  const db2 = nieuweDb();
+  await metFetch(null, async () => { r = await ontvangMail(ctxVan(db2), bouwMail({ link: null }), { nu: VOOR_14 }); });
+  assert.equal(r.soort, 'fout', 'zonder link en zonder die tekst: een fout, zoals vroeger');
+});

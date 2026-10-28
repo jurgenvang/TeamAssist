@@ -477,30 +477,8 @@ het formulier opnieuw te tonen.
 
 ## Gekende fouten
 
-### Woensdaglijst zonder link: vals alarm, en een verkeerde terugval (V44)
-
-Zijn er in een weekend **geen** wedstrijden zonder scheidsrechter, dan stuurt
-Basketbal Vlaanderen de woensdagmail wel, maar zonder link naar een
-Excel-bestand: in de tekst staat dat er geen wedstrijden zonder
-scheidsrechter zijn. Zo op 28 oktober 2026.
-
-Zowel YOAssist (`src/lib/woensdaglijst.js`) als TeamAssist
-(`src/officials/woensdaglijst.js`) zien dat als een fout ('Geen link naar een
-Excel-bestand gevonden in de mail'). Gevolgen:
-
-1. de beheerders krijgen 'Woensdaglijst kon niet verwerkt worden';
-2. de lijst telt niet als ontvangen, dus om 14 uur volgt 'nog niet binnen';
-3. om 20 uur valt de app terug op de API: elke thuiswedstrijd vanaf U14 waar
-   de API nog geen twee scheidsrechters toont, komt in de aanduidingslijst,
-   en de YO+'ers krijgen daarover bericht — terwijl de bond net alles
-   gedekt had.
-
-Tot de fix: na zo'n mail om 20 uur in het cluboverzicht nakijken wat er met
-reden 'woensdag' in de lijst kwam, en het eruit halen. Wat de juiste
-verwerking is: een lege lijst — niets in de lijst zetten, en elke eigen
-thuiswedstrijd van dat weekend vanaf U14 krijgt 'de bond voorziet twee'.
-Daarvoor is de precieze tekst uit de mail nodig, om ze te herkennen zonder
-een echte fout (een gewijzigde mail) ook als 'leeg' te lezen.
+Geen openstaande. De laatste, V44 (een woensdagmail zonder link werd als fout
+gelezen), is opgelost in 0.39.1 — zie `WIJZIGINGEN-0.39.1.md`.
 
 ## Wat er nog niet is
 

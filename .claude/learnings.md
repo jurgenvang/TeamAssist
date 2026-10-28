@@ -38,6 +38,10 @@ iets nieuws boven kwam; nooit inkorten zonder reden.
   het oude moment laten staan, niet overschrijven met leeg.
 - **`gespeeld` is `'G'`**, niet `'J'`. **`TeamMatchesByGuid` mengt
   competities.**
+- **Een lege woensdaglijst komt zonder bijlage.** Is alles gedekt, dan stuurt
+  de bond geen Excel maar enkel een zin in de mail (V44, 28 oktober 2026).
+  'Geen link' is dus niet altijd een fout; herken de lege lijst aan haar
+  tekst, en laat al de rest luid falen.
 - **De API is niet bereikbaar vanuit de sandbox**; de diagnoseroute in de
   Worker toont een echt antwoord.
 - **Een Worker mag per aanroep maar een beperkt aantal uitgaande oproepen

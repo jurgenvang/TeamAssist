@@ -100,9 +100,9 @@ function qp(tekst) {
 }
 export function bouwMail({ van = 'Basketbal Vlaanderen <info@basketbal.vlaanderen>',
   onderwerp = '=?utf-8?Q?Wedstrijden=20zonder=20officials=20komend=20weekend=20&=20nieuws?=',
-  link = LINK } = {}) {
-  const tekst = `** Beste official\n\nOverzicht wedstrijden zonder officials (${link ?? 'geen link'})\n\nTot volgende week.`;
-  const html = `<p><a href="https://vlaanderen.us3.list-manage.com/track/click?u=1&amp;id=2">Overzicht</a></p>`;
+  link = LINK, inhoud = null, htmlInhoud = null } = {}) {
+  const tekst = inhoud ?? `** Beste official\n\nOverzicht wedstrijden zonder officials (${link ?? 'geen link'})\n\nTot volgende week.`;
+  const html = htmlInhoud ?? `<p><a href="https://vlaanderen.us3.list-manage.com/track/click?u=1&amp;id=2">Overzicht</a></p>`;
   return [
     `From: ${van}`, 'To: vbl@yoassist.org', `Subject: ${onderwerp}`, 'MIME-Version: 1.0',
     'Content-Type: multipart/alternative; boundary="_----------=_MCPart_1"', '',
