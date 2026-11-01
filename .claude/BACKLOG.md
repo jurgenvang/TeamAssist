@@ -11,7 +11,7 @@ WIJZIGINGEN-bestanden blijven kloppen:
   punt *U* (Microsoft 365) heet hier **VU**, want TeamAssist heeft al een *U*
 - **T** + nummer, en de letters **A–AB** — TeamAssist
 
-Stand: YOAssist **v1.17.1**, TeamAssist **0.39.2**
+Stand: YOAssist **v1.17.1**, TeamAssist **0.40.0**
 
 ---
 
@@ -41,9 +41,9 @@ Bijgewerkt bij elke versie. Voor de volledige tekst: zoek de kop verderop
   de terugval om 20 uur erin zette.
 
 ### Klaar om te bouwen
-- **I1, fase 4c (0.40.0)** — Vergoedingen club en de tarieven. Daarna 4d
-  (Regio en de beheerdelen) en 4e (tabbladen per stuk uitzetten —
-  schemawijziging, eerst de migratie).
+- **I1, fase 4d (0.41.0)** — Regio en de beheerdelen (woensdaglijst,
+  synchroniseren, instellingen van de module). Daarna 4e (tabbladen per stuk
+  uitzetten — schemawijziging, eerst de migratie).
 - **T7** — tabblad Mijn club.
 - **T12** — aanmelden als.
 - **T18, T19** — twee kleine gaten uit de code-audit.
@@ -236,7 +236,8 @@ rapport. Verder:
    - **4b — 0.39.0, afgewerkt: het Cluboverzicht** met aanduiden,
      vrijgeven, scope, refs bevestigd, automatisch aanvullen, vul nog in,
      problemen, voorbije wedstrijden.
-   - **4c — 0.40.0: Vergoedingen club** en de tarieven.
+   - **4c — 0.40.0, afgewerkt: Vergoedingen club** en de tarieven, onder
+     Beheer in het naammenu (YOADM, ADMIN, FINADM).
    - **4d — 0.41.0: Regio en de beheerdelen** (woensdaglijst, synchroniseren,
      instellingen van de module).
    - **4e: tabbladen per stuk uitzetten** (YOAssist's `verborgen_tabs`) —
@@ -370,6 +371,7 @@ YOAssist met `ruudcuyvers@…`, vermoedelijk het adres van zijn vader.
 | 0.23.0 | T14 afgewerkt: een volledige backup van de databank als JSON. Beter dan aanvankelijk voorgesteld — geen hardcoded tabellenlijst met een test die drift moet vangen (de YOAssist-aanpak), maar tabellen rechtstreeks uit `sqlite_master` gehaald, wat de hele bugklasse structureel onmogelijk maakt. De kerntest bewijst dat letterlijk: een tabel die pas ná het schrijven van de route wordt aangemaakt, zit er toch in. |
 | 0.24.0 | T16 en T17 afgewerkt. `verwittig()` heeft geen `kanaal`-parameter meer en leest voortaan `kanaal_voorkeur` — mail blijft de terugval zolang push niet bestaat, met een aparte logregel voor wie 'push' koos. Blokken bij Zaalbeheer staan nu gegroepeerd per weekdag als losse blokjes, met bewust neutrale kleuren in plaats van de accentkleur. |
 | 0.25.0 | T15 afgewerkt: opruiming van `logboek` (365 dagen), `taak_runs` (30 dagen), `berichten` (120 dagen), en het definitief verwijderen van een inactieve persoon na 180 dagen. Twee tabellen extra gevonden tijdens het bouwen (`accounts`, `ouder_kind`) die niet in het oorspronkelijke overzicht stonden. Enkel `aanwezigheden` wordt geanonimiseerd in plaats van verwijderd — de enige tabel waar dat structureel kon — wat een schema-heropbouw vroeg, grondig getoetst tegen een nagemaakte bestaande databank. |
+| 0.40.0 | I1 fase 4c: Vergoedingen club, onder Beheer in het naammenu, voor wie `officials.vergoedingen` heeft (YOADM, ADMIN, FINADM). Zoals in YOAssist: per open maand *Bekijken en afsluiten* (pas vanaf de eerste dag van de volgende maand), met het voorbeeld per official — regels, bedragen, de wedstrijden zelf, correcties, forfait, en waarschuwingen voor een categorie zonder tarief of een wedstrijd die niet meer bij de bond staat; daarna afsluiten en versturen, na bevestiging. Een wedstrijd weghalen uit het voorbeeld is vrijgeven (enkel met `officials.beheren`, dus niet voor FINADM; enkel werk in een open maand). De afgesloten maanden met hun staat (wie afsloot, naar wie de verzamelstaat ging), het totaal per official over het seizoen, wie de verzamelstaat krijgt. Nieuw tegenover YOAssist: de tarieven aanpassen in het scherm. In Chromium bekeken tegen de echte handlers, ook als FINADM. Geen schemawijziging. 985 tests. |
 | 0.39.2 | T20: langer aangemeld blijven. Het verversingstoken staat in een HttpOnly-cookie die de Worker zet (400 dagen, enkel voor `/api/sessie/`), het toegangstoken enkel in het geheugen; drie publieke routes `POST /api/sessie/start`, `/vernieuw`, `/stop`. Eén verversing tegelijk in de browser (twee tegelijk konden de sessie bij Supabase laten intrekken). Enkel afmelden als Supabase zegt dat het token niet meer geldt: een storing (5xx, gepauzeerd project, onbereikbare JWKS) is een 503 en de sessie blijft. Een sessie van vóór 0.39.2 gaat bij het openen één keer mee naar de cookie. Het codeveld neemt 6 tot 10 cijfers; de README legt uit dat `{{ .Token }}` in *Magic Link* én *Confirm signup* moet. Ook: een test van het cluboverzicht faalde op zondag. Geen schemawijziging. 977 tests. |
 | 0.39.1 | V44: de woensdagmail zonder link ('Alle wedstrijden zijn dit weekend van officials voorzien') is een lege lijst voor het komende weekend, geen fout: geen vals alarm, om 14 uur verwerkt (niets erbij, wat automatisch in de lijst kwam zonder official eruit, 'twee volgens de bond' voor eigen thuiswedstrijden vanaf U14 en Regio), om 20 uur geen terugval op de API. Zonder link én zonder die tekst blijft het een fout. Ook mee: het wedstrijd-id in het facturatievoorbeeld en de naam van wie een maand afsloot (voorbereiding 4c). Geen schemawijziging. 969 tests. |
 | 0.39.0 | I1 fase 4b: het Cluboverzicht. Tabblad voor wie de officials beheert (YOADM, ADMIN), met de backend erbij (`GET /api/admin/officials/overzicht`, uit YOAssist: de thuiswedstrijden met de scheidsrechters van de bond, wie kan, wie niet en wie aangeduid is; cijfers over de twee eerstvolgende volledige weekends; voorbije wedstrijden vanaf de vorige maand op vraag, die nooit meetellen). Op het scherm: tegels die ook filteren, groepen *Aandacht nodig*, *U10/U12*, *Overige*, *Voorbij*; aanduiden door op een naam te tikken (wie 'nee' zei of botst: na bevestiging), iemand anders aanduiden, vrijgeven, in of uit de lijst, 'er komen twee refs', de gemelde problemen, automatisch aanvullen (eerst het voorstel), de herinnering voor wie nog niet invulde. In Chromium bekeken tegen de echte handlers. Geen schemawijziging. 968 tests. |

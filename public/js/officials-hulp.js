@@ -66,3 +66,23 @@ export function alsBedrag(cent) {
   const t = `€ ${Math.floor(a / 100)},${String(a % 100).padStart(2, '0')}`;
   return neg ? `− ${t}` : t;
 }
+
+/**
+ * Een bedrag zoals een beheerder het intypt ('15', '15,50', '€ 15.5') als
+ * cent, of null als het geen bedrag is. Een tarief in cent laten intypen
+ * vraagt om een tarief van € 0,15.
+ */
+export function naarCent(tekst) {
+  const s = String(tekst ?? '').replace(/€/g, '').replace(/\s/g, '').replace(',', '.');
+  if (!/^\d+(\.\d{1,2})?$/.test(s)) return null;
+  const [heel, deel = ''] = s.split('.');
+  return Number(heel) * 100 + Number(deel.padEnd(2, '0'));
+}
+
+/** Eén wedstrijd uit een vergoeding: 'za 14/11 G12 A - Gent (U12)', met correctie en forfait. */
+export function wedstrijdTekst(w) {
+  const d = w.datum ? dagVan(w.datum) : null;
+  const wanneer = d ? `${d.dag} ${d.nr}/${w.datum.slice(5, 7)}` : '';
+  const correctie = w.soort === 'correctie' ? ` — correctie ${w.aantal > 0 ? '+' : ''}${w.aantal}` : '';
+  return `${wanneer} ${w.wedstrijd} (${w.catLabel ?? w.catCode})${correctie}${w.forfait ? ' — forfait' : ''}`.trim();
+}

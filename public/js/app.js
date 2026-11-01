@@ -28,6 +28,7 @@ import { zetOfficialsPersonen, laadAanduidingen, koppelAanduidingen } from './sc
 import { toonMijnVergoeding } from './schermen/mijn-vergoeding.js';
 import { toonOfficialsVoorkeuren, koppelOfficialsVoorkeuren } from './schermen/officials-voorkeuren.js';
 import { laadCluboverzicht, koppelCluboverzicht } from './schermen/cluboverzicht.js';
+import { laadVergoedingen, koppelVergoedingen } from './schermen/vergoedingen-club.js';
 
 function toonAanmelden() {
   el('aanmelden').hidden = false;
@@ -103,6 +104,9 @@ function toonApp(gegevens) {
     }
     if (tab === 'cluboverzicht') {
       laadCluboverzicht();
+    }
+    if (tab === 'vergoedingen') {
+      laadVergoedingen(rechten);
     }
     if (tab === 'ploegen') {
       laadPloegen();
@@ -404,6 +408,7 @@ koppelPersoonscherm();
 koppelMeelezen();
 koppelAanduidingen();
 koppelCluboverzicht();
+koppelVergoedingen();
 koppelOfficialsVoorkeuren();
 koppelTestrol();
 

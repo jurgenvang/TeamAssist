@@ -68,15 +68,20 @@ test('het overzicht heeft geen recht nodig', () => {
 test('de beheerschermen staan in het naammenu, niet in de tabbalk', () => {
   const rechten = bouwRechten({ rollen: [{ rol: 'ADMIN', team_guid: null }] }).overzicht();
   assert.deepEqual(tabbalkTabbladen(rechten).map((t) => t.id), ['mij', 'cluboverzicht', 'ploegen', 'personen']);
-  assert.deepEqual(menuTabbladen(rechten).map((t) => t.id), ['dagelijksbeheer', 'configuratie', 'zaalbeheer']);
+  assert.deepEqual(menuTabbladen(rechten).map((t) => t.id), ['vergoedingen', 'dagelijksbeheer', 'configuratie', 'zaalbeheer']);
 });
 
 test('wie de officials beheert, ziet het Cluboverzicht in de tabbalk, en geen clubbeheer', () => {
   const yoadm = bouwRechten({ rollen: [{ rol: 'YOADM', team_guid: null }] }).overzicht();
   assert.deepEqual(tabbalkTabbladen(yoadm).map((t) => t.id), ['mij', 'cluboverzicht']);
-  assert.deepEqual(menuTabbladen(yoadm), []);
+  assert.deepEqual(menuTabbladen(yoadm).map((t) => t.id), ['vergoedingen']);
+  // De penningmeester sluit de maand af, maar beheert de officials niet.
+  const finadm = bouwRechten({ rollen: [{ rol: 'FINADM', team_guid: null }] }).overzicht();
+  assert.ok(!tabbalkTabbladen(finadm).some((t) => t.id === 'cluboverzicht'));
+  assert.deepEqual(menuTabbladen(finadm).map((t) => t.id), ['vergoedingen']);
   const yo = bouwRechten({ rollen: [{ rol: 'YO', team_guid: null }] }).overzicht();
   assert.ok(!tabbalkTabbladen(yo).some((t) => t.id === 'cluboverzicht'), 'een official ziet het niet');
+  assert.deepEqual(menuTabbladen(yo), [], 'ook geen Vergoedingen club');
 });
 
 test('een coach heeft niets onder Beheer', () => {

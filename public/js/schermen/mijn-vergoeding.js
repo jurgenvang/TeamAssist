@@ -4,19 +4,12 @@
 
 import { api } from '../api.js';
 import { el, veilig } from '../hulp.js';
-import { maandLabel, dagVan } from '../officials-hulp.js';
+import { maandLabel, wedstrijdTekst } from '../officials-hulp.js';
 import { huidigNamens, namensKeuzeHtml } from './aanduidingen.js';
 
 function regelTekst(r) {
   const wat = `${r.aantal > 0 && r.soort === 'correctie' ? '+' : ''}${r.aantal} × ${r.cat_label ?? r.cat_code}`;
   return r.soort === 'correctie' ? `correctie ${maandLabel(r.betreft_maand)}: ${wat}` : wat;
-}
-
-function wedstrijdTekst(w) {
-  const d = w.datum ? dagVan(w.datum) : null;
-  const wanneer = d ? `${d.dag} ${d.nr}/${w.datum.slice(5, 7)}` : '';
-  const correctie = w.soort === 'correctie' ? ` — correctie ${w.aantal > 0 ? '+' : ''}${w.aantal}` : '';
-  return `${wanneer} ${w.wedstrijd} (${w.catLabel ?? w.catCode})${correctie}${w.forfait ? ' — forfait' : ''}`;
 }
 
 export async function toonMijnVergoeding(namens = huidigNamens()) {

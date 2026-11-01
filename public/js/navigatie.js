@@ -30,6 +30,9 @@ export const TABBLADEN = [
   // examens en feestdagen sturen rechtstreeks wat een zaal-gebonden
   // trainingsreeks genereert. Dagelijks beheer is voor wat je vaak even wil
   // checken (de bond bekijken), Configuratie voor wat zelden wijzigt.
+  // Vergoedingen club (0.40.0): onder Beheer, zoals in YOAssist — het werk
+  // van één keer per maand. Ook voor FINADM, die verder niets beheert.
+  { id: 'vergoedingen', naam: 'Vergoedingen club', recht: 'officials.vergoedingen', inMenu: true },
   { id: 'dagelijksbeheer', naam: 'Dagelijks beheer', recht: 'systeem.beheren', inMenu: true },
   { id: 'configuratie', naam: 'Configuratie', recht: 'systeem.beheren', inMenu: true },
   { id: 'zaalbeheer', naam: 'Zaalbeheer', recht: 'systeem.beheren', inMenu: true },

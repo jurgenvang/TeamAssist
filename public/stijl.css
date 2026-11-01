@@ -495,6 +495,7 @@ textarea {
 .aangeduid-merk { font-weight: 600; color: #2563eb; }
 .gaat-niet-door { color: var(--gedempt); margin: .4rem 0 0; }
 .maandblok { border-top: 1px solid var(--lijn); padding-top: .4rem; }
+.maandblok h3 .bedrag { float: right; color: var(--inkt); }
 
 /* Cluboverzicht (0.39.0). Een kaart per wedstrijd, met links een kleur die
    zegt hoe het ervoor staat: aandacht nodig, compleet, of buiten de lijst. */

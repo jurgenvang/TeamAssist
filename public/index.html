@@ -113,6 +113,34 @@
       <div id="cluboverzichtlijst"></div>
     </section>
 
+    <!-- Vergoedingen club (0.40.0), via Beheer in het naammenu -->
+    <section id="tab-vergoedingen" hidden>
+      <h2>Vergoedingen club</h2>
+      <p class="klein">
+        Een maand afsluiten kan vanaf de eerste dag van de volgende maand. Eerst zie je wat er betaald
+        wordt; daarna liggen de bedragen vast, en wat nog verandert komt als correctie in de volgende maand.
+      </p>
+      <div id="vergoedingenmaanden"></div>
+      <div id="vergoedingendetail"></div>
+      <details>
+        <summary>Per official, dit seizoen</summary>
+        <form><button type="button" class="stil" id="vergoedingenperofficialknop">Tonen</button></form>
+        <div id="vergoedingenperofficial"></div>
+      </details>
+      <details>
+        <summary>Tarieven</summary>
+        <p class="klein">Een nieuw tarief geldt voor wat nog niet afgesloten is.</p>
+        <div id="vergoedingentarieven"></div>
+      </details>
+      <details>
+        <summary>Wie krijgt de verzamelstaat</summary>
+        <p class="klein">Adressen gescheiden door een komma; ze hoeven geen account te hebben (bv. de penningmeester).</p>
+        <label class="veld"><span>Adressen</span><textarea id="vergoedingenontvangers" rows="2"></textarea></label>
+        <form><button type="button" id="vergoedingenontvangersbewaar">Bewaren</button></form>
+        <div id="vergoedingenontvangersmelding"></div>
+      </details>
+    </section>
+
     <!-- Overzicht -->
     <section id="tab-mij" hidden>
       <p class="adres" id="emailadres"></p>
