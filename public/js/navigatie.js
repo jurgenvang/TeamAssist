@@ -68,7 +68,9 @@ export function bouwNavigatie(rechten, bijWissel, extra) {
     .join('');
 
   const kies = (id) => {
-    for (const tab of TABBLADEN) {
+    // Enkel de tabbladen zelf: wat onder Beheer staat, is een paneel
+    // (paneel.js) en heeft hier niets mee te maken.
+    for (const tab of TABBLADEN.filter((t) => !t.inMenu)) {
       const paneel = el(`tab-${tab.id}`);
       if (paneel) paneel.hidden = tab.id !== id;
     }

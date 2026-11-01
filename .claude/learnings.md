@@ -66,6 +66,10 @@ iets nieuws boven kwam; nooit inkorten zonder reden.
 
 ## Werkwijze
 
+- **'Zoals YOAssist' gaat ook over gedrag, niet enkel over welke knoppen er
+  zijn.** Het naammenu van 0.27.0 had dezelfde items, maar opende ze als
+  secties onderaan de pagina in plaats van als panelen (0.40.1). Bij het
+  overzetten van een scherm: ook in de browser naast YOAssist leggen.
 - **Een versie op een werkbranch draait niet.** De Worker liep op 0.25.0
   terwijl 0.26.0–0.30.1 al klaarstonden. Cloudflare deployt vanaf `main`.
 - **Een tekstvervanging die niets vindt, doet stil niets.** Altijd

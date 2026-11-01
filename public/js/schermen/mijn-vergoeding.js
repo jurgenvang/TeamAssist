@@ -3,6 +3,7 @@
 // nog niets vastligt. Een ouder ziet die van zijn kind.
 
 import { api } from '../api.js';
+import { openPaneel } from '../paneel.js';
 import { el, veilig } from '../hulp.js';
 import { maandLabel, wedstrijdTekst } from '../officials-hulp.js';
 import { huidigNamens, namensKeuzeHtml } from './aanduidingen.js';
@@ -13,7 +14,7 @@ function regelTekst(r) {
 }
 
 export async function toonMijnVergoeding(namens = huidigNamens()) {
-  el('vergoedingscherm').hidden = false;
+  openPaneel('vergoedingscherm');
   el('vergoedingnamens').innerHTML = namensKeuzeHtml('vergoedingvoor');
   const keuze = el('vergoedingvoor');
   if (keuze) keuze.addEventListener('change', () => toonMijnVergoeding(keuze.value || null));

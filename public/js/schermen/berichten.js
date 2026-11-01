@@ -3,6 +3,7 @@
 // Een bericht wordt pas gelezen als je het zelf aantikt, niet bij het openen
 // van de lijst: zo kan je eerst scannen zonder dat de stipjes verdwijnen.
 
+import { openPaneel } from '../paneel.js';
 import { api } from '../api.js';
 import { el, toon, veilig } from '../hulp.js';
 
@@ -57,8 +58,7 @@ function datumTekst(sqlTijd) {
 }
 
 export async function toonBerichten() {
-  el('berichtenscherm').hidden = false;
-  el('berichtenscherm').scrollIntoView({ block: 'start' });
+  openPaneel('berichtenscherm');
   const lijst = el('berichtenlijst');
   lijst.innerHTML = '<p class="klein">Laden…</p>';
 

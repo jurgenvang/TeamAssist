@@ -377,14 +377,15 @@ test('een fout bij het zetten van open_op_feestdagen draait de schakelaar terug'
 test('de dichtstbevolkte secties zijn samenvouwbaar met <details>, geen kale <h2>/<h3> meer in die twee tabbladen', () => {
   const configStart = html.indexOf('id="tab-configuratie"');
   const configEind = html.indexOf('id="tab-zaalbeheer"');
-  const configBlok = html.slice(configStart, configEind);
-  // De paneelkop (het scherm zelf) telt niet: het gaat om de secties erin.
+  // De kop van het paneel (het scherm zelf) telt niet: het gaat om de secties erin.
+  const zonderKop = (blok) => blok.replace(/<div class="paneel-kop">[\s\S]*?<\/div>/, '');
+  const configBlok = zonderKop(html.slice(configStart, configEind));
   assert.ok(!configBlok.includes('<h2>'), 'Configuratie hoort geen kale h2 meer te hebben, enkel <summary>');
   assert.match(configBlok, /<summary>Instellingen<\/summary>/);
 
   const zaalStart = html.indexOf('id="tab-zaalbeheer"');
   const zaalEind = html.indexOf('id="tab-dagelijksbeheer"');
-  const zaalBlok = html.slice(zaalStart, zaalEind);
+  const zaalBlok = zonderKop(html.slice(zaalStart, zaalEind));
   assert.ok(!zaalBlok.includes('<h2>') && !zaalBlok.includes('<h3>'), 'Zaalbeheer hoort geen kale koppen meer te hebben');
   assert.match(zaalBlok, /<summary>Zalen<\/summary>/);
   assert.match(zaalBlok, /<summary>Schoolvakanties en examens<\/summary>/);
@@ -484,9 +485,9 @@ test('Kijken als … staat enkel in het menu als de backend zegt dat het werkt',
 });
 
 test('de beheerschermen hebben een titel, want er licht geen tabblad op', () => {
-  assert.match(html, /id="tab-configuratie" hidden>\s*<h2 class="paneelkop">Configuratie<\/h2>/);
-  assert.match(html, /id="tab-zaalbeheer" hidden>\s*<h2 class="paneelkop">Zaalbeheer<\/h2>/);
-  assert.match(html, /id="tab-dagelijksbeheer" hidden>\s*<h2 class="paneelkop">Dagelijks beheer<\/h2>/);
+  for (const titel of ['Configuratie', 'Zaalbeheer', 'Dagelijks beheer', 'Vergoedingen club']) {
+    assert.match(html, new RegExp(`<div class="paneel-kop"><h2>${titel}</h2>`), titel);
+  }
 });
 
 test('de oude losse afmeldknop op Overzicht bestaat niet meer, enkel die in het naammenu', () => {
@@ -521,9 +522,10 @@ test('bij het aanmelden wint de databank, niet de lokale opslag', () => {
   assert.match(app, /pasDonkereModusToe\(gegevens\.persoon\.donkere_modus\)/);
 });
 
-test('de knoppen onder Beheer gebruiken de kies-functie van bouwNavigatie', () => {
-  assert.ok(app.includes('huidigeKies = bouwNavigatie'));
-  assert.match(app, /huidigeKies\(knop\.dataset\.scherm\)/);
+test('de knoppen onder Beheer openen een paneel en laden het zoals de tabbalk', () => {
+  // Eén laadfunctie voor tabbalk en panelen: geen tweede lijst die uit de pas loopt.
+  assert.match(app, /bouwNavigatie\(rechten, \(tab\) => laadScherm\(tab, rechten\)/);
+  assert.match(app, /openPaneel\(`tab-\$\{knop\.dataset\.scherm\}`\);\s*laadScherm\(knop\.dataset\.scherm, rechten\)/);
 });
 
 test('dark mode gebruikt de accentkleur enkel als achtergrond, niet als tekst op de donkere pagina', () => {

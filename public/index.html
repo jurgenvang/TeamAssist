@@ -114,8 +114,8 @@
     </section>
 
     <!-- Vergoedingen club (0.40.0), via Beheer in het naammenu -->
-    <section id="tab-vergoedingen" hidden>
-      <h2>Vergoedingen club</h2>
+    <section id="tab-vergoedingen" class="paneel breed" role="dialog" aria-modal="true" aria-label="Vergoedingen club" hidden>
+      <div class="paneel-kop"><h2>Vergoedingen club</h2><button type="button" class="sluit" data-sluit aria-label="Sluiten">&times;</button></div>
       <p class="klein">
         Een maand afsluiten kan vanaf de eerste dag van de volgende maand. Eerst zie je wat er betaald
         wordt; daarna liggen de bedragen vast, en wat nog verandert komt als correctie in de volgende maand.
@@ -315,8 +315,8 @@
     </section>
 
     <!-- Beheer -->
-    <section id="tab-configuratie" hidden>
-      <h2 class="paneelkop">Configuratie</h2>
+    <section id="tab-configuratie" class="paneel breed" role="dialog" aria-modal="true" aria-label="Configuratie" hidden>
+      <div class="paneel-kop"><h2>Configuratie</h2><button type="button" class="sluit" data-sluit aria-label="Sluiten">&times;</button></div>
       <details>
         <summary>Huisstijl</summary>
         <p class="klein">
@@ -354,8 +354,8 @@
 
     </section>
 
-    <section id="tab-zaalbeheer" hidden>
-      <h2 class="paneelkop">Zaalbeheer</h2>
+    <section id="tab-zaalbeheer" class="paneel breed" role="dialog" aria-modal="true" aria-label="Zaalbeheer" hidden>
+      <div class="paneel-kop"><h2>Zaalbeheer</h2><button type="button" class="sluit" data-sluit aria-label="Sluiten">&times;</button></div>
       <details open>
         <summary>Zalen</summary>
         <table>
@@ -473,8 +473,8 @@
       </details>
     </section>
 
-    <section id="tab-dagelijksbeheer" hidden>
-      <h2 class="paneelkop">Dagelijks beheer</h2>
+    <section id="tab-dagelijksbeheer" class="paneel breed" role="dialog" aria-modal="true" aria-label="Dagelijks beheer" hidden>
+      <div class="paneel-kop"><h2>Dagelijks beheer</h2><button type="button" class="sluit" data-sluit aria-label="Sluiten">&times;</button></div>
       <details open>
         <summary>Belangrijk nieuws</summary>
         <div id="mededelinghuidig"></div>
@@ -530,8 +530,8 @@
     <!-- Kijken als …, bereikbaar via Beheer in het naammenu. Enkel daar
          zichtbaar als testrol_toegelaten aanstaat (/api/mij geeft
          testrol_mogelijk mee). -->
-    <section id="testrolscherm" hidden>
-      <h2>Kijken als …</h2>
+    <section id="testrolscherm" class="paneel" role="dialog" aria-modal="true" aria-label="Kijken als …" hidden>
+      <div class="paneel-kop"><h2>Kijken als …</h2><button type="button" class="sluit" data-sluit aria-label="Sluiten">&times;</button></div>
       <p class="klein">
         Je rechten worden versmald tot die rol; meer dan wat je zelf mag, krijg je nooit.
         Zolang het duurt, staat bovenaan een balk met de weg terug.
@@ -546,8 +546,8 @@
     </section>
 
     <!-- Mijn berichten, via het naammenu of het bolletje op de naam -->
-    <section id="berichtenscherm" hidden>
-      <h2>Mijn berichten</h2>
+    <section id="berichtenscherm" class="paneel" role="dialog" aria-modal="true" aria-label="Mijn berichten" hidden>
+      <div class="paneel-kop"><h2>Mijn berichten</h2><button type="button" class="sluit" data-sluit aria-label="Sluiten">&times;</button></div>
       <p class="klein">
         Wat de app je stuurde. Tik een bericht aan om het als gelezen te markeren en,
         waar dat kan, de volledige tekst te zien.
@@ -561,16 +561,16 @@
     </section>
 
     <!-- Mijn vergoeding, bereikbaar via het naammenu (0.38.0) -->
-    <section id="vergoedingscherm" hidden>
-      <h2>Mijn vergoeding</h2>
+    <section id="vergoedingscherm" class="paneel" role="dialog" aria-modal="true" aria-label="Mijn vergoeding" hidden>
+      <div class="paneel-kop"><h2>Mijn vergoeding</h2><button type="button" class="sluit" data-sluit aria-label="Sluiten">&times;</button></div>
       <div id="vergoedingnamens"></div>
       <div id="vergoedinglijst"></div>
       <form><button type="button" class="stil" id="vergoedingsluiten">Sluiten</button></form>
     </section>
 
     <!-- Mijn voorkeuren, bereikbaar via het naammenu -->
-    <section id="voorkeuren" hidden>
-      <h2>Mijn voorkeuren</h2>
+    <section id="voorkeuren" class="paneel" role="dialog" aria-modal="true" aria-label="Mijn voorkeuren" hidden>
+      <div class="paneel-kop"><h2>Mijn voorkeuren</h2><button type="button" class="sluit" data-sluit aria-label="Sluiten">&times;</button></div>
       <label class="veld">
         <span>Uiterlijk</span>
         <select id="voorkeurmodus">
@@ -701,6 +701,8 @@
   </div>
 
   <footer><span id="versieregel"></span></footer>
+  <!-- Achter een open paneel (paneel.js): een tik ernaast sluit het. -->
+  <div id="paneelachtergrond" class="paneel-achtergrond" hidden></div>
 </main>
 
 <script type="module" src="/js/app.js"></script>

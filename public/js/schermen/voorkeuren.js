@@ -7,6 +7,7 @@
 // toestel. Bij een verschil wint de databank; localStorage is enkel een
 // snelle eerste gok.
 
+import { openPaneel } from '../paneel.js';
 import { api } from '../api.js';
 import { el, toon } from '../hulp.js';
 import { toonMeldingenstatus } from './meldingen.js';
@@ -33,7 +34,7 @@ export function toonVoorkeuren(persoon) {
   el('voorkeurmodus').value = persoon.donkere_modus ?? 'systeem';
   el('voorkeurkanaal').value = persoon.kanaal_voorkeur ?? 'mail';
   el('voorkeurenmelding').hidden = true;
-  el('voorkeuren').hidden = false;
+  openPaneel('voorkeuren');
   toonMeldingenstatus();
   toonMeelezen();
 }

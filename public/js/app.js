@@ -5,6 +5,7 @@ import {
 } from './api.js';
 import { el, toon, veilig } from './hulp.js';
 import { bouwNavigatie, menuTabbladen } from './navigatie.js';
+import { openPaneel, sluitPaneel, koppelPanelen } from './paneel.js';
 import { laadPloegen, synchroniseerPloegen, synchroniseerLeden, downloadSjabloon, uploadSjabloon } from './schermen/ploegen.js';
 import { bewaarSelectie, publiceerSelectie } from './schermen/aanwezigheid-beheer.js';
 import { zoekPersonen } from './schermen/personen.js';
@@ -35,7 +36,6 @@ function toonAanmelden() {
   el('app').hidden = true;
 }
 
-let huidigeKies = null;
 let huidigePersoon = null;
 // Official zelf, of ouder van een official: dan horen Aanduidingen, Mijn
 // vergoeding en de officials-voorkeuren erbij (0.38.0).
@@ -96,33 +96,7 @@ function toonApp(gegevens) {
   zetOfficialsPersonen(gegevens.persoon, isOfficial, kinderen);
   el('naammenu-vergoeding').hidden = !metOfficials;
 
-  // Elk tabblad laadt pas wanneer het geopend wordt: dat scheelt oproepen voor
-  // schermen die iemand nooit bekijkt.
-  huidigeKies = bouwNavigatie(rechten, (tab) => {
-    if (tab === 'aanduidingen') {
-      laadAanduidingen();
-    }
-    if (tab === 'cluboverzicht') {
-      laadCluboverzicht();
-    }
-    if (tab === 'vergoedingen') {
-      laadVergoedingen(rechten);
-    }
-    if (tab === 'ploegen') {
-      laadPloegen();
-      laadZalen(); // vult de zaalkeuze voor het reeksformulier
-    }
-    if (tab === 'configuratie') {
-      laadInstellingen();
-    }
-    if (tab === 'dagelijksbeheer') {
-      laadMededelingBeheer();
-    }
-    if (tab === 'zaalbeheer') {
-      laadZalen();
-      laadPeriodes();
-    }
-  }, { ouderVanOfficial: kinderen.length > 0 });
+  bouwNavigatie(rechten, (tab) => laadScherm(tab, rechten), { ouderVanOfficial: kinderen.length > 0 });
 
   bouwBeheermenu(rechten, gegevens.testrol_mogelijk === true);
 
@@ -135,6 +109,37 @@ function toonApp(gegevens) {
   if (new URLSearchParams(location.search).get('open') === 'berichten') {
     history.replaceState(null, '', location.pathname);
     toonBerichten();
+  }
+}
+
+/**
+ * Elk scherm laadt pas wanneer het geopend wordt: dat scheelt oproepen voor
+ * schermen die iemand nooit bekijkt. Gedeeld door de tabbalk en de panelen
+ * onder Beheer.
+ */
+function laadScherm(tab, rechten) {
+  if (tab === 'aanduidingen') {
+    laadAanduidingen();
+  }
+  if (tab === 'cluboverzicht') {
+    laadCluboverzicht();
+  }
+  if (tab === 'vergoedingen') {
+    laadVergoedingen(rechten);
+  }
+  if (tab === 'ploegen') {
+    laadPloegen();
+    laadZalen(); // vult de zaalkeuze voor het reeksformulier
+  }
+  if (tab === 'configuratie') {
+    laadInstellingen();
+  }
+  if (tab === 'dagelijksbeheer') {
+    laadMededelingBeheer();
+  }
+  if (tab === 'zaalbeheer') {
+    laadZalen();
+    laadPeriodes();
   }
 }
 
@@ -154,7 +159,10 @@ function bouwBeheermenu(rechten, testrolMogelijk) {
   for (const knop of vak.querySelectorAll('button[data-scherm]')) {
     knop.addEventListener('click', () => {
       sluitNaammenu();
-      if (huidigeKies) huidigeKies(knop.dataset.scherm);
+      // Een paneel over de pagina, zoals in YOAssist: het tabblad eronder
+      // blijft staan waar het stond.
+      openPaneel(`tab-${knop.dataset.scherm}`);
+      laadScherm(knop.dataset.scherm, rechten);
     });
   }
 
@@ -327,7 +335,7 @@ el('berichtenbadge').addEventListener('click', (e) => {
 });
 el('berichtenallesgelezen').addEventListener('click', allesGelezen);
 el('berichtensluiten').addEventListener('click', () => {
-  el('berichtenscherm').hidden = true;
+  sluitPaneel();
 });
 el('mededelingweg').addEventListener('click', mededelingWegklikken);
 el('meldingenaan').addEventListener('click', zetMeldingenAan);
@@ -349,7 +357,7 @@ el('naammenu-vergoeding').addEventListener('click', () => {
   toonMijnVergoeding();
 });
 el('vergoedingsluiten').addEventListener('click', () => {
-  el('vergoedingscherm').hidden = true;
+  sluitPaneel();
 });
 
 el('naammenu-afmelden').addEventListener('click', async () => {
@@ -359,17 +367,16 @@ el('naammenu-afmelden').addEventListener('click', async () => {
 
 el('naammenu-testrol').addEventListener('click', () => {
   sluitNaammenu();
-  el('testrolscherm').hidden = false;
+  openPaneel('testrolscherm');
   vulTestrolkeuze();
-  el('testrolscherm').scrollIntoView({ block: 'start' });
 });
 el('testrolsluiten').addEventListener('click', () => {
-  el('testrolscherm').hidden = true;
+  sluitPaneel();
 });
 
 el('voorkeurenbewaren').addEventListener('click', bewaarVoorkeuren);
 el('voorkeurensluiten').addEventListener('click', () => {
-  el('voorkeuren').hidden = true;
+  sluitPaneel();
 });
 
 el('backupdownload').addEventListener('click', downloadBackup);
@@ -408,6 +415,7 @@ koppelPersoonscherm();
 koppelMeelezen();
 koppelAanduidingen();
 koppelCluboverzicht();
+koppelPanelen();
 koppelVergoedingen();
 koppelOfficialsVoorkeuren();
 koppelTestrol();
