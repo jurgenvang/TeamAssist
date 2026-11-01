@@ -11,7 +11,7 @@ WIJZIGINGEN-bestanden blijven kloppen:
   punt *U* (Microsoft 365) heet hier **VU**, want TeamAssist heeft al een *U*
 - **T** + nummer, en de letters **A–AB** — TeamAssist
 
-Stand: YOAssist **v1.17.1**, TeamAssist **0.39.1**
+Stand: YOAssist **v1.17.1**, TeamAssist **0.39.2**
 
 ---
 
@@ -26,7 +26,9 @@ Bijgewerkt bij elke versie. Voor de volledige tekst: zoek de kop verderop
   in de buurt van de 210 wedstrijden uit YOAssist?
 - **AA** — een droogloop op de echte Worker (`POST /api/admin/periodes/sync`)
   om de OpenHolidays-fix te bevestigen.
-- **AB** — `{{ .Token }}` in de Magic Link-mailsjabloon van Supabase.
+- **AB** — `{{ .Token }}` in **twee** mailsjablonen van Supabase: *Magic
+  Link* én *Confirm signup* (die laatste krijgt wie zich de eerste keer
+  aanmeldt). Zie README.
 - **V32** — op een echte telefoon testen of tikken op een pushmelding naar
   Mijn berichten gaat.
 - **I1** — `clubassist.org` bij Resend als afzenderdomein verifiëren (de
@@ -368,6 +370,7 @@ YOAssist met `ruudcuyvers@…`, vermoedelijk het adres van zijn vader.
 | 0.23.0 | T14 afgewerkt: een volledige backup van de databank als JSON. Beter dan aanvankelijk voorgesteld — geen hardcoded tabellenlijst met een test die drift moet vangen (de YOAssist-aanpak), maar tabellen rechtstreeks uit `sqlite_master` gehaald, wat de hele bugklasse structureel onmogelijk maakt. De kerntest bewijst dat letterlijk: een tabel die pas ná het schrijven van de route wordt aangemaakt, zit er toch in. |
 | 0.24.0 | T16 en T17 afgewerkt. `verwittig()` heeft geen `kanaal`-parameter meer en leest voortaan `kanaal_voorkeur` — mail blijft de terugval zolang push niet bestaat, met een aparte logregel voor wie 'push' koos. Blokken bij Zaalbeheer staan nu gegroepeerd per weekdag als losse blokjes, met bewust neutrale kleuren in plaats van de accentkleur. |
 | 0.25.0 | T15 afgewerkt: opruiming van `logboek` (365 dagen), `taak_runs` (30 dagen), `berichten` (120 dagen), en het definitief verwijderen van een inactieve persoon na 180 dagen. Twee tabellen extra gevonden tijdens het bouwen (`accounts`, `ouder_kind`) die niet in het oorspronkelijke overzicht stonden. Enkel `aanwezigheden` wordt geanonimiseerd in plaats van verwijderd — de enige tabel waar dat structureel kon — wat een schema-heropbouw vroeg, grondig getoetst tegen een nagemaakte bestaande databank. |
+| 0.39.2 | T20: langer aangemeld blijven. Het verversingstoken staat in een HttpOnly-cookie die de Worker zet (400 dagen, enkel voor `/api/sessie/`), het toegangstoken enkel in het geheugen; drie publieke routes `POST /api/sessie/start`, `/vernieuw`, `/stop`. Eén verversing tegelijk in de browser (twee tegelijk konden de sessie bij Supabase laten intrekken). Enkel afmelden als Supabase zegt dat het token niet meer geldt: een storing (5xx, gepauzeerd project, onbereikbare JWKS) is een 503 en de sessie blijft. Een sessie van vóór 0.39.2 gaat bij het openen één keer mee naar de cookie. Het codeveld neemt 6 tot 10 cijfers; de README legt uit dat `{{ .Token }}` in *Magic Link* én *Confirm signup* moet. Ook: een test van het cluboverzicht faalde op zondag. Geen schemawijziging. 977 tests. |
 | 0.39.1 | V44: de woensdagmail zonder link ('Alle wedstrijden zijn dit weekend van officials voorzien') is een lege lijst voor het komende weekend, geen fout: geen vals alarm, om 14 uur verwerkt (niets erbij, wat automatisch in de lijst kwam zonder official eruit, 'twee volgens de bond' voor eigen thuiswedstrijden vanaf U14 en Regio), om 20 uur geen terugval op de API. Zonder link én zonder die tekst blijft het een fout. Ook mee: het wedstrijd-id in het facturatievoorbeeld en de naam van wie een maand afsloot (voorbereiding 4c). Geen schemawijziging. 969 tests. |
 | 0.39.0 | I1 fase 4b: het Cluboverzicht. Tabblad voor wie de officials beheert (YOADM, ADMIN), met de backend erbij (`GET /api/admin/officials/overzicht`, uit YOAssist: de thuiswedstrijden met de scheidsrechters van de bond, wie kan, wie niet en wie aangeduid is; cijfers over de twee eerstvolgende volledige weekends; voorbije wedstrijden vanaf de vorige maand op vraag, die nooit meetellen). Op het scherm: tegels die ook filteren, groepen *Aandacht nodig*, *U10/U12*, *Overige*, *Voorbij*; aanduiden door op een naam te tikken (wie 'nee' zei of botst: na bevestiging), iemand anders aanduiden, vrijgeven, in of uit de lijst, 'er komen twee refs', de gemelde problemen, automatisch aanvullen (eerst het voorstel), de herinnering voor wie nog niet invulde. In Chromium bekeken tegen de echte handlers. Geen schemawijziging. 968 tests. |
 | 0.38.0 | I1 fase 4a: het scherm van een official. Tabblad *Aanduidingen*, vooraan voor wie official is — en voor een ouder van een official, die namens zijn kind invult (keuze bovenaan; `/api/mij` meldt nu `officials_kinderen`). Zoals in YOAssist: drie secties (aangeduid, nog te beantwoorden — deze en volgende maand, de rest op vraag —, beantwoord), de indeling vast per bezoek, de teller die meteen meetelt, REF1/REF2 met bellen en WhatsApp bij wie samen fluit, de scheidsrechters van de bond, forfait, probleem melden. *Mijn vergoeding* in het naammenu. Bij Mijn voorkeuren de herinneringen, gsm delen en de agendalink (nieuwe routes `GET/POST /api/officials/voorkeuren`). In Chromium bekeken met een nep-API. Geen schemawijziging. 964 tests. |
@@ -829,7 +832,9 @@ had geen eigen, traceerbaar punt in de backlog — bevestigd dat dit nog niet
 gebeurd is.
 
 **Actie, bij Jurgen:** in het Supabase-dashboard, **Authentication → Email
-Templates → Magic Link**, `{{ .Token }}` toevoegen aan de mailtekst, bijvoorbeeld:
+Templates**, `{{ .Token }}` toevoegen aan **twee** sjablonen: *Magic Link* én
+*Confirm signup* — die laatste krijgt wie zich met een adres voor het eerst
+aanmeldt (T20, 1 november 2026). Bijvoorbeeld:
 
 ```
 Je kan aanmelden via de link hieronder, of deze code intypen in de app:
@@ -843,6 +848,48 @@ Zonder deze stap blijft het codeveld in de app onbruikbaar — niet omdat de
 code stuk is, maar omdat er nooit een code in de mail staat om in te typen.
 Dit is dus geen bugmelding, enkel een openstaande operationele stap die
 buiten de code om moet gebeuren.
+
+### T20 — Langer aangemeld blijven — **beslist** (Jurgen, 1 november 2026), **gebouwd in 0.39.2**
+Jurgen moest te vaak opnieuw aanmelden, en de mail bevatte geen code. Supabase
+laat een sessie op het gratis plan nooit vervallen (het verversingstoken
+vervalt niet; *time-box* en *inactivity timeout* zijn betalend). Wat iemand
+afmeldt, zit dus in de app:
+
+1. **Twee verversingen tegelijk.** Krijgen twee oproepen tegelijk een 401
+   (bv. `Promise.all`), dan ververst elk met hetzelfde token. Supabase draait
+   het token bij elke verversing; een oud token dat buiten de wachttijd van
+   10 seconden opnieuw opduikt, trekt de hele sessie in.
+2. **Een storing gooit de sessie weg.** Elke niet-200 bij het verversen (ook
+   een 5xx, of een gepauzeerd project) gaf een 401 aan de app, die de sessie
+   wiste. Erger: kon de Worker de publieke sleutels (JWKS) niet ophalen, dan
+   gaf hij een 401 op een geldig token.
+3. **Safari wist wat een pagina zelf bewaart** na 7 dagen zonder bezoek
+   (behalve een app op het beginscherm). Een cookie die de server zet, valt
+   daar niet onder.
+
+**Beslist:**
+- **Het verversingstoken in een HttpOnly-cookie** die de Worker zet:
+  `Secure`, `SameSite=Strict`, enkel voor `/api/sessie/`, 400 dagen (de grens
+  van Chrome), bij elke verversing opnieuw gezet. Het toegangstoken staat
+  enkel nog in het geheugen. Een script in de pagina kan het verversingstoken
+  dus niet meer lezen.
+- **Drie routes, publiek** (ze zijn de aanmelding zelf): `POST
+  /api/sessie/start` (met het verversingstoken uit de link of de code; de
+  Worker ververst meteen, zodat het token dat in de URL stond niet meer
+  geldt), `/vernieuw` (uit de cookie), `/stop` (cookie weg, afmelden bij
+  Supabase).
+- **Eén verversing tegelijk** in de browser.
+- **Enkel weg als Supabase zegt dat het token niet meer geldt** (400/401).
+  Een storing is een 503: de app zegt dat het aanmeldsysteem even niet
+  bereikbaar is, en de sessie blijft. Ook een onbereikbare JWKS is een 503.
+- **Wie al aangemeld is, blijft dat**: een sessie van vóór 0.39.2 in de
+  browseropslag wordt bij het openen één keer naar de cookie overgezet.
+- **De code**: `{{ .Token }}` in beide sjablonen (AB); het codeveld neemt 6
+  tot 10 cijfers (de lengte is instelbaar in Supabase).
+
+Aanmelden moet daarna nog enkel na afmelden, op een nieuw toestel of in een
+nieuwe browser — ook een in-app-browser (bv. die van Gmail) telt als een
+andere browser; daar is de code voor.
 
 ### Z — Zaaluren laden via een CSV-bestand — **afgewerkt in 0.14.0**
 Geleverd zoals hier voorgesteld: vooraf ingevuld sjabloon, kolommen

@@ -1,6 +1,8 @@
 // De schil: aanmelden, navigatie, en de schermen aan elkaar knopen.
 
-import { api, haalConfig, sessie, bewaarSessie, leesTokensUitUrl, vraagAanmeldlink, verifieerCode, testrol } from './api.js';
+import {
+  api, haalConfig, leesTokensUitUrl, vraagAanmeldlink, verifieerCode, testrol, startSessie, herneemSessie, afmelden,
+} from './api.js';
 import { el, toon, veilig } from './hulp.js';
 import { bouwNavigatie, menuTabbladen } from './navigatie.js';
 import { laadPloegen, synchroniseerPloegen, synchroniseerLeden, downloadSjabloon, uploadSjabloon } from './schermen/ploegen.js';
@@ -192,9 +194,20 @@ async function start() {
     toon('aanmeldmelding', `Aanmelden lukte niet: ${uitUrl.fout}`, true);
     return;
   }
-  if (uitUrl) bewaarSessie(uitUrl);
-  await voltooiAanmelding();
+  if (uitUrl) {
+    const start = await startSessie(uitUrl.refresh_token);
+    if (start === 'weg') {
+      toonAanmelden();
+      toon('aanmeldmelding', 'Deze link is niet meer geldig. Vraag een nieuwe aan.', true);
+      return;
+    }
+    return voltooiAanmelding(start);
+  }
+  await voltooiAanmelding(await herneemSessie());
 }
+
+const STORING_TEKST =
+  'Het aanmeldsysteem is even niet bereikbaar. Je blijft aangemeld; probeer het straks opnieuw.';
 
 /**
  * Alles ná het binnenkrijgen van tokens — of ze nu uit het URL-fragment komen
@@ -202,8 +215,13 @@ async function start() {
  * Beide wegen komen hier samen, zodat er geen tweede kopie van deze logica
  * kan gaan afwijken.
  */
-async function voltooiAanmelding() {
-  if (!sessie()) return toonAanmelden();
+async function voltooiAanmelding(start) {
+  if (start === 'weg') return toonAanmelden();
+  if (start === 'storing') {
+    toonAanmelden();
+    toon('aanmeldmelding', STORING_TEKST, true);
+    return;
+  }
 
   const uitkomst = await api('/api/mij');
   if (uitkomst.status === 200) return toonApp(uitkomst.body);
@@ -231,8 +249,14 @@ async function voltooiAanmelding() {
   if (uitkomst.status === 401) {
     // Enkel hier de sessie weggooien: het token deugt niet meer. Bij een 409
     // zou opnieuw aanmelden niets oplossen.
-    bewaarSessie(null);
+    await afmelden();
     toon('aanmeldmelding', 'Je aanmelding is verlopen. Vraag een nieuwe link aan.', true);
+    return;
+  }
+  if (uitkomst.status === 503) {
+    // Geen reden om af te melden: het token deugt misschien, Supabase
+    // antwoordde enkel niet (T20).
+    toon('aanmeldmelding', STORING_TEKST, true);
     return;
   }
   toon(
@@ -265,8 +289,8 @@ el('codeform').addEventListener('submit', async (e) => {
   const code = el('code').value.trim();
   if (!email || !code) return;
   try {
-    bewaarSessie(await verifieerCode(email, code));
-    await voltooiAanmelding();
+    const tokens = await verifieerCode(email, code);
+    await voltooiAanmelding(await startSessie(tokens.refresh_token));
   } catch (fout) {
     toon('aanmeldmelding', `De code klopt niet (meer): ${fout.message}`, true);
   }
@@ -324,8 +348,8 @@ el('vergoedingsluiten').addEventListener('click', () => {
   el('vergoedingscherm').hidden = true;
 });
 
-el('naammenu-afmelden').addEventListener('click', () => {
-  bewaarSessie(null);
+el('naammenu-afmelden').addEventListener('click', async () => {
+  await afmelden();
   location.reload();
 });
 

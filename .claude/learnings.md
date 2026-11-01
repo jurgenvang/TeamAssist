@@ -50,6 +50,14 @@ iets nieuws boven kwam; nooit inkorten zonder reden.
 
 ## Supabase
 
+- **Twee verversingen met hetzelfde token kunnen de sessie intrekken.**
+  Supabase draait het verversingstoken bij elk gebruik; een oud token dat
+  buiten de wachttijd (10 s) opnieuw opduikt, trekt de hele sessie in. In de
+  browser dus nooit twee tegelijk (`vernieuw()` in `api.js`, 0.39.2).
+- **Enkel 400/401 bij het verversen betekent 'opnieuw aanmelden'.** Tot
+  0.39.2 meldde elke hapering (een 5xx, een onbereikbare JWKS) iemand af.
+- **De eerste aanmelding met een adres gebruikt de sjabloon *Confirm
+  signup*, niet *Magic Link*.** `{{ .Token }}` moet in beide.
 - **Een gratis project wordt na een week zonder activiteit gepauzeerd**, en
   dan geeft alles status 530: aanmelden, de token-controle (jwks), de ping.
   In september–oktober 2026 lag het een maand stil zonder dat iemand het zag.
@@ -63,7 +71,8 @@ iets nieuws boven kwam; nooit inkorten zonder reden.
 - **Een tekstvervanging die niets vindt, doet stil niets.** Altijd
   `assert t.count(oud) == 1`.
 - **Een vaste datum in een test is een tijdbom.** Datums relatief tegenover
-  vandaag rekenen.
+  vandaag rekenen. Ook relatief kan het mis: de zaterdag van 'het lopende
+  weekend' is op zondag al voorbij (officials-overzicht, 1 november 2026).
 - **Een bericht dat bij de eerste sync na een fix voor iedereen vertrekt.**
   Een fix die een veld in de wijzigingshash aanvult, ziet elke rij als
   gewijzigd: kijk of dat een melding geeft (0.30.1: de tegenstander).

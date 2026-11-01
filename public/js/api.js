@@ -3,8 +3,14 @@
 // Alles loopt hier langs, zodat het vernieuwen van een verlopen token op één
 // plaats staat. Een kale fetch elders levert stille 401's op: een token is maar
 // enkele minuten tot een uur geldig, en dan lijkt een knop het niet te doen.
+//
+// Sinds 0.39.2 (T20) staat het verversingstoken in een HttpOnly-cookie die de
+// Worker zet, en het toegangstoken enkel in het geheugen van deze pagina. Bij
+// het openen haalt de pagina een nieuw toegangstoken bij /api/sessie/vernieuw.
 
-const OPSLAG = 'teamassist.sessie';
+// Waar de sessie tot 0.39.1 stond. Enkel nog gelezen om ze één keer naar de
+// cookie over te zetten, zodat niemand door de overstap opnieuw moet aanmelden.
+const OUDE_OPSLAG = 'teamassist.sessie';
 const TESTROL = 'teamassist.testrol';
 
 export let config = null;
@@ -15,17 +21,98 @@ export async function haalConfig() {
   return config;
 }
 
-export function sessie() {
+let toegang = null;
+let lopend = null;
+
+async function sessieOproep(stap, body) {
+  return fetch(`/api/sessie/${stap}`, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      ...(toegang ? { authorization: `Bearer ${toegang}` } : {}),
+    },
+    body: JSON.stringify(body ?? {}),
+  });
+}
+
+/** 'ok', 'weg' (opnieuw aanmelden) of 'storing' (de sessie blijft). */
+async function alsUitkomst(antwoord) {
+  if (antwoord.ok) {
+    toegang = (await antwoord.json()).access_token;
+    return 'ok';
+  }
+  if (antwoord.status === 401) {
+    toegang = null;
+    return 'weg';
+  }
+  return 'storing';
+}
+
+/**
+ * Een nieuw toegangstoken uit de cookie. Nooit twee tegelijk: twee
+ * verversingen met hetzelfde token kunnen de sessie bij Supabase laten
+ * intrekken (T20). Wie vraagt terwijl er een loopt, wacht op die.
+ */
+export function vernieuw() {
+  if (!lopend) {
+    lopend = (async () => {
+      try {
+        return await alsUitkomst(await sessieOproep('vernieuw'));
+      } catch {
+        return 'storing';
+      } finally {
+        lopend = null;
+      }
+    })();
+  }
+  return lopend;
+}
+
+/** Na de link of de code: de Worker zet de cookie. */
+export async function startSessie(verversToken) {
   try {
-    return JSON.parse(localStorage.getItem(OPSLAG) || 'null');
+    return await alsUitkomst(await sessieOproep('start', { refresh_token: verversToken }));
+  } catch {
+    return 'storing';
+  }
+}
+
+function oudeSessie() {
+  try {
+    return JSON.parse(localStorage.getItem(OUDE_OPSLAG) || 'null');
   } catch {
     return null;
   }
 }
 
-export function bewaarSessie(s) {
-  if (s) localStorage.setItem(OPSLAG, JSON.stringify(s));
-  else localStorage.removeItem(OPSLAG);
+function wisOudeSessie() {
+  try {
+    localStorage.removeItem(OUDE_OPSLAG);
+  } catch {
+    // Geen opslag, dan valt er ook niets te wissen.
+  }
+}
+
+/** Bij het openen van de app: de cookie, en anders eenmalig de oude opslag. */
+export async function herneemSessie() {
+  const uitkomst = await vernieuw();
+  if (uitkomst !== 'weg') return uitkomst;
+  const oud = oudeSessie();
+  if (!oud?.refresh_token) return 'weg';
+  const overgezet = await startSessie(oud.refresh_token);
+  // Bij een storing blijft ze staan, voor een volgende poging.
+  if (overgezet !== 'storing') wisOudeSessie();
+  return overgezet;
+}
+
+export async function afmelden() {
+  try {
+    await sessieOproep('stop');
+  } catch {
+    // De cookie gaat dan bij de volgende 401 weg; het toegangstoken nu al.
+  }
+  toegang = null;
+  wisOudeSessie();
 }
 
 /** De rol waarmee een beheerder wil kijken, of null. */
@@ -42,17 +129,6 @@ export function bewaarTestrol(keuze) {
   else localStorage.removeItem(TESTROL);
 }
 
-async function vernieuwToken(huidige) {
-  const antwoord = await fetch(`${config.supabase_url}/auth/v1/token?grant_type=refresh_token`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', apikey: config.supabase_publishable_key },
-    body: JSON.stringify({ refresh_token: huidige.refresh_token }),
-  });
-  if (!antwoord.ok) return null;
-  const body = await antwoord.json();
-  return { access_token: body.access_token, refresh_token: body.refresh_token };
-}
-
 function kopHeaders(token, extra = {}) {
   const rol = testrol();
   return {
@@ -65,18 +141,22 @@ function kopHeaders(token, extra = {}) {
   };
 }
 
-/** Voert het verzoek uit en vernieuwt eenmalig het token bij een 401. */
-async function voerUit(pad, optiesVoorToken) {
-  let s = sessie();
-  if (!s) return null;
+const STORING = { status: 503, fout: 'het aanmeldsysteem is even niet bereikbaar' };
 
-  let antwoord = await fetch(pad, optiesVoorToken(s.access_token));
-  if (antwoord.status === 401 && s.refresh_token) {
-    const nieuw = await vernieuwToken(s);
-    if (nieuw) {
-      bewaarSessie(nieuw);
-      antwoord = await fetch(pad, optiesVoorToken(nieuw.access_token));
-    }
+/**
+ * Voert het verzoek uit en vernieuwt eenmalig het token bij een 401. Geeft
+ * het antwoord, of 'weg' / 'storing' als er geen bruikbaar token kwam.
+ */
+async function voerUit(pad, optiesVoorToken) {
+  if (!toegang) {
+    const uitkomst = await vernieuw();
+    if (uitkomst !== 'ok') return uitkomst;
+  }
+  let antwoord = await fetch(pad, optiesVoorToken(toegang));
+  if (antwoord.status === 401) {
+    const uitkomst = await vernieuw();
+    if (uitkomst !== 'ok') return uitkomst;
+    antwoord = await fetch(pad, optiesVoorToken(toegang));
   }
   return antwoord;
 }
@@ -89,7 +169,8 @@ export async function api(pad, methode = 'GET', body = null) {
   });
 
   const antwoord = await voerUit(pad, opties);
-  if (!antwoord) return { status: 401 };
+  if (antwoord === 'weg') return { status: 401 };
+  if (antwoord === 'storing') return { status: STORING.status, body: { fout: STORING.fout } };
   return { status: antwoord.status, body: await antwoord.json().catch(() => null) };
 }
 
@@ -107,7 +188,8 @@ export async function apiRuw(pad, methode, lichaam, contentType) {
   });
 
   const antwoord = await voerUit(pad, opties);
-  if (!antwoord) return { status: 401 };
+  if (antwoord === 'weg') return { status: 401, tekst: '' };
+  if (antwoord === 'storing') return { status: STORING.status, tekst: STORING.fout };
   return { status: antwoord.status, tekst: await antwoord.text().catch(() => '') };
 }
 

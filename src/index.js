@@ -45,6 +45,7 @@ import { mededelingHuidige, mededelingPlaatsen, mededelingIntrekken } from './ro
 import { pushAbonneer, pushAfmelden, pushToestellen, pushTest } from './routes/push.js';
 import { opgaveZetten, mijnOpgaven } from './routes/aanwezigheid-opgave.js';
 import { aanmeldlink } from './routes/aanmeldlink.js';
+import { sessieStarten, sessieVernieuwen, sessieStoppen } from './routes/sessie.js';
 import { vblDiagnose } from './routes/admin/vbl-diagnose.js';
 import { teamsLijst, teamsSync, teamGevolgd } from './routes/admin/teams.js';
 import { ledenSync } from './routes/admin/leden.js';
@@ -105,6 +106,11 @@ export const ROUTES = [
   // en antwoordt altijd hetzelfde zodat ze niet te gebruiken is om uit te zoeken
   // wie er lid is.
   { methode: 'POST', pad: '/api/aanmeldlink', publiek: true, doe: aanmeldlink },
+  // De sessie (T20): publiek, want ze zijn de aanmelding zelf. Het
+  // verversingstoken zit in een HttpOnly-cookie die enkel deze paden zien.
+  { methode: 'POST', pad: '/api/sessie/start', publiek: true, doe: sessieStarten },
+  { methode: 'POST', pad: '/api/sessie/vernieuw', publiek: true, doe: sessieVernieuwen },
+  { methode: 'POST', pad: '/api/sessie/stop', publiek: true, doe: (c) => sessieStoppen(c) },
 
   { methode: 'GET', pad: '/api/mij', doe: mij },
   { methode: 'POST', pad: '/api/mij/voorkeuren', doe: voorkeurenBewaren },
@@ -332,6 +338,10 @@ async function bouwContext(request, env, route) {
     // Waarom het token niet deugt, hoort niet naar buiten: dat helpt enkel wie
     // aan het proberen is. Het staat wel in het logboek.
     await logSchrijf(env.DB, { soort: 'fout', wat: 'token geweigerd', details: String(e.message) });
+    // Kon de handtekening niet nagekeken worden, dan deugt het token
+    // misschien wel. Een 401 zou de app laten afmelden bij elke hapering van
+    // Supabase (T20).
+    if (e.storing) return { fout: fout(503, 'het aanmeldsysteem is even niet bereikbaar') };
     return { fout: fout(401, 'aanmelden vereist') };
   }
 

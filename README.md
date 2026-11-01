@@ -191,6 +191,31 @@ er `localhost`, dan ontbreekt het adres in Redirect URLs.
 
 Zet daarna bij Providers e-mail aan en wachtwoorden uit.
 
+**De code in de mail.** De mail bevat standaard enkel een link. Op een iPhone
+waar de app op het beginscherm staat, helpt die link niet: hij opent in
+Safari, en de app ziet daar niets van. Ook de ingebouwde browser van de
+Gmail-app is een andere browser dan die waarin de app openstaat. Daarvoor is
+er de code, maar die staat pas in de mail als je ze in de sjabloon zet. Bij
+Authentication, dan Email Templates, in **twee** sjablonen:
+
+- **Magic Link** — voor wie zich al eens aanmeldde;
+- **Confirm signup** — voor de allereerste aanmelding met een adres. Wie
+  enkel *Magic Link* aanpast, ziet bij de eerste aanmelding nog altijd geen
+  code.
+
+Zet in beide bijvoorbeeld:
+
+```
+Je kan aanmelden via de link hieronder, of deze code intypen in de app:
+
+{{ .Token }}
+
+{{ .ConfirmationURL }}
+```
+
+Het codeveld in de app neemt 6 tot 10 cijfers: de lengte is instelbaar bij
+Providers, dan Email (*Email OTP Length*).
+
 **4. Resend als SMTP-server.** Dit is geen verfijning maar een voorwaarde. De
 ingebouwde mailservice van Supabase stuurt **twee berichten per uur** en is
 uitdrukkelijk enkel voor testen bedoeld — er is geen garantie op levering en het
@@ -412,7 +437,29 @@ Er staat een test op die faalt zodra de twee uit elkaar lopen. In YOAssist bleef
 de backuplijst jarenlang achter op het schema, telkens wanneer er een tabel
 bijkwam, precies omdat zo'n test er niet was.
 
+## Hoe lang je aangemeld blijft (sinds 0.39.2)
+
+Tot je afmeldt. Het verversingstoken van Supabase staat in een cookie die de
+Worker zelf zet (`ta_sessie`: HttpOnly, Secure, SameSite=Strict, enkel voor
+`/api/sessie/`, 400 dagen). Die termijn begint opnieuw bij elke verversing,
+dus elke keer dat je de app opent. Supabase laat de sessie op het gratis plan
+zelf niet vervallen. Opnieuw aanmelden hoeft dus enkel na afmelden, op een
+nieuw toestel, in een andere browser, of na 400 dagen zonder de app te
+openen.
+
+Een storing bij Supabase meldt niemand meer af: de app zegt dan dat het
+aanmeldsysteem even niet bereikbaar is, en de sessie blijft.
+
 ## Als er iets misgaat bij het aanmelden
+
+**Er staat geen code in de mail.** De sjablonen in Supabase missen
+`{{ .Token }}`; zie *De code in de mail* hierboven. Vergeet *Confirm signup*
+niet.
+
+**Je moet toch opnieuw aanmelden.** Kijk of je de app in dezelfde browser
+opent als waar je je aanmeldde. Een link in de Gmail-app opent in de browser
+van Gmail, een iPhone-app op het beginscherm is een eigen browser. Gebruik
+daar de code.
 
 **De link komt uit op `localhost:3000`.** Het adres van de app staat niet bij
 Redirect URLs in Supabase. Zie stap 3 hierboven. Let op de misleiding: Supabase

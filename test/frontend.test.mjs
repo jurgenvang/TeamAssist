@@ -60,12 +60,15 @@ test('elke uitkomst van /api/mij wordt uitgelegd', () => {
   assert.ok(app.includes('geen uitleg'), 'ook een onbekende status hoort iets te tonen');
 });
 
-test('de sessie wordt enkel bij een 401 weggegooid', () => {
+test('de sessie wordt enkel bij een 401 weggegooid, niet bij een storing', () => {
   const begin = app.indexOf("const uitkomst = await api('/api/mij')");
   const eind = app.indexOf('// --- knoppen');
   const inStart = app.slice(begin, eind);
-  assert.equal((inStart.match(/bewaarSessie\(null\)/g) ?? []).length, 1);
+  assert.equal((inStart.match(/afmelden\(\)/g) ?? []).length, 1);
   assert.ok(inStart.includes('uitkomst.status === 401'));
+  // Een 503 (Supabase even weg) toont iets, maar meldt niet af (T20).
+  const storing = inStart.slice(inStart.indexOf('uitkomst.status === 503'));
+  assert.ok(storing.length > 0 && !storing.slice(0, 300).includes('afmelden'));
 });
 
 test('elke oproep naar de eigen API loopt via api()', () => {
@@ -442,10 +445,9 @@ test('verifieerCode gaat rechtstreeks naar Supabase, niet via de eigen route', (
 test('de link- en de codeflow komen samen in dezelfde afrondingslogica', () => {
   const bron = lees('../public/js/app.js');
   assert.ok(bron.includes('async function voltooiAanmelding'));
-  assert.ok(bron.includes('await voltooiAanmelding()'));
   // Beide plekken die tokens binnenkrijgen, roepen dezelfde functie aan —
   // geen tweede kopie van de /api/mij-afhandeling die uit de pas kan lopen.
-  const aantalAanroepen = (bron.match(/voltooiAanmelding\(\)/g) || []).length;
+  const aantalAanroepen = (bron.match(/voltooiAanmelding\(/g) || []).length - 1;
   assert.ok(aantalAanroepen >= 2, 'zowel de URL-tokenflow als de codeflow roepen voltooiAanmelding aan');
 });
 

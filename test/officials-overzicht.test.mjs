@@ -63,7 +63,9 @@ async function vraag(db, query = '') {
 
 test('cijfers over het venster, en per wedstrijd wie kan, wie niet en wie aangeduid is', async () => {
   const db = zetKlaar();
-  const za = weekendVenster(new Date()).weekends[0].zaterdag;
+  // De zondag, niet de zaterdag: op zondag is de zaterdag van dat weekend al
+  // voorbij, en dan telt ze niet meer mee (de test faalde op 1 november 2026).
+  const za = weekendVenster(new Date()).weekends[0].zondag;
   const vol = wed(db, { datum: za, ja: ['ann', 'bert'], op: ['ann', 'bert'] });
   const tekort = wed(db, { datum: za, ja: ['ann'], nee: ['bert'] });
   const leeg = wed(db, { team: 'T16', cat: 'J16', datum: za });

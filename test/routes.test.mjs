@@ -39,10 +39,13 @@ test('publieke routes geven geen persoonsgegevens terug', () => {
   // is; ze geeft wel altijd hetzelfde antwoord terug. /api/branding geeft enkel
   // de huisstijl (clubnaam, kleur, logo) — geen enkel gegeven over personen.
   // De externe API en de agendafeed (0.37.0) wel, maar enkel met een eigen
-  // sleutel: die controleren ze zelf (officials-regio.test.mjs).
+  // sleutel: die controleren ze zelf (officials-regio.test.mjs). De sessie
+  // (T20) geeft enkel een toegangstoken, en enkel tegen een geldig
+  // verversingstoken (sessie.test.mjs).
   const publiek = ROUTES.filter((r) => r.publiek).map((r) => r.pad);
   assert.deepEqual(publiek.sort(), [
-    '/api/aanmeldlink', '/api/branding', '/api/config', '/api/extern/aanduidingen', '/api/kalender/', '/api/versie',
+    '/api/aanmeldlink', '/api/branding', '/api/config', '/api/extern/aanduidingen', '/api/kalender/',
+    '/api/sessie/start', '/api/sessie/stop', '/api/sessie/vernieuw', '/api/versie',
   ]);
 });
 

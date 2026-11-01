@@ -91,7 +91,14 @@ function algoritmeVan(jwk) {
 }
 
 async function controleerMetJwks(ontleed, projectUrl, fetcher, jwksUrl) {
-  const sleutels = await haalJwks(projectUrl, fetcher, jwksUrl);
+  let sleutels;
+  try {
+    sleutels = await haalJwks(projectUrl, fetcher, jwksUrl);
+  } catch (e) {
+    // Een storing, geen ongeldig token: de route maakt er een 503 van.
+    e.storing = true;
+    throw e;
+  }
   const jwk = sleutels.find((k) => k.kid === ontleed.header.kid) ?? sleutels[0];
   if (!jwk) throw new Error('geen passende sleutel in de jwks');
 
