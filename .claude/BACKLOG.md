@@ -54,6 +54,8 @@ Bijgewerkt bij elke versie. Voor de volledige tekst: zoek de kop verderop
 - **T3** en **V29** — evaluatie van spelers en van officials.
 - **T5** en **V30** — een tweede omgeving / demo-omgeving.
 - **V43** — eigen VBL-aanduidingen: eerst uitzoeken, dan bouwen; na I1.
+- **T21** — één agenda voor aanwezigheden, zoals de kaarten van YOAssist:
+  trainingen, wedstrijden én wat iemand fluit, met het type meteen zichtbaar.
 
 ---
 
@@ -893,6 +895,79 @@ afmeldt, zit dus in de app:
 Aanmelden moet daarna nog enkel na afmelden, op een nieuw toestel of in een
 nieuwe browser — ook een in-app-browser (bv. die van Gmail) telt als een
 andere browser; daar is de code voor.
+
+### T21 — Eén agenda: trainingen, wedstrijden en fluiten, op de manier van YOAssist
+**Gevraagd door Jurgen (2 november 2026), nog uit te klaren.**
+
+Een overzicht van activiteiten moet er overal hetzelfde uitzien, en het
+voorbeeld is YOAssist. Daar staat elke wedstrijd als een kaart:
+- links een datumblok (dag en nummer);
+- de ploegen, het uur en de zaal;
+- grote keuzeknoppen;
+- een kleur per toestand;
+- de lijst ingedeeld in secties (te beantwoorden, beantwoord, aangeduid).
+
+In TeamAssist staat het nog niet op punt. *Mijn eerstvolgende trainingen*
+(Overzicht, `mijn-opgaven.js`) is een kale tabel: datum en uur, voor wie,
+status, en twee tekstlinks. Er staat geen ploeg, tegenstander of zaal bij,
+en een training is niet van een wedstrijd te onderscheiden.
+
+**De wens:**
+- **Eén manier om activiteiten te tonen**, dezelfde kaart overal. Dat geldt
+  voor het Overzicht van een speler of ouder, en bij voorkeur ook voor het
+  scherm van de coach en het tabblad Aanduidingen.
+- **Bij een speler die ook fluit staat alles in één lijst**: de trainingen en
+  wedstrijden van zijn ploeg, én de wedstrijden waarop hij als official
+  aangeduid is.
+- **Het type is meteen duidelijk**: training, wedstrijd (thuis of uit) en
+  fluiten zijn op het eerste gezicht van elkaar te onderscheiden, met een
+  label en een eigen kleur of rand. Niet enkel via de tekst.
+
+**Voorstel, nog te bevestigen:**
+1. **Eén gedeelde kaart** (`public/js/kaart.js`), naar het model van het
+   Aanduidingen-scherm (0.38.0, al uit YOAssist). Ze bestaat uit:
+   - het datumblok;
+   - een label voor het type (*Training*, *Wedstrijd*, *Fluiten*);
+   - een titel (ploeg, tegenstander en thuis/uit), het uur en de zaal;
+   - de status en de knoppen van dat type.
+
+   Het tabblad Aanduidingen gaat ze ook gebruiken, zodat er niet twee kaarten
+   uit elkaar groeien.
+2. **Het Overzicht wordt *Mijn agenda*.** Eén lijst in tijdsvolgorde,
+   gegroepeerd per dag, voor deze en volgende maand, met 'meer tonen' voor
+   later, zoals in Aanduidingen. Wie fluit noch speelt (bv. enkel ADMIN),
+   ziet de lijst niet.
+3. **Wat er per type kan:**
+   - *training* en *wedstrijd*: aanwezig of afwezig opgeven, zoals nu (met
+     de termijn, de reden bij afwezig, en een uitsluiting door de coach die
+     zichtbaar blijft);
+   - *fluiten*: enkel tonen en *probleem melden*. Beschikbaarheid opgeven
+     blijft in Aanduidingen.
+4. **Een botsing tonen**: speelt iemand om 10 uur en moet hij om 11 uur
+   fluiten, dan staat er bij beide een waarschuwing. Er wordt niets
+   geweigerd: de club beslist. Dezelfde regel als bij aanduiden (2 uur in
+   dezelfde zaal, 2,5 uur in een andere).
+5. **Backend**: één route `GET /api/mij/agenda[?namens=]` die de opgaven
+   (`aanwezigheid`) en de aanduidingen (`officials_aanduidingen`) samenvoegt,
+   met per item `soort`. Zo zijn het tijdsvenster, de volgorde en de botsing
+   op één plaats geregeld, en apart te testen. Geen schemawijziging.
+
+**Nog te beslissen:**
+- **Wedstrijdtaken (T1)**: klok, 24 seconden, tablet en ploegafgevaardigde
+  horen er ook in als vierde type, *Taak*. Voorstel: ja, zelfde kaart, enkel
+  tonen en probleem melden.
+- **Een ouder met meerdere kinderen**: één lijst met de naam bij elk item, of
+  bovenaan kiezen voor wie (zoals Aanduidingen)? Voorstel: één lijst met de
+  naam erbij, want een ouder wil zien wat het gezin dit weekend heeft.
+- **Fluiten in de lijst**: enkel wat aangeduid is, of ook wat nog beantwoord
+  moet worden? Voorstel: enkel aangeduid. Wat nog beantwoord moet worden,
+  blijft in Aanduidingen, met een teller of link ernaar.
+- **Het scherm van de coach** (aanwezigheden van de ploeg) meteen mee
+  ombouwen, of in een volgend pakket? Voorstel: eerst de kaart en Mijn
+  agenda, de coach daarna.
+- **Volgorde tegenover I1**: na fase 4d/4e, of ertussen? Voorstel: na 4e,
+  vóór de overschakeling (fase 5). Dan zien de officials bij de overstap
+  meteen hun volledige agenda.
 
 ### Z — Zaaluren laden via een CSV-bestand — **afgewerkt in 0.14.0**
 Geleverd zoals hier voorgesteld: vooraf ingevuld sjabloon, kolommen
