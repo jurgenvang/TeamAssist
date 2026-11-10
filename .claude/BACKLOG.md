@@ -54,8 +54,9 @@ Bijgewerkt bij elke versie. Voor de volledige tekst: zoek de kop verderop
 - **T3** en **V29** — evaluatie van spelers en van officials.
 - **T5** en **V30** — een tweede omgeving / demo-omgeving.
 - **V43** — eigen VBL-aanduidingen: eerst uitzoeken, dan bouwen; na I1.
-- **T21** — één agenda voor aanwezigheden, zoals de kaarten van YOAssist:
-  trainingen, wedstrijden én wat iemand fluit, met het type meteen zichtbaar.
+- **T21** — elke lijst met wedstrijden zoals in YOAssist (beslist), en één
+  agenda voor aanwezigheden: trainingen, wedstrijden én wat iemand fluit,
+  met het type meteen zichtbaar (nog uit te klaren).
 
 ---
 
@@ -898,6 +899,37 @@ andere browser; daar is de code voor.
 
 ### T21 — Eén agenda: trainingen, wedstrijden en fluiten, op de manier van YOAssist
 **Gevraagd door Jurgen (2 november 2026), nog uit te klaren.**
+
+**Beslist (Jurgen, 10 november 2026): overal waar TeamAssist wedstrijden
+toont, gebeurt dat zoals in YOAssist.** Het is geen wens voor één scherm. Het
+is een regel voor elke lijst, ook voor schermen die er later bijkomen
+(Regio in 4d, Mijn club in T7). Het model is de kaart van YOAssist:
+- een datumblok;
+- de ploegen, met thuis of uit;
+- het uur en de zaal, met een kaartlink;
+- de uitslag, en *forfait* als label;
+- een kleur per toestand;
+- een link naar het wedstrijdblad;
+- per dag of per sectie gegroepeerd.
+
+Lijsten die vandaag anders zijn (nagekeken op 10 november 2026):
+- **Ploegen → Wedstrijden van een ploeg** (`trainingen.js`,
+  `toonWedstrijden`): een tabel met datum, 'thuis/uit — tegenstander', zaal,
+  uitslag en een link *Aanwezigheid*.
+- **Ploegen → Trainingen van een ploeg** (`trainingen.js`): ook een tabel.
+- **Overzicht → Mijn eerstvolgende trainingen** (`mijn-opgaven.js`): een
+  tabel zonder ploeg, tegenstander of zaal (zie hieronder).
+- **De aanwezigheid van één training of wedstrijd**
+  (`aanwezigheid-beheer.js`): enkel een kop *Aanwezigheid — wedstrijd*,
+  zonder de wedstrijd zelf.
+- **Aanduidingen en Cluboverzicht** zijn al uit YOAssist overgezet. Ze
+  moeten toch in de browser naast YOAssist gelegd worden, en elk verschil
+  wordt rechtgezet. Dezelfde knoppen hebben is niet hetzelfde als
+  hetzelfde werken (zie `learnings.md`, 0.40.1).
+
+Eerste stap bij het bouwen: van elk scherm hierboven een schermafdruk naast
+YOAssist, op telefoonbreedte.
+
 
 Een overzicht van activiteiten moet er overal hetzelfde uitzien, en het
 voorbeeld is YOAssist. Daar staat elke wedstrijd als een kaart:
