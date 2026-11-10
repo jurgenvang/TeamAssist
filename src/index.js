@@ -25,6 +25,7 @@ import {
 } from './officials/routes.js';
 import { officialsSync } from './officials/sync-route.js';
 import { woensdaglijstTonen } from './officials/woensdaglijst-route.js';
+import { officialsInstellingenTonen, officialsInstellingBewaren } from './officials/instellingen.js';
 import { automatischAanvullen } from './officials/aanvullen.js';
 import { vulNogIn } from './officials/herinneringen.js';
 import {
@@ -134,6 +135,9 @@ export const ROUTES = [
   { methode: 'GET', pad: '/api/admin/officials/problemen', recht: 'officials.beheren', doe: problemenTonen },
   { methode: 'POST', pad: '/api/admin/officials/probleem-afhandelen', recht: 'officials.beheren', doe: probleemAfhandelen },
   { methode: 'GET', pad: '/api/admin/officials/woensdaglijst', recht: 'officials.beheren', doe: woensdaglijstTonen },
+  // Forfait en Extern lezen (0.41.0): een YOADM zet ze zelf, zoals in YOAssist.
+  { methode: 'GET', pad: '/api/admin/officials/instellingen', recht: 'officials.beheren', doe: officialsInstellingenTonen },
+  { methode: 'POST', pad: '/api/admin/officials/instellingen', recht: 'officials.beheren', doe: officialsInstellingBewaren },
   { methode: 'POST', pad: '/api/admin/officials/automatisch', recht: 'officials.beheren', doe: automatischAanvullen },
   { methode: 'POST', pad: '/api/admin/officials/vul-nog-in', recht: 'officials.beheren', doe: vulNogIn },
   // De vergoedingen (0.36.0): YOADM, ADMIN en FINADM — de penningmeester

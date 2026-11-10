@@ -30,6 +30,8 @@ import { toonMijnVergoeding } from './schermen/mijn-vergoeding.js';
 import { toonOfficialsVoorkeuren, koppelOfficialsVoorkeuren } from './schermen/officials-voorkeuren.js';
 import { laadCluboverzicht, koppelCluboverzicht } from './schermen/cluboverzicht.js';
 import { laadVergoedingen, koppelVergoedingen } from './schermen/vergoedingen-club.js';
+import { laadRegio } from './schermen/regio.js';
+import { laadDagelijksOfficials, laadConfiguratieOfficials, koppelOfficialsBeheer } from './schermen/officials-beheer.js';
 
 function toonAanmelden() {
   el('aanmelden').hidden = false;
@@ -99,6 +101,7 @@ function toonApp(gegevens) {
   bouwNavigatie(rechten, (tab) => laadScherm(tab, rechten), { ouderVanOfficial: kinderen.length > 0 });
 
   bouwBeheermenu(rechten, gegevens.testrol_mogelijk === true);
+  toonSectiesVolgensRechten(rechten);
 
   startTeller();
   toonMededeling();
@@ -127,15 +130,23 @@ function laadScherm(tab, rechten) {
   if (tab === 'vergoedingen') {
     laadVergoedingen(rechten);
   }
+  if (tab === 'regio') {
+    laadRegio();
+  }
   if (tab === 'ploegen') {
     laadPloegen();
     laadZalen(); // vult de zaalkeuze voor het reeksformulier
   }
+  // Dagelijks beheer en Configuratie zijn er voor twee soorten beheerders:
+  // elk deel laadt enkel voor wie het mag, anders volgt een 403.
+  const mag = (recht) => Object.hasOwn(rechten ?? {}, recht);
   if (tab === 'configuratie') {
-    laadInstellingen();
+    if (mag('systeem.beheren')) laadInstellingen();
+    if (mag('officials.beheren')) laadConfiguratieOfficials();
   }
   if (tab === 'dagelijksbeheer') {
-    laadMededelingBeheer();
+    if (mag('systeem.beheren')) laadMededelingBeheer();
+    if (mag('officials.beheren')) laadDagelijksOfficials();
   }
   if (tab === 'zaalbeheer') {
     laadZalen();
@@ -174,6 +185,16 @@ function bouwBeheermenu(rechten, testrolMogelijk) {
   // een beheerder ziet in één oogopslag dat hij meer mag dan een gewone
   // official — en een beheerder die als coach kijkt, ziet dat het niet zo is.
   el('topbalkrollen').classList.toggle('beheer', schermen.length > 0);
+}
+
+/**
+ * Een sectie met data-recht staat er enkel voor wie dat recht heeft (0.41.0).
+ * Gemak, geen beveiliging: de routes erachter controleren het zelf.
+ */
+function toonSectiesVolgensRechten(rechten) {
+  for (const sectie of document.querySelectorAll('[data-recht]')) {
+    sectie.hidden = !Object.hasOwn(rechten ?? {}, sectie.dataset.recht);
+  }
 }
 
 function sluitNaammenu() {
@@ -417,6 +438,7 @@ koppelAanduidingen();
 koppelCluboverzicht();
 koppelPanelen();
 koppelVergoedingen();
+koppelOfficialsBeheer();
 koppelOfficialsVoorkeuren();
 koppelTestrol();
 

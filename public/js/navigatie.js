@@ -18,6 +18,9 @@ export const TABBLADEN = [
   // Het cluboverzicht van de officials (0.39.0): in de tabbalk, zoals in
   // YOAssist — een YOADM werkt er dagelijks in.
   { id: 'cluboverzicht', naam: 'Cluboverzicht', recht: 'officials.beheren' },
+  // Regio (0.41.0): krappe wedstrijden bij clubs die de club volgt, zoals in
+  // YOAssist. Per stuk uitzetten komt met fase 4e.
+  { id: 'regio', naam: 'Regio', recht: 'officials.beheren' },
   { id: 'ploegen', naam: 'Ploegen', recht: 'team.bekijken' },
   { id: 'personen', naam: 'Personen', recht: 'personen.beheren' },
   // De beheerschermen staan enkel onder Beheer in het naammenu, niet in de
@@ -33,8 +36,11 @@ export const TABBLADEN = [
   // Vergoedingen club (0.40.0): onder Beheer, zoals in YOAssist — het werk
   // van één keer per maand. Ook voor FINADM, die verder niets beheert.
   { id: 'vergoedingen', naam: 'Vergoedingen club', recht: 'officials.vergoedingen', inMenu: true },
-  { id: 'dagelijksbeheer', naam: 'Dagelijks beheer', recht: 'systeem.beheren', inMenu: true },
-  { id: 'configuratie', naam: 'Configuratie', recht: 'systeem.beheren', inMenu: true },
+  // Dagelijks beheer en Configuratie: ook voor wie enkel de officials beheert
+  // (0.41.0). Die ziet er enkel de secties van de officials; welke sectie
+  // voor wie is, staat op de sectie zelf (data-recht, app.js).
+  { id: 'dagelijksbeheer', naam: 'Dagelijks beheer', recht: ['systeem.beheren', 'officials.beheren'], inMenu: true },
+  { id: 'configuratie', naam: 'Configuratie', recht: ['systeem.beheren', 'officials.beheren'], inMenu: true },
   { id: 'zaalbeheer', naam: 'Zaalbeheer', recht: 'systeem.beheren', inMenu: true },
 ];
 
@@ -44,9 +50,9 @@ export const TABBLADEN = [
  *   ziet de tabbladen met `ouder: true`, ook zonder het recht zelf
  */
 export function zichtbareTabbladen(rechten, { ouderVanOfficial = false } = {}) {
-  return TABBLADEN.filter(
-    (t) => !t.recht || Object.hasOwn(rechten ?? {}, t.recht) || (t.ouder && ouderVanOfficial)
-  );
+  // Een lijst van rechten betekent: één ervan volstaat.
+  const heeft = (recht) => [].concat(recht).some((r) => Object.hasOwn(rechten ?? {}, r));
+  return TABBLADEN.filter((t) => !t.recht || heeft(t.recht) || (t.ouder && ouderVanOfficial));
 }
 
 /** Wat in de tabbalk komt; de rest opent via het naammenu. */

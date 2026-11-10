@@ -148,9 +148,10 @@ test('de topbalk toont clubnaam en logo, geen hardcoded clubnaam meer in JS', ()
 
 test('beheer bestaat uit drie schermen, waaronder zaalbeheer, en die staan in het naammenu', () => {
   const nav = lees('../public/js/navigatie.js');
-  assert.ok(nav.includes("id: 'dagelijksbeheer', naam: 'Dagelijks beheer', recht: 'systeem.beheren', inMenu: true"));
+  // Dagelijks beheer en Configuratie ook voor wie de officials beheert (0.41.0).
+  assert.ok(nav.includes("id: 'dagelijksbeheer', naam: 'Dagelijks beheer', recht: ['systeem.beheren', 'officials.beheren'], inMenu: true"));
   assert.ok(nav.includes("id: 'zaalbeheer', naam: 'Zaalbeheer', recht: 'systeem.beheren', inMenu: true"));
-  assert.ok(nav.includes("id: 'configuratie', naam: 'Configuratie', recht: 'systeem.beheren', inMenu: true"));
+  assert.ok(nav.includes("id: 'configuratie', naam: 'Configuratie', recht: ['systeem.beheren', 'officials.beheren'], inMenu: true"));
   assert.ok(html.includes('id="tab-dagelijksbeheer"'));
   assert.ok(html.includes('id="tab-zaalbeheer"'));
   assert.ok(html.includes('id="tab-configuratie"'));
@@ -395,7 +396,7 @@ test('de kleine, veelgebruikte secties staan standaard open, de rest dicht', () 
   const html2 = html;
   // Instellingen en Zalen/Schoolvakanties zijn de kern van hun tabblad en
   // staan open; iets als het sjabloon of de testrol staat standaard dicht.
-  assert.match(html2, /<details open>\s*<summary>Instellingen<\/summary>/);
+  assert.match(html2, /<details open data-recht="systeem.beheren">\s*<summary>Instellingen<\/summary>/);
   assert.match(html2, /<details open>\s*<summary>Zalen<\/summary>/);
   assert.match(html2, /<details>\s*<summary>Zaaluren-sjabloon<\/summary>/);
 });

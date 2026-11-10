@@ -67,14 +67,16 @@ test('het overzicht heeft geen recht nodig', () => {
 
 test('de beheerschermen staan in het naammenu, niet in de tabbalk', () => {
   const rechten = bouwRechten({ rollen: [{ rol: 'ADMIN', team_guid: null }] }).overzicht();
-  assert.deepEqual(tabbalkTabbladen(rechten).map((t) => t.id), ['mij', 'cluboverzicht', 'ploegen', 'personen']);
+  assert.deepEqual(tabbalkTabbladen(rechten).map((t) => t.id), ['mij', 'cluboverzicht', 'regio', 'ploegen', 'personen']);
   assert.deepEqual(menuTabbladen(rechten).map((t) => t.id), ['vergoedingen', 'dagelijksbeheer', 'configuratie', 'zaalbeheer']);
 });
 
 test('wie de officials beheert, ziet het Cluboverzicht in de tabbalk, en geen clubbeheer', () => {
   const yoadm = bouwRechten({ rollen: [{ rol: 'YOADM', team_guid: null }] }).overzicht();
-  assert.deepEqual(tabbalkTabbladen(yoadm).map((t) => t.id), ['mij', 'cluboverzicht']);
-  assert.deepEqual(menuTabbladen(yoadm).map((t) => t.id), ['vergoedingen']);
+  assert.deepEqual(tabbalkTabbladen(yoadm).map((t) => t.id), ['mij', 'cluboverzicht', 'regio']);
+  // Dagelijks beheer en Configuratie, maar enkel met de secties van de
+  // officials (data-recht); Zaalbeheer niet (0.41.0).
+  assert.deepEqual(menuTabbladen(yoadm).map((t) => t.id), ['vergoedingen', 'dagelijksbeheer', 'configuratie']);
   // De penningmeester sluit de maand af, maar beheert de officials niet.
   const finadm = bouwRechten({ rollen: [{ rol: 'FINADM', team_guid: null }] }).overzicht();
   assert.ok(!tabbalkTabbladen(finadm).some((t) => t.id === 'cluboverzicht'));

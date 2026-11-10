@@ -11,7 +11,7 @@ WIJZIGINGEN-bestanden blijven kloppen:
   punt *U* (Microsoft 365) heet hier **VU**, want TeamAssist heeft al een *U*
 - **T** + nummer, en de letters **A–AB** — TeamAssist
 
-Stand: YOAssist **v1.17.1**, TeamAssist **0.40.1**
+Stand: YOAssist **v1.17.1**, TeamAssist **0.41.0**
 
 ---
 
@@ -41,9 +41,8 @@ Bijgewerkt bij elke versie. Voor de volledige tekst: zoek de kop verderop
   (v1.17.1 staat sinds 10 november op `main`.)
 
 ### Klaar om te bouwen
-- **I1, fase 4d (0.41.0)** — Regio en de beheerdelen (woensdaglijst,
-  synchroniseren, instellingen van de module). Daarna 4e (tabbladen per stuk
-  uitzetten — schemawijziging, eerst de migratie).
+- **I1, fase 4e** — tabbladen per stuk uitzetten (YOAssist's
+  `verborgen_tabs`): een kolom op `personen`, dus eerst de migratie.
 - **T21** — na 4e, vóór de overschakeling: elke lijst met wedstrijden
   zoals in YOAssist, één gedeelde kaart, *Mijn agenda* (trainingen,
   wedstrijden, fluiten, taken) en het scherm van de coach, in één pakket.
@@ -242,8 +241,10 @@ rapport. Verder:
      problemen, voorbije wedstrijden.
    - **4c — 0.40.0, afgewerkt: Vergoedingen club** en de tarieven, onder
      Beheer in het naammenu (YOADM, ADMIN, FINADM).
-   - **4d — 0.41.0: Regio en de beheerdelen** (woensdaglijst, synchroniseren,
-     instellingen van de module).
+   - **4d — 0.41.0, afgewerkt: Regio en de beheerdelen.** Het tabblad Regio;
+     in Dagelijks beheer de woensdaglijst en de synchronisatie, in
+     Configuratie de gevolgde clubs, Forfait en Extern lezen — zoals in
+     YOAssist, en ook voor een YOADM, die er enkel die secties ziet.
    - **4e: tabbladen per stuk uitzetten** (YOAssist's `verborgen_tabs`) —
      een kolom op `personen`, dus een migratie.
 5. **Parallel draaien** op een testadres, daarna overschakelen: migratie
@@ -375,6 +376,7 @@ YOAssist met `ruudcuyvers@…`, vermoedelijk het adres van zijn vader.
 | 0.23.0 | T14 afgewerkt: een volledige backup van de databank als JSON. Beter dan aanvankelijk voorgesteld — geen hardcoded tabellenlijst met een test die drift moet vangen (de YOAssist-aanpak), maar tabellen rechtstreeks uit `sqlite_master` gehaald, wat de hele bugklasse structureel onmogelijk maakt. De kerntest bewijst dat letterlijk: een tabel die pas ná het schrijven van de route wordt aangemaakt, zit er toch in. |
 | 0.24.0 | T16 en T17 afgewerkt. `verwittig()` heeft geen `kanaal`-parameter meer en leest voortaan `kanaal_voorkeur` — mail blijft de terugval zolang push niet bestaat, met een aparte logregel voor wie 'push' koos. Blokken bij Zaalbeheer staan nu gegroepeerd per weekdag als losse blokjes, met bewust neutrale kleuren in plaats van de accentkleur. |
 | 0.25.0 | T15 afgewerkt: opruiming van `logboek` (365 dagen), `taak_runs` (30 dagen), `berichten` (120 dagen), en het definitief verwijderen van een inactieve persoon na 180 dagen. Twee tabellen extra gevonden tijdens het bouwen (`accounts`, `ouder_kind`) die niet in het oorspronkelijke overzicht stonden. Enkel `aanwezigheden` wordt geanonimiseerd in plaats van verwijderd — de enige tabel waar dat structureel kon — wat een schema-heropbouw vroeg, grondig getoetst tegen een nagemaakte bestaande databank. |
+| 0.41.0 | I1 fase 4d: Regio en de beheerdelen van de officials, zoals in YOAssist. Tabblad *Regio* voor wie de officials beheert: per dag de krappe wedstrijden bij de gevolgde clubs (de rand rood bij geen scheidsrechter, oranje bij één, met zijn naam), met de bron van de dag (*volgens de lijst van de bond* of *volgens de API — de lijst volgt woensdag*) en een link naar het wedstrijdblad. *Dagelijks beheer* en *Configuratie* zijn er nu ook voor een YOADM, die er enkel de secties van de officials ziet (`data-recht` per sectie): de woensdaglijsten van de laatste weken met hun status, de synchronisatie (eerst wat er zou veranderen), de gevolgde clubs (toevoegen, verwijderen, nu synchroniseren, de lijst leegmaken na een telling), en de instellingen *Forfait* en *Extern lezen* via een eigen route (`/api/admin/officials/instellingen`, enkel die twee sleutels). In Chromium bekeken tegen de echte handlers, als YOADM en als ADMIN. Geen schemawijziging. 995 tests. |
 | 0.40.1 | Het naammenu werkt zoals in YOAssist: elk scherm dat het opent (Mijn berichten, Mijn vergoeding, Mijn voorkeuren, Kijken als …, en onder Beheer Vergoedingen club, Dagelijks beheer, Configuratie, Zaalbeheer) is een paneel dat van rechts over de pagina schuift — op een telefoon schermvullend — met een × om te sluiten; Escape of een tik ernaast sluit ook. Altijd hoogstens één paneel open; het tabblad eronder blijft staan. Tot nu toe hing zo'n scherm onderaan het tabblad dat openstond, bleef het vorige openstaan, en leek het alsof er niets gebeurde. Gemeld door Jurgen. Geen schemawijziging. 989 tests. |
 | 0.40.0 | I1 fase 4c: Vergoedingen club, onder Beheer in het naammenu, voor wie `officials.vergoedingen` heeft (YOADM, ADMIN, FINADM). Zoals in YOAssist: per open maand *Bekijken en afsluiten* (pas vanaf de eerste dag van de volgende maand), met het voorbeeld per official — regels, bedragen, de wedstrijden zelf, correcties, forfait, en waarschuwingen voor een categorie zonder tarief of een wedstrijd die niet meer bij de bond staat; daarna afsluiten en versturen, na bevestiging. Een wedstrijd weghalen uit het voorbeeld is vrijgeven (enkel met `officials.beheren`, dus niet voor FINADM; enkel werk in een open maand). De afgesloten maanden met hun staat (wie afsloot, naar wie de verzamelstaat ging), het totaal per official over het seizoen, wie de verzamelstaat krijgt. Nieuw tegenover YOAssist: de tarieven aanpassen in het scherm. In Chromium bekeken tegen de echte handlers, ook als FINADM. Geen schemawijziging. 985 tests. |
 | 0.39.2 | T20: langer aangemeld blijven. Het verversingstoken staat in een HttpOnly-cookie die de Worker zet (400 dagen, enkel voor `/api/sessie/`), het toegangstoken enkel in het geheugen; drie publieke routes `POST /api/sessie/start`, `/vernieuw`, `/stop`. Eén verversing tegelijk in de browser (twee tegelijk konden de sessie bij Supabase laten intrekken). Enkel afmelden als Supabase zegt dat het token niet meer geldt: een storing (5xx, gepauzeerd project, onbereikbare JWKS) is een 503 en de sessie blijft. Een sessie van vóór 0.39.2 gaat bij het openen één keer mee naar de cookie. Het codeveld neemt 6 tot 10 cijfers; de README legt uit dat `{{ .Token }}` in *Magic Link* én *Confirm signup* moet. Ook: een test van het cluboverzicht faalde op zondag. Geen schemawijziging. 977 tests. |

@@ -113,6 +113,11 @@
       <div id="cluboverzichtlijst"></div>
     </section>
 
+    <!-- Regio (0.41.0): krappe wedstrijden bij gevolgde clubs, zoals in YOAssist -->
+    <section id="tab-regio" hidden>
+      <div id="regiolijst"></div>
+    </section>
+
     <!-- Vergoedingen club (0.40.0), via Beheer in het naammenu -->
     <section id="tab-vergoedingen" class="paneel breed" role="dialog" aria-modal="true" aria-label="Vergoedingen club" hidden>
       <div class="paneel-kop"><h2>Vergoedingen club</h2><button type="button" class="sluit" data-sluit aria-label="Sluiten">&times;</button></div>
@@ -317,7 +322,7 @@
     <!-- Beheer -->
     <section id="tab-configuratie" class="paneel breed" role="dialog" aria-modal="true" aria-label="Configuratie" hidden>
       <div class="paneel-kop"><h2>Configuratie</h2><button type="button" class="sluit" data-sluit aria-label="Sluiten">&times;</button></div>
-      <details>
+      <details data-recht="systeem.beheren">
         <summary>Huisstijl</summary>
         <p class="klein">
           De accentkleur wordt gecontroleerd op leesbaarheid; een te lichte kleur wordt geweigerd,
@@ -330,7 +335,7 @@
         <div id="brandingvoorstel" class="melding" hidden></div>
       </details>
 
-      <details open>
+      <details open data-recht="systeem.beheren">
         <summary>Instellingen</summary>
         <table>
           <thead><tr><th>Instelling</th><th>Waarde</th></tr></thead>
@@ -339,7 +344,7 @@
         <p id="instellingmelding" class="klein"></p>
       </details>
 
-      <details>
+      <details data-recht="systeem.beheren">
         <summary>Backup</summary>
         <p class="klein">
           Eén JSON-bestand met alle tabellen, op het moment van downloaden. Er is
@@ -352,6 +357,40 @@
         <div id="backupmelding" class="melding" hidden></div>
       </details>
 
+      <details open data-recht="officials.beheren">
+        <summary>Regio</summary>
+        <p class="klein">
+          Clubs waarvan je wil zien welke wedstrijden krap zitten (nul of één scheidsrechter), ook al
+          doet de app zelf niets voor die club. Verschijnt in het tabblad Regio.
+        </p>
+        <label class="veld"><span>Club-GUID</span><input type="text" id="volgclubguid" placeholder="bv. BVBL1053"></label>
+        <form>
+          <button type="button" id="volgclubtoevoegen">Toevoegen</button>
+          <button type="button" class="stil" id="volgclubsync">Nu synchroniseren</button>
+          <button type="button" class="stil" id="volgclubwis">Wedstrijdenlijst leegmaken</button>
+        </form>
+        <div id="volgclubmelding"></div>
+        <div id="volgclublijst"></div>
+      </details>
+      <details data-recht="officials.beheren">
+        <summary>Forfait</summary>
+        <p class="klein">
+          Wat er gebeurt met een eigen aanduiding als de bond een forfait meldt. Een forfait dat pas op
+          de wedstrijddag zelf of achteraf bekend wordt, wordt nooit automatisch vrijgegeven: de
+          official kan al naar de wedstrijd gekomen zijn.
+        </p>
+        <label class="veld"><span>Bij een forfait</span>
+          <select id="instforfait"><option value="vrijgeven">Automatisch vrijgeven</option><option value="melden">Enkel de beheerders verwittigen</option></select>
+        </label>
+      </details>
+      <details data-recht="officials.beheren">
+        <summary>Extern lezen</summary>
+        <p class="klein">Welke namen de externe API en de agendafeed tonen.</p>
+        <label class="veld"><span>Namen</span>
+          <select id="instextern"><option value="initialen">Enkel initialen</option><option value="volledig">Volledige namen</option></select>
+        </label>
+        <div id="officialsinstmelding"></div>
+      </details>
     </section>
 
     <section id="tab-zaalbeheer" class="paneel breed" role="dialog" aria-modal="true" aria-label="Zaalbeheer" hidden>
@@ -475,7 +514,7 @@
 
     <section id="tab-dagelijksbeheer" class="paneel breed" role="dialog" aria-modal="true" aria-label="Dagelijks beheer" hidden>
       <div class="paneel-kop"><h2>Dagelijks beheer</h2><button type="button" class="sluit" data-sluit aria-label="Sluiten">&times;</button></div>
-      <details open>
+      <details open data-recht="systeem.beheren">
         <summary>Belangrijk nieuws</summary>
         <div id="mededelinghuidig"></div>
         <form>
@@ -511,7 +550,7 @@
         <div id="mededelingplan" class="melding" hidden></div>
       </details>
 
-      <details>
+      <details data-recht="systeem.beheren">
       <summary>Gegevens van de bond bekijken</summary>
       <p class="klein">
         Laat leeg voor de ploegenlijst van de club, of vul een ploeg-GUID in zoals
@@ -524,6 +563,23 @@
         <button type="button" class="stil" id="diagnoseruw">Volledig antwoord</button>
       </form>
       <pre id="diagnoseuitvoer" hidden></pre>
+      </details>
+      <details open data-recht="officials.beheren">
+        <summary>Woensdaglijst van de bond</summary>
+        <p class="klein">
+          De lijsten die de laatste weken binnenkwamen. Staat er niets, dan bereikt de mail van de
+          bond de app niet (Email Routing, zie de README).
+        </p>
+        <div id="woensdaglijststatus"></div>
+      </details>
+      <details data-recht="officials.beheren">
+        <summary>Synchronisatie van de officials</summary>
+        <p class="klein">
+          Haalt de thuiswedstrijden bij de bond op, met de scheidsrechters en forfaits. Gebeurt vanzelf
+          vier keer per dag; hier eerst zien wat er zou veranderen, dan uitvoeren.
+        </p>
+        <form><button type="button" class="stil" id="officialssyncproef">Bekijk wat er zou veranderen</button></form>
+        <div id="officialssyncmelding"></div>
       </details>
     </section>
 
