@@ -49,7 +49,8 @@ Bijgewerkt bij elke versie. Voor de volledige tekst: zoek de kop verderop
   wedstrijden, fluiten, taken) en het scherm van de coach, in één pakket.
 - **T7** — tabblad Mijn club.
 - **T12** — aanmelden als.
-- **T18, T19** — twee kleine gaten uit de code-audit.
+- **T18, T19** — twee kleine gaten uit de code-audit, beslist: vrije
+  zaaluren in de blokjes zelf tonen (T18), `clublogo_bron` schrappen (T19).
 
 ### Nog uit te klaren vóór er gebouwd kan worden
 - **T2** — financiële module (FINADM). Hangt na I1 samen met de vergoedingen
@@ -1423,7 +1424,12 @@ accentkleur zoals `.rollen li` — dit is roosterinformatie, geen rolbadge — e
 gebruikt daarom `--vlak`/`--lijn`, die al zonder extra werk donker-veilig zijn.
 
 ### T18 — `GET /api/admin/zalen/vrij` heeft geen enkel scherm
-**Nog uit te werken, gevonden bij een systematische route-vs-frontend
+**Beslist (Jurgen, 10 november 2026): in de blokjes zelf.** Een blok
+waar geen ploeg op traint, krijgt een eigen kleur en het woord *vrij*, in
+de bestaande weergave per weekdag (T17). Geen tweede lijst ernaast.
+`zalenTonen()` geeft daarvoor per blok mee of het bezet is.
+
+**Oorspronkelijk:** nog uit te werken, gevonden bij een systematische route-vs-frontend
 vergelijking** (dezelfde controle die in 0.13.2 vijf ontbrekende schermen
 opleverde). De route bestaat, werkt, heeft rechten (`systeem.beheren`) en een
 zinvolle functie: `vrijeBlokken()` in `src/routes/admin/zalen.js` geeft terug
@@ -1447,7 +1453,13 @@ Nog te bepalen:
   `zalenTonen()` de vrij/bezet-informatie meegeeft, wat ze vandaag niet doet.
 
 ### T19 — De instelling `clublogo_bron` wordt geschreven maar nergens gelezen
-**Nog uit te werken, klein.** `clublogo_bron` staat als keuzeveld
+**Beslist (Jurgen, 10 november 2026): schrappen.** De instelling verdwijnt
+uit `INSTELBAAR` en uit het scherm; het logo komt van de bond, en een
+beheerder neemt het voorstel over zoals nu. Komt er ooit een eigen
+logo-upload, dan komt de keuze terug met die functie. Een rij die al in
+`instellingen` staat, doet geen kwaad en blijft staan.
+
+**Oorspronkelijk:** nog uit te werken, klein. `clublogo_bron` staat als keuzeveld
 (`vbl`/`eigen`) in `INSTELBAAR` (`src/routes/admin/instellingen.js`) en wordt
 op `'vbl'` gezet wanneer een beheerder het VBL-logo overneemt
 (`public/js/schermen/instellingen.js`). Maar geen enkele plek in `src/` leest
