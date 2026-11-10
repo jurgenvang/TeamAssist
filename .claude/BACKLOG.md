@@ -36,14 +36,17 @@ Bijgewerkt bij elke versie. Voor de volledige tekst: zoek de kop verderop
   als eigen domein aan `teamassist.clubassist.org` hangen.
 - **I1** — de VAPID-secrets bij de Worker zetten (`node tools/maak-vapid.mjs`,
   zie README); zonder blijft alles per mail.
-- **V44** — YOAssist v1.17.1 naar `main` (live), en na 28 oktober in het
-  cluboverzicht van YOAssist de wedstrijden met reden 'woensdag' wegnemen die
-  de terugval om 20 uur erin zette.
+- **V44** — in het cluboverzicht van YOAssist de wedstrijden met reden
+  'woensdag' wegnemen die de terugval van 28 oktober om 20 uur erin zette.
+  (v1.17.1 staat sinds 10 november op `main`.)
 
 ### Klaar om te bouwen
 - **I1, fase 4d (0.41.0)** — Regio en de beheerdelen (woensdaglijst,
   synchroniseren, instellingen van de module). Daarna 4e (tabbladen per stuk
   uitzetten — schemawijziging, eerst de migratie).
+- **T21** — na 4e, vóór de overschakeling: elke lijst met wedstrijden
+  zoals in YOAssist, één gedeelde kaart, *Mijn agenda* (trainingen,
+  wedstrijden, fluiten, taken) en het scherm van de coach, in één pakket.
 - **T7** — tabblad Mijn club.
 - **T12** — aanmelden als.
 - **T18, T19** — twee kleine gaten uit de code-audit.
@@ -54,9 +57,6 @@ Bijgewerkt bij elke versie. Voor de volledige tekst: zoek de kop verderop
 - **T3** en **V29** — evaluatie van spelers en van officials.
 - **T5** en **V30** — een tweede omgeving / demo-omgeving.
 - **V43** — eigen VBL-aanduidingen: eerst uitzoeken, dan bouwen; na I1.
-- **T21** — elke lijst met wedstrijden zoals in YOAssist (beslist), en één
-  agenda voor aanwezigheden: trainingen, wedstrijden én wat iemand fluit,
-  met het type meteen zichtbaar (nog uit te klaren).
 
 ---
 
@@ -898,7 +898,7 @@ nieuwe browser — ook een in-app-browser (bv. die van Gmail) telt als een
 andere browser; daar is de code voor.
 
 ### T21 — Eén agenda: trainingen, wedstrijden en fluiten, op de manier van YOAssist
-**Gevraagd door Jurgen (2 november 2026), nog uit te klaren.**
+**Gevraagd door Jurgen (2 november 2026), beslist op 10 november 2026: klaar om te bouwen, na fase 4e en vóór de overschakeling.**
 
 **Beslist (Jurgen, 10 november 2026): overal waar TeamAssist wedstrijden
 toont, gebeurt dat zoals in YOAssist.** Het is geen wens voor één scherm. Het
@@ -984,22 +984,23 @@ en een training is niet van een wedstrijd te onderscheiden.
    met per item `soort`. Zo zijn het tijdsvenster, de volgorde en de botsing
    op één plaats geregeld, en apart te testen. Geen schemawijziging.
 
-**Nog te beslissen:**
-- **Wedstrijdtaken (T1)**: klok, 24 seconden, tablet en ploegafgevaardigde
-  horen er ook in als vierde type, *Taak*. Voorstel: ja, zelfde kaart, enkel
-  tonen en probleem melden.
-- **Een ouder met meerdere kinderen**: één lijst met de naam bij elk item, of
-  bovenaan kiezen voor wie (zoals Aanduidingen)? Voorstel: één lijst met de
-  naam erbij, want een ouder wil zien wat het gezin dit weekend heeft.
-- **Fluiten in de lijst**: enkel wat aangeduid is, of ook wat nog beantwoord
-  moet worden? Voorstel: enkel aangeduid. Wat nog beantwoord moet worden,
-  blijft in Aanduidingen, met een teller of link ernaar.
-- **Het scherm van de coach** (aanwezigheden van de ploeg) meteen mee
-  ombouwen, of in een volgend pakket? Voorstel: eerst de kaart en Mijn
-  agenda, de coach daarna.
-- **Volgorde tegenover I1**: na fase 4d/4e, of ertussen? Voorstel: na 4e,
-  vóór de overschakeling (fase 5). Dan zien de officials bij de overstap
-  meteen hun volledige agenda.
+**Beslist (Jurgen, 10 november 2026):**
+- **Wedstrijdtaken horen erbij** als vierde type, *Taak* (klok, 24
+  seconden, tablet, ploegafgevaardigde). Zelfde kaart, eigen label en
+  kleur. Enkel tonen en probleem melden.
+- **Een ouder met meerdere kinderen ziet één lijst**, met 'voor Max' bij
+  elk item: alles van het gezin samen.
+- **Fluiten: enkel wat aangeduid is.** Bovenaan een regel 'Nog N
+  wedstrijden te beantwoorden' die naar Aanduidingen gaat.
+- **Het scherm van de coach gaat meteen mee**, in hetzelfde pakket, met
+  dezelfde kaart. Ook de andere lijsten uit het overzicht hierboven
+  (wedstrijden en trainingen van een ploeg, de aanwezigheid van één
+  activiteit) gaan mee. Eén groter pakket, maar daarna klopt alles in één
+  keer.
+- **Volgorde: na fase 4e, vóór de overschakeling (fase 5).** Dan zien de
+  officials bij de overstap meteen hun volledige agenda. Regio (4d) volgt
+  intussen al de kaart van YOAssist; bij T21 gaat ook Regio naar de
+  gedeelde kaart.
 
 ### Z — Zaaluren laden via een CSV-bestand — **afgewerkt in 0.14.0**
 Geleverd zoals hier voorgesteld: vooraf ingevuld sjabloon, kolommen
