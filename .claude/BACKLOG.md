@@ -11,7 +11,7 @@ WIJZIGINGEN-bestanden blijven kloppen:
   punt *U* (Microsoft 365) heet hier **VU**, want TeamAssist heeft al een *U*
 - **T** + nummer, en de letters **A–AB** — TeamAssist
 
-Stand: YOAssist **v1.17.1**, TeamAssist **0.42.0** (op de werkbranch; `main` staat op 0.41.0 tot de migratie gedaan is)
+Stand: YOAssist **v1.17.1**, TeamAssist **0.42.0** (op `main` sinds 10 november 2026)
 
 ---
 
@@ -21,9 +21,6 @@ Bijgewerkt bij elke versie. Voor de volledige tekst: zoek de kop verderop
 (`### T7`, `### V43`, `## I1`, ...).
 
 ### Wacht op een actie van Jurgen
-- **0.42.0** — `migratie-0.42.0.sql` in de D1-console uitvoeren (één
-  `ALTER TABLE`), en zeggen dat het gedaan is: pas dan gaat 0.42.0 naar
-  `main`.
 - **0.33.0** — een droogloop van de nieuwe officials-sync op de echte Worker
   (`POST /api/admin/officials/sync`, zonder `uitvoeren=1`): komt `gevonden`
   in de buurt van de 210 wedstrijden uit YOAssist?
