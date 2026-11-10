@@ -46,8 +46,8 @@ function yoBackup(over = {}) {
       ],
       users: [
         gebruiker(),
-        gebruiker({ email: 'Beheer@Example.org', voornaam: 'Bert', achternaam: 'Beheer', is_admin: 1, profiel: 'YO+', kanaal_push: 1, agenda_sleutel: 'sleutel-bert' }),
-        gebruiker({ email: 'nieuw@example.org', voornaam: 'Nina', achternaam: 'Nieuw', profiel: 'YO+' }),
+        gebruiker({ email: 'Beheer@Example.org', voornaam: 'Bert', achternaam: 'Beheer', is_admin: 1, profiel: 'YO+', kanaal_push: 1, agenda_sleutel: 'sleutel-bert', verborgen_tabs: 'club,log' }),
+        gebruiker({ email: 'nieuw@example.org', voornaam: 'Nina', achternaam: 'Nieuw', profiel: 'YO+', verborgen_tabs: 'log,aandacht' }),
       ],
       teams: [
         { guid: PLOEG, naam: 'Bears G12 A', cat_code: 'G12', volgen: 1 },
@@ -177,6 +177,12 @@ test('na het script hangt alles aan de juiste persoon en wedstrijd', () => {
   const bert = db.prepare(`SELECT * FROM personen WHERE id = 'p-bert'`).get();
   assert.equal(bert.kanaal_voorkeur, 'beide');
   assert.equal(bert.agenda_sleutel, 'sleutel-bert', 'het agenda-abonnement blijft werken');
+  // De tabbladen (0.42.0): Bert verborg het Cluboverzicht, Nina had de
+  // standaard van YOAssist (Logboek en Regio uit) en volgt nu die van
+  // TeamAssist, Anna verborg niets.
+  assert.equal(bert.verborgen_tabs, '["cluboverzicht"]');
+  assert.equal(nina.verborgen_tabs, null);
+  assert.equal(db.prepare(`SELECT verborgen_tabs FROM personen WHERE id = 'p-anna'`).get().verborgen_tabs, '[]');
 
   const rollen = db.prepare(`SELECT persoon_id, rol FROM rollen ORDER BY persoon_id, rol`).all().map((r) => `${r.persoon_id}:${r.rol}`);
   assert.deepEqual(rollen, ['p-anna:YO', 'p-bert:YOADM', 'p-bert:YOPLUS', `${nina.id}:YOPLUS`]);

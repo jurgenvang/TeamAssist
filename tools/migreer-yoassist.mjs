@@ -28,6 +28,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { pathToFileURL } from 'node:url';
+import { vanYoassist } from '../src/lib/tabbladen.js';
 
 /** Een SQL-letterlijke waarde. Enkel tekst, getallen en NULL komen voor. */
 export function q(waarde) {
@@ -211,9 +212,10 @@ export function maakMigratie(yo, ta, keuzes = {}) {
     }
     if (k.hoe === 'nieuw') {
       sql.push(
-        `INSERT OR IGNORE INTO personen (id, voornaam, achternaam, email, tel_gsm, actief, kanaal_voorkeur, agenda_sleutel, naam_bron)` +
+        `INSERT OR IGNORE INTO personen (id, voornaam, achternaam, email, tel_gsm, actief, kanaal_voorkeur, agenda_sleutel, verborgen_tabs, naam_bron)` +
           ` VALUES (${q(k.persoon_id)}, ${q(u.voornaam ?? '')}, ${q(u.achternaam ?? '')}, ${q(eigenAdres)},` +
-          ` ${q(u.gsm || null)}, ${u.actief ? 1 : 0}, ${q(kanaal)}, ${q(u.agenda_sleutel || null)}, 'club');`
+          ` ${q(u.gsm || null)}, ${u.actief ? 1 : 0}, ${q(kanaal)}, ${q(u.agenda_sleutel || null)},` +
+          ` ${q(vanYoassist(u.verborgen_tabs))}, 'club');`
       );
     } else {
       // Enkel aanvullen wat leeg is: wat in TeamAssist al staat, wint. De
@@ -223,6 +225,8 @@ export function maakMigratie(yo, ta, keuzes = {}) {
         `UPDATE personen SET email = coalesce(email, ${q(eigenAdres)}),` +
           ` tel_gsm = coalesce(tel_gsm, ${q(u.gsm || null)}),` +
           ` agenda_sleutel = coalesce(agenda_sleutel, ${q(u.agenda_sleutel || null)}),` +
+          // De tabbladen (0.42.0): een keuze in TeamAssist wint, zoals elders.
+          ` verborgen_tabs = coalesce(verborgen_tabs, ${q(vanYoassist(u.verborgen_tabs))}),` +
           ` kanaal_voorkeur = ${q(kanaal)}, gewijzigd = datetime('now')` +
           ` WHERE id = ${q(k.persoon_id)};`
       );
@@ -481,10 +485,6 @@ export function maakMigratie(yo, ta, keuzes = {}) {
   }
   for (const pr of yo.yoassist?.problemen ?? []) {
     meldingen.push(`De YOAssist-backup meldde zelf: ${pr.tabel} — ${pr.reden}.`);
-  }
-  const verborgen = rij('users').filter((u) => u.verborgen_tabs && u.verborgen_tabs.replace(/,/g, ''));
-  if (verborgen.length) {
-    meldingen.push(`${verborgen.length} gebruiker(s) hadden tabbladen verborgen; dat komt pas mee met de schermen (fase 4).`);
   }
 
   const kop =

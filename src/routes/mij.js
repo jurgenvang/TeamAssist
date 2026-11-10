@@ -4,6 +4,7 @@
 // nagaan of de rechtenlaag doet wat ze hoort te doen.
 
 import { json } from '../lib/http.js';
+import { leesVerborgen } from '../lib/tabbladen.js';
 import { VERSIE } from '../versie.js';
 import { magTestrolGebruiken } from '../lib/rechten.js';
 import { instellingLezen } from './admin/instellingen.js';
@@ -101,6 +102,8 @@ export async function mij(ctx) {
       donkere_modus: persoon.donkere_modus,
       kanaal_voorkeur: persoon.kanaal_voorkeur,
     },
+    // Welke tabbladen iemand verborg (0.42.0); NULL wordt de standaard.
+    verborgen_tabs: leesVerborgen(persoon.verborgen_tabs),
     rollen: rechten.rollen,
     ziet_alle_ploegen: zietAlles,
     ploegen,

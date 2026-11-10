@@ -4,7 +4,7 @@ import {
   api, haalConfig, leesTokensUitUrl, vraagAanmeldlink, verifieerCode, testrol, startSessie, herneemSessie, afmelden,
 } from './api.js';
 import { el, toon, veilig } from './hulp.js';
-import { bouwNavigatie, menuTabbladen } from './navigatie.js';
+import { bouwNavigatie, menuTabbladen, verbergbareTabbladen } from './navigatie.js';
 import { openPaneel, sluitPaneel, koppelPanelen } from './paneel.js';
 import { laadPloegen, synchroniseerPloegen, synchroniseerLeden, downloadSjabloon, uploadSjabloon } from './schermen/ploegen.js';
 import { bewaarSelectie, publiceerSelectie } from './schermen/aanwezigheid-beheer.js';
@@ -12,7 +12,7 @@ import { zoekPersonen } from './schermen/personen.js';
 import { koppelPersoonscherm } from './schermen/persoon.js';
 import { koppelMeelezen } from './schermen/meelezen.js';
 import { laadInstellingen, haalBrandingvoorstel, downloadBackup } from './schermen/instellingen.js';
-import { toonVoorkeuren, bewaarVoorkeuren, pasDonkereModusToe } from './schermen/voorkeuren.js';
+import { toonVoorkeuren, bewaarVoorkeuren, pasDonkereModusToe, toonTabbladkeuze } from './schermen/voorkeuren.js';
 import { laadMijnOpgaven } from './schermen/mijn-opgaven.js';
 import { toonDiagnose } from './schermen/diagnose.js';
 import { pasHuisstijlToe } from './huisstijl.js';
@@ -42,6 +42,9 @@ let huidigePersoon = null;
 // Official zelf, of ouder van een official: dan horen Aanduidingen, Mijn
 // vergoeding en de officials-voorkeuren erbij (0.38.0).
 let metOfficials = false;
+// Voor de tabbladen (0.42.0): na een wijziging bij Mijn voorkeuren wordt de
+// tabbalk opnieuw gebouwd, met dezelfde rechten.
+let navigatie = null;
 
 function toonApp(gegevens) {
   el('aanmelden').hidden = true;
@@ -98,7 +101,8 @@ function toonApp(gegevens) {
   zetOfficialsPersonen(gegevens.persoon, isOfficial, kinderen);
   el('naammenu-vergoeding').hidden = !metOfficials;
 
-  bouwNavigatie(rechten, (tab) => laadScherm(tab, rechten), { ouderVanOfficial: kinderen.length > 0 });
+  navigatie = { rechten, extra: { ouderVanOfficial: kinderen.length > 0, verborgen: gegevens.verborgen_tabs ?? [] } };
+  bouwNavigatie(rechten, (tab) => laadScherm(tab, rechten), navigatie.extra);
 
   bouwBeheermenu(rechten, gegevens.testrol_mogelijk === true);
   toonSectiesVolgensRechten(rechten);
@@ -371,6 +375,12 @@ el('naammenu-voorkeuren').addEventListener('click', () => {
   sluitNaammenu();
   if (huidigePersoon) toonVoorkeuren(huidigePersoon);
   toonOfficialsVoorkeuren(metOfficials);
+  if (navigatie) {
+    toonTabbladkeuze(verbergbareTabbladen(navigatie.rechten, navigatie.extra), navigatie.extra.verborgen, (verborgen) => {
+      navigatie.extra.verborgen = verborgen;
+      bouwNavigatie(navigatie.rechten, (tab) => laadScherm(tab, navigatie.rechten), navigatie.extra);
+    });
+  }
 });
 
 el('naammenu-vergoeding').addEventListener('click', () => {

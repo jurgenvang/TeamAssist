@@ -13,16 +13,16 @@ export const TABBLADEN = [
   // Module Officials (0.38.0). Vooraan: voor een official is dit het werk van
   // elke dag, zoals in YOAssist. Ook voor een ouder van een official, die zelf
   // geen recht heeft maar namens zijn kind invult (`ouder: true`).
-  { id: 'aanduidingen', naam: 'Aanduidingen', recht: 'officials.opgeven', ouder: true },
+  { id: 'aanduidingen', naam: 'Aanduidingen', recht: 'officials.opgeven', ouder: true, verbergbaar: true },
   { id: 'mij', naam: 'Overzicht', recht: null },
   // Het cluboverzicht van de officials (0.39.0): in de tabbalk, zoals in
   // YOAssist — een YOADM werkt er dagelijks in.
-  { id: 'cluboverzicht', naam: 'Cluboverzicht', recht: 'officials.beheren' },
+  { id: 'cluboverzicht', naam: 'Cluboverzicht', recht: 'officials.beheren', verbergbaar: true },
   // Regio (0.41.0): krappe wedstrijden bij clubs die de club volgt, zoals in
-  // YOAssist. Per stuk uitzetten komt met fase 4e.
-  { id: 'regio', naam: 'Regio', recht: 'officials.beheren' },
-  { id: 'ploegen', naam: 'Ploegen', recht: 'team.bekijken' },
-  { id: 'personen', naam: 'Personen', recht: 'personen.beheren' },
+  // YOAssist. Standaard uit, zoals daar: wie de regio opvolgt, zet het zelf aan.
+  { id: 'regio', naam: 'Regio', recht: 'officials.beheren', verbergbaar: true, standaardUit: true },
+  { id: 'ploegen', naam: 'Ploegen', recht: 'team.bekijken', verbergbaar: true },
+  { id: 'personen', naam: 'Personen', recht: 'personen.beheren', verbergbaar: true },
   // De beheerschermen staan enkel onder Beheer in het naammenu, niet in de
   // tabbalk — zoals in YOAssist (I1). De tabbalk is voor het dagelijkse werk
   // van iedereen; wat zelden of enkel door een beheerder geopend wordt, zou er
@@ -55,9 +55,19 @@ export function zichtbareTabbladen(rechten, { ouderVanOfficial = false } = {}) {
   return TABBLADEN.filter((t) => !t.recht || heeft(t.recht) || (t.ouder && ouderVanOfficial));
 }
 
-/** Wat in de tabbalk komt; de rest opent via het naammenu. */
-export function tabbalkTabbladen(rechten, extra) {
-  return zichtbareTabbladen(rechten, extra).filter((t) => !t.inMenu);
+/**
+ * Wat in de tabbalk komt; de rest opent via het naammenu. Wat iemand zelf
+ * verborg (`extra.verborgen`, 0.42.0) valt weg, maar enkel een tabblad dat
+ * verbergbaar is: Overzicht blijft altijd staan.
+ */
+export function tabbalkTabbladen(rechten, extra = {}) {
+  const verborgen = extra.verborgen ?? [];
+  return zichtbareTabbladen(rechten, extra).filter((t) => !t.inMenu && !(t.verbergbaar && verborgen.includes(t.id)));
+}
+
+/** De tabbladen die iemand bij Mijn voorkeuren aan of uit kan zetten. */
+export function verbergbareTabbladen(rechten, extra) {
+  return zichtbareTabbladen(rechten, extra).filter((t) => t.verbergbaar && !t.inMenu);
 }
 
 /** Wat onder Beheer in het naammenu komt, in de volgorde van TABBLADEN. */

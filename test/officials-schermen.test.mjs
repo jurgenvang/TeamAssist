@@ -80,7 +80,7 @@ test('een nieuwe agendalink vraagt bevestiging, want de oude stopt te werken', (
 test('Aanduidingen, Mijn vergoeding en de voorkeuren hangen aan official of ouder van een official', () => {
   assert.match(app, /metOfficials = isOfficial \|\| kinderen\.length > 0/);
   assert.match(app, /el\('naammenu-vergoeding'\)\.hidden = !metOfficials/);
-  assert.match(app, /\{ ouderVanOfficial: kinderen\.length > 0 \}/);
+  assert.match(app, /\{ ouderVanOfficial: kinderen\.length > 0, verborgen: gegevens\.verborgen_tabs \?\? \[\] \}/);
   for (const id of ['tab-aanduidingen', 'vergoedingscherm', 'officialsvoorkeuren', 'naammenu-vergoeding']) {
     const start = html.indexOf(`id="${id}"`);
     assert.ok(start > 0, id);

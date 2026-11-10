@@ -9,7 +9,7 @@
 
 import { openPaneel } from '../paneel.js';
 import { api } from '../api.js';
-import { el, toon } from '../hulp.js';
+import { el, toon, veilig } from '../hulp.js';
 import { toonMeldingenstatus } from './meldingen.js';
 import { toonMeelezen } from './meelezen.js';
 
@@ -48,4 +48,33 @@ export async function bewaarVoorkeuren() {
 
   const uit = await api('/api/mij/voorkeuren', 'POST', { donkere_modus, kanaal_voorkeur });
   toon('voorkeurenmelding', uit.status === 200 ? 'Bewaard.' : `Dat lukte niet: ${uit.body?.fout ?? uit.status}`, uit.status !== 200);
+}
+
+/**
+ * De tabbladen aan en uit (0.42.0). `tabs` zijn enkel die waar iemand recht
+ * op heeft; een vinkje dat aangaat, toont het tabblad meteen weer.
+ */
+export function toonTabbladkeuze(tabs, verborgen, naBewaren) {
+  el('tabbladenblok').hidden = tabs.length === 0;
+  el('tabbladenmelding').hidden = true;
+  el('tabbladenkeuze').innerHTML = tabs
+    .map((t) => `<label class="vinkje"><input type="checkbox" data-tab="${t.id}" ${verborgen.includes(t.id) ? '' : 'checked'}> ${veilig(t.naam)}</label>`)
+    .join('');
+  for (const vak of el('tabbladenkeuze').querySelectorAll('[data-tab]')) {
+    vak.addEventListener('change', async () => {
+      const uitgevinkt = [...el('tabbladenkeuze').querySelectorAll('[data-tab]')].filter((v) => !v.checked).map((v) => v.dataset.tab);
+      // Een tabblad waar iemand geen recht op heeft, staat hier niet, maar
+      // kan wel verborgen zijn (bv. Regio voor wie later YOADM wordt): dat
+      // blijft zoals het was.
+      const nietGetoond = verborgen.filter((id) => !tabs.some((t) => t.id === id));
+      const nieuw = [...nietGetoond, ...uitgevinkt];
+      const uit = await api('/api/mij/voorkeuren', 'POST', { verborgen_tabs: nieuw });
+      if (uit.status !== 200) {
+        toon('tabbladenmelding', `Dat lukte niet: ${uit.body?.fout ?? uit.status}`, true);
+        return;
+      }
+      verborgen = uit.body.verborgen_tabs;
+      naBewaren(verborgen);
+    });
+  }
 }

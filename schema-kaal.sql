@@ -76,7 +76,8 @@ CREATE TABLE personen (
   aangemaakt         TEXT NOT NULL DEFAULT (datetime('now')),
   gewijzigd          TEXT NOT NULL DEFAULT (datetime('now')),
   agenda_sleutel     TEXT,
-  ouders_meelezen    INTEGER CHECK (ouders_meelezen IN (0, 1))
+  ouders_meelezen    INTEGER CHECK (ouders_meelezen IN (0, 1)),
+  verborgen_tabs     TEXT
 );
 
 CREATE INDEX idx_personen_email ON personen (email);

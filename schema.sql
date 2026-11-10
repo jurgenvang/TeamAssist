@@ -80,7 +80,11 @@ CREATE TABLE personen (
   -- standaard volgens de leeftijd (minderjarig aan, meerderjarig uit); 1/0:
   -- een gemaakte keuze. Een kind zonder e-mailadres krijgt ze altijd mee.
   -- Zie src/lib/namens.js.
-  ouders_meelezen    INTEGER CHECK (ouders_meelezen IN (0, 1))
+  ouders_meelezen    INTEGER CHECK (ouders_meelezen IN (0, 1)),
+  -- Welke tabbladen iemand voor zichzelf verborg (0.42.0, I1 fase 4e), als
+  -- JSON-lijst van tabblad-id's. NULL: de standaard — Regio uit, de rest aan,
+  -- zoals in YOAssist. Zie src/lib/tabbladen.js.
+  verborgen_tabs     TEXT
 );
 
 CREATE INDEX idx_personen_email ON personen (email);
