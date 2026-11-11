@@ -17,6 +17,7 @@ import { takenVoorUur } from './lib/planner.js';
 import { voerGeplandeTakenUit } from './lib/geplandetaken.js';
 import { logSchrijf } from './lib/logboek.js';
 import { mij } from './routes/mij.js';
+import { agenda } from './routes/agenda.js';
 import { voorkeurenBewaren } from './routes/voorkeuren.js';
 import { meelezenTonen, meelezenZetten, meelezenAntwoord } from './routes/meelezen.js';
 import {
@@ -114,6 +115,8 @@ export const ROUTES = [
   { methode: 'POST', pad: '/api/sessie/stop', publiek: true, doe: (c) => sessieStoppen(c) },
 
   { methode: 'GET', pad: '/api/mij', doe: mij },
+  // Mijn agenda (T21): trainingen, wedstrijden, fluiten en taken van het gezin.
+  { methode: 'GET', pad: '/api/mij/agenda', doe: agenda },
   { methode: 'POST', pad: '/api/mij/voorkeuren', doe: voorkeurenBewaren },
   // Berichten ook naar de ouders (0.32.0): over jezelf of een eigen kind;
   // dat het een eigen kind is, controleert de route tegen ouder_kind.

@@ -142,6 +142,8 @@ test('wedstrijden tonen voor een ploeg', async () => {
   const res = await wedstrijdenTonen({ db, seizoen, request: new Request(`https://x/api/admin/wedstrijden?team=${encodeURIComponent(T1)}`) });
   const body = await res.json();
   assert.equal(body.wedstrijden.length, 1);
+  assert.equal(body.wedstrijden[0].ploeg_naam, 'J16 B', 'de kaart (T21) toont de ploeg');
+  assert.equal(body.wedstrijden[0].wedstrijd_guid, 'W1', 'en linkt het wedstrijdblad');
 });
 
 test('zonder team volgt een 400', async () => {

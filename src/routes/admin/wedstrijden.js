@@ -229,8 +229,12 @@ export async function wedstrijdenTonen(ctx) {
 
   const rijen = await db
     .prepare(
-      `SELECT * FROM wedstrijden WHERE team_guid = ? AND seizoen = ?
-        ORDER BY datum, begin`
+      // De naam van de ploeg erbij, voor de kaart (T21).
+      `SELECT w.*, t.naam AS ploeg_naam, t.naam_kort
+         FROM wedstrijden w
+         LEFT JOIN teams t ON t.guid = w.team_guid AND t.seizoen = w.seizoen
+        WHERE w.team_guid = ? AND w.seizoen = ?
+        ORDER BY w.datum, w.begin`
     )
     .bind(team, seizoen.code)
     .all();

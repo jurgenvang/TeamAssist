@@ -6,7 +6,7 @@ import { toonPersoon } from './persoon.js';
 
 let huidigTeamVoorSjabloon = null;
 import { toonReeksen, toonWedstrijden } from './trainingen.js';
-import { laadTrainingenVoorAanwezigheid, koppelWedstrijdenAanAanwezigheid } from './aanwezigheid-beheer.js';
+import { laadTrainingenVoorAanwezigheid } from './aanwezigheid-beheer.js';
 
 export async function laadPloegen() {
   const uitkomst = await api('/api/admin/teams');
@@ -31,7 +31,6 @@ export async function laadPloegen() {
       toonLeden(knop.dataset.toon);
       toonReeksen(knop.dataset.toon);
       await toonWedstrijden(knop.dataset.toon);
-      koppelWedstrijdenAanAanwezigheid(); // pas nadat de rijen met wedstrijden er staan
       laadTrainingenVoorAanwezigheid(knop.dataset.toon);
     });
   }

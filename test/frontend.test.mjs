@@ -278,14 +278,14 @@ test('publiceren van een selectie vraagt bevestiging', () => {
 });
 
 test('de opgave- en beheerschermen ontsmetten namen voor ze in HTML komen', () => {
-  const opgave = lees('../public/js/schermen/mijn-opgaven.js');
+  const opgave = lees('../public/js/schermen/agenda.js');
   const beheer = lees('../public/js/schermen/aanwezigheid-beheer.js');
   assert.ok(opgave.includes('veilig('));
   assert.ok(beheer.includes('veilig(s.voornaam)'));
 });
 
 test('elke oproep in de nieuwe aanwezigheidsmodules loopt via api()', () => {
-  for (const bestand of ['mijn-opgaven.js', 'aanwezigheid-beheer.js']) {
+  for (const bestand of ['agenda.js', 'aanwezigheid-beheer.js']) {
     const bron = lees(`../public/js/schermen/${bestand}`);
     assert.ok(!bron.match(/fetch\(['"`]\/api\//), `geen kale fetch in ${bestand}`);
   }

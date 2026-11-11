@@ -475,49 +475,124 @@ textarea {
 }
 .vinkje { display: flex; gap: .4rem; align-items: center; margin: .5rem 0; font-size: .92rem; }
 
-/* Module Officials (0.38.0): het scherm Aanduidingen, zoals in YOAssist —
-   een kaart per wedstrijd met de datum links, en de rand die zegt wat je
-   antwoordde. Enkel de bestaande kleurvariabelen, zodat donker vanzelf werkt. */
-.teller { padding: .6rem .8rem; border-radius: var(--radius); background: var(--vlak); }
-.teller.open b { color: #b45309; font-size: 1.2rem; }
-.teller.klaar b { color: #15803d; }
-.aantal { font-size: .8rem; color: var(--gedempt); font-weight: normal; }
-.dag-kop { margin: 1rem 0 .3rem; font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; color: var(--gedempt); }
-.wed { display: flex; gap: .8rem; padding: .7rem; margin: .5rem 0; border: 1px solid var(--lijn);
-  border-left: 4px solid var(--lijn); border-radius: var(--radius); }
-.wed[data-status="ja"] { border-left-color: #16a34a; }
-.wed[data-status="nee"] { border-left-color: #9ca3af; }
-.wed[data-toegewezen="1"] { border-left-color: #2563eb; }
-.wed-datum { display: flex; flex-direction: column; align-items: center; min-width: 3rem; font-size: .8rem; color: var(--gedempt); }
-.wed-datum b { font-size: 1.4rem; color: var(--inkt); line-height: 1.1; }
-.wed-lijf { flex: 1; min-width: 0; }
-.wed-ploegen { overflow-wrap: anywhere; }
+/* De gedeelde kaart (T21, kaart.js), zoals in YOAssist: een witte kaart met
+   een zachte schaduw, het datumblok links, en een rand die de toestand zegt.
+   Dezelfde kleuren als YOAssist; in donkere modus volgen kaart en schaduw
+   de variabelen hierboven. */
+:root {
+  --kaart: #ffffff;
+  --groen: #16704a; --groen-zacht: #e6f4ee;
+  --rood: #b4231f; --rood-zacht: #fdeceb;
+  --amber: #e8a317; --amber-diep: #8a5d00; --amber-zacht: #fdf4e0;
+  --blauw: #2b3f7a; --blauw-zacht: #e9edf7;
+  --paars: #6b3fa0; --paars-zacht: #f1eaf8;
+  --schaduw: 0 1px 2px rgba(18,22,28,.06), 0 4px 14px rgba(18,22,28,.05);
+}
+[data-modus="donker"] { --kaart: #1f2226; --schaduw: none; --groen-zacht: #173327; --rood-zacht: #3a2020;
+  --amber-zacht: #3a2f17; --blauw-zacht: #1e2740; --paars-zacht: #2b2238; }
+@media (prefers-color-scheme: dark) {
+  [data-modus="systeem"] { --kaart: #1f2226; --schaduw: none; --groen-zacht: #173327; --rood-zacht: #3a2020;
+    --amber-zacht: #3a2f17; --blauw-zacht: #1e2740; --paars-zacht: #2b2238; }
+}
+.teller { display: flex; align-items: baseline; gap: .5rem; padding: .7rem .9rem; margin: 0 0 1rem;
+  border-radius: 12px; background: var(--kaart); border: 1px solid var(--lijn); box-shadow: var(--schaduw); }
+.teller b { font-size: 1.4rem; font-variant-numeric: tabular-nums; }
+.teller.open b { color: var(--amber-diep); }
+.teller.klaar b { color: var(--groen); }
+.teller a { color: inherit; }
+.aantal { font-size: .75rem; color: var(--gedempt); font-weight: normal; font-variant-numeric: tabular-nums; }
+.sectie-kop { display: flex; align-items: center; gap: .75rem; margin: 1.6rem 0 .5rem; padding-bottom: .4rem;
+  border-bottom: 2px solid var(--inkt); }
+.sectie-kop h3 { margin: 0; font-size: .8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .12em; }
+.sectie-kop .aantal { margin-left: auto; }
+.sectie-uitleg { font-size: .82rem; color: var(--gedempt); margin: -.1rem 0 .6rem; }
+.dag-kop { margin: .9rem 0 .4rem; font-size: .72rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .08em; color: var(--gedempt); }
+.wed { display: grid; grid-template-columns: 3.6rem 1fr; gap: .1rem .85rem; padding: .85rem .95rem; margin: 0 0 .6rem;
+  background: var(--kaart); border: 1px solid var(--lijn); border-left: 4px solid var(--lijn);
+  border-radius: 12px; box-shadow: var(--schaduw); }
+/* De rand zegt in één blik waar je staat, zoals in YOAssist:
+   geel = beschikbaar of nog niet beslist, rood = niet beschikbaar of afwezig,
+   groen = het ligt vast (aangeduid, aanwezig). */
+.wed[data-status="ja"], .wed[data-toestand="open"] { border-left-color: var(--amber); }
+.wed[data-status="nee"], .wed[data-toestand="nee"] { border-left-color: var(--rood); }
+.wed[data-toegewezen="1"], .wed[data-toestand="ja"] { border-left-color: var(--groen); }
+.wed[data-toestand="weg"] { opacity: .65; }
+.wed-datum { text-align: center; font-variant-numeric: tabular-nums; padding-top: .1rem; }
+.wed-datum .dag { display: block; font-size: .68rem; text-transform: uppercase; letter-spacing: .08em; color: var(--gedempt); }
+.wed-datum .nr { display: block; font-size: 1.5rem; font-weight: 700; line-height: 1.05; letter-spacing: -.03em; }
+.wed-datum .uur { display: block; font-size: .8rem; font-weight: 600; }
+.wed-lijf { min-width: 0; }
+.wed-labels { display: flex; flex-wrap: wrap; gap: .3rem; margin-bottom: .2rem; }
+/* Het type van een activiteit, met een eigen kleur: in Mijn agenda staan
+   trainingen, wedstrijden, fluiten en taken door elkaar. */
+.soort-label, .voor-label { font-size: .66rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em;
+  border-radius: 4px; padding: .08rem .35rem; }
+.soort-label[data-soort="training"] { background: var(--blauw-zacht); color: var(--blauw); }
+.soort-label[data-soort="wedstrijd"] { background: var(--amber-zacht); color: var(--amber-diep); }
+.soort-label[data-soort="fluiten"] { background: var(--groen-zacht); color: var(--groen); }
+.soort-label[data-soort="taak"] { background: var(--paars-zacht); color: var(--paars); }
+[data-modus="donker"] .soort-label { color: var(--inkt); }
+@media (prefers-color-scheme: dark) { [data-modus="systeem"] .soort-label, [data-modus="systeem"] .botsing { color: var(--inkt); } }
+.voor-label { background: var(--vlak); color: var(--gedempt); border: 1px solid var(--lijn); }
+.wed-ploegen { font-weight: 600; font-size: .97rem; overflow-wrap: anywhere; }
+.wed-ploegen .tegen { color: var(--gedempt); font-weight: 400; }
+.wed-ploegen .uitslag { margin-left: .4rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.forfait-label { display: inline-block; font-size: .66rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em;
+  color: var(--rood); background: var(--rood-zacht); border-radius: 4px; padding: .08rem .35rem; margin-left: .35rem; }
+.wed-meta { display: flex; flex-wrap: wrap; align-items: baseline; gap: .2rem .45rem; font-size: .82rem; color: var(--gedempt); margin-top: .15rem; }
 .wed-meta a { color: inherit; }
-.uitslag, .forfait-label, .cat { font-size: .78rem; padding: 0 .35rem; border-radius: 4px; background: var(--vlak); border: 1px solid var(--lijn); margin-left: .3rem; }
-.forfait-label { border-color: #b45309; }
+.wed-meta .blad { text-decoration: none; border-bottom: 1px solid var(--lijn); font-size: .78rem; }
+.cat { font-size: .68rem; font-weight: 700; letter-spacing: .04em; padding: .1rem .3rem; border-radius: 4px; background: var(--vlak); border: 1px solid var(--lijn); }
+.thuisuit { font-size: .68rem; text-transform: uppercase; letter-spacing: .06em; }
 /* Regio (0.41.0): de rand zegt hoe krap — geen scheidsrechter, of één. */
-.wed[data-refs="0"] { border-left-color: #dc2626; }
-.wed[data-refs="1"] { border-left-color: #d97706; }
-.regio-bron { display: block; text-transform: none; letter-spacing: 0; font-size: .78rem; color: #15803d; }
-.regio-bron.api { color: #b45309; }
+.wed[data-refs="0"] { border-left-color: var(--rood); }
+.wed[data-refs="1"] { border-left-color: var(--amber); }
+.regio-bron { display: block; text-transform: none; letter-spacing: 0; font-weight: 400; font-size: .78rem; color: var(--groen); }
+.regio-bron.api { color: var(--amber-diep); }
 ul.lijst { list-style: none; padding: 0; margin: .5rem 0; }
 ul.lijst li { padding: .35rem 0; border-bottom: 1px solid var(--lijn); }
 ul.lijst li.fout b { color: var(--accent); }
-.wed-refs { display: flex; flex-wrap: wrap; gap: .3rem .5rem; margin: .4rem 0; font-size: .88rem; }
-.vbl-regel { width: 100%; color: var(--gedempt); }
-.ref-plaats { padding: .1rem .45rem; border-radius: 4px; border: 1px solid var(--lijn); }
-.ref-plaats.leeg { border-style: dashed; color: var(--gedempt); }
-.ref-plaats.ik { font-weight: 600; }
-.ref-nr { font-size: .72rem; margin-right: .3rem; color: var(--gedempt); }
-.wed-acties { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; margin-top: .4rem; }
-/* Klein en naast elkaar, en enkel de gekozen knop gevuld: zo zie je in één
-   oogopslag wat je antwoordde. */
-.wed-acties button { padding: .3rem .75rem; font-size: .88rem; width: auto; margin: 0; }
-.keuze { background: transparent; color: var(--inkt); border: 1px solid var(--lijn); }
-.keuze[data-keuze="ja"][aria-pressed="true"] { background: #16a34a; border-color: #16a34a; color: #fff; }
-.keuze[data-keuze="nee"][aria-pressed="true"] { background: #6b7280; border-color: #6b7280; color: #fff; }
-.aangeduid-merk { font-weight: 600; color: #2563eb; }
-.gaat-niet-door { color: var(--gedempt); margin: .4rem 0 0; }
+/* REF1 en REF2 onder elkaar, gevuld zoals in YOAssist: zwart voor een
+   collega, groen voor jezelf, gestippeld voor wat nog gezocht wordt. */
+.wed-refs { display: flex; flex-direction: column; align-items: flex-start; gap: .25rem; margin-top: .5rem; font-size: .8rem; }
+.vbl-regel { font-size: .76rem; color: var(--gedempt); }
+.ref-plaats { display: inline-flex; align-items: center; gap: .3rem; border-radius: 5px; padding: .14rem .4rem .14rem .16rem; }
+.wed-refs .ref-plaats { display: flex; width: 100%; max-width: 20rem; gap: .4rem; }
+.ref-plaats.gevuld { background: #17191c; color: #fff; }
+.ref-plaats.gevuld.ik { background: var(--groen); }
+.ref-plaats.gevuld a { color: #fff; }
+.ref-plaats .contact { margin-left: auto; display: flex; gap: .5rem; }
+.ref-plaats.leeg { border: 1px dashed var(--lijn); color: var(--gedempt); font-style: italic; }
+.ref-nr { font-size: .6rem; font-weight: 700; letter-spacing: .06em; border-radius: 3px; padding: .1rem .25rem; font-style: normal; }
+.ref-plaats.gevuld .ref-nr { background: rgba(255,255,255,.2); }
+.ref-plaats.leeg .ref-nr { background: var(--vlak); color: var(--inkt); }
+/* Het kruisje om vrij te geven, zoals in YOAssist: geen knop met een rand,
+   maar een gedempt teken in de balk zelf. */
+.ref-plaats button, .ref-plaats button.mini { background: none; border: 0; color: #aab3c0; padding: 0 0 0 .1rem; margin: 0; width: auto; font-size: .95em; line-height: 1; }
+.ref-plaats button:hover { color: #fff; }
+/* Grote keuzeknoppen naast elkaar, zoals in YOAssist: je tikt ze aan met een
+   duim, en enkel de gekozen knop kleurt. */
+.wed-acties { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; margin-top: .6rem; }
+.wed-acties button { width: auto; margin: 0; }
+.keuze { flex: 1; padding: .5rem .4rem; border-radius: 8px; font-size: .88rem; font-weight: 600;
+  border: 1.5px solid var(--lijn); background: var(--kaart); color: var(--inkt); }
+.keuze[data-keuze="ja"][aria-pressed="true"] { background: var(--groen-zacht); border-color: var(--groen); color: var(--groen); }
+.keuze[data-keuze="nee"][aria-pressed="true"] { background: var(--rood-zacht); border-color: var(--rood); color: var(--rood); }
+.keuze:disabled { opacity: .5; }
+.vast { display: flex; flex-direction: column; align-items: flex-start; gap: .4rem; margin-top: .5rem; font-size: .82rem; color: var(--gedempt); }
+.vast-knoppen { display: flex; flex-wrap: wrap; gap: .8rem; }
+.vast-knoppen a, .vast-knoppen button { font-size: .8rem; color: var(--gedempt); background: none; border: 0; padding: 0;
+  margin: 0; width: auto; text-decoration: none; }
+.aangeduid-merk { font-size: .68rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
+  background: var(--groen); color: #fff; border-radius: 4px; padding: .12rem .35rem; }
+.merk-afwezig { background: var(--rood); }
+.gaat-niet-door { color: var(--gedempt); margin: .4rem 0 0; font-size: .84rem; }
+.botsing { margin-top: .4rem; padding: .3rem .5rem; border-radius: 6px; background: var(--amber-zacht);
+  color: var(--amber-diep); font-size: .8rem; }
+[data-modus="donker"] .botsing { color: var(--inkt); }
+.afwezig-vorm { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .5rem; width: 100%; }
+.afwezig-vorm select, .afwezig-vorm input { flex: 1; min-width: 8rem; }
 .maandblok { border-top: 1px solid var(--lijn); padding-top: .4rem; }
 .maandblok h3 .bedrag { float: right; color: var(--inkt); }
 
@@ -530,9 +605,14 @@ ul.lijst li.fout b { color: var(--accent); }
 .tegel span { font-size: .8rem; color: var(--gedempt); }
 .tegel.let b { color: #b45309; }
 .tegel[aria-pressed="true"] { border-color: var(--inkt); }
-.ov { padding: .6rem .7rem; margin: .4rem 0; border: 1px solid var(--lijn); border-left: 4px solid var(--lijn); border-radius: var(--radius); }
-.ov.probleem { border-left-color: #dc2626; }
-.ov.compleet { border-left-color: #16a34a; }
+.ov { padding: .85rem .95rem; margin: 0 0 .6rem; background: var(--kaart); border: 1px solid var(--lijn);
+  border-left: 4px solid var(--lijn); border-radius: 12px; box-shadow: var(--schaduw); }
+.ov .uitslag { margin-left: .4rem; font-weight: 700; }
+.ov.probleem .ov-kop > b:first-child { color: var(--rood); }
+.sectie-kop.aandacht h3 { color: var(--rood); }
+.sectie-kop.aandacht { border-bottom-color: var(--rood); }
+.ov.probleem { border-left-color: var(--rood); }
+.ov.compleet { border-left-color: var(--groen); }
 .ov.buiten { opacity: .7; }
 .ov.voorbij { background: var(--vlak); }
 .ov-kop { overflow-wrap: anywhere; }

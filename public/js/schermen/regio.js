@@ -8,30 +8,35 @@
 
 import { api } from '../api.js';
 import { el, veilig } from '../hulp.js';
-import { dagVan, maandLabel } from '../officials-hulp.js';
-
-const wedstrijdblad = (guid) => `https://vblweb.wisseq.eu/Home/MatchDetail?wedguid=${encodeURIComponent(guid)}`;
+import { kaart as gedeeldeKaart, gegroepeerd, wedstrijdblad } from '../kaart.js';
 
 /** De bron van een dag: 'lijst' als elke wedstrijd uit de verwerkte lijst komt. */
 export function bronVanDag(wedstrijden) {
   return wedstrijden.every((w) => w.bron === 'lijst') ? 'lijst' : 'api';
 }
 
+// De gedeelde kaart (T21), met de rand die zegt hoe krap het is.
 function kaart(w) {
   const refs = w.refs === 0
     ? 'geen scheidsrechter aangeduid'
     : `nog maar één scheidsrechter aangeduid${w.naam ? `: ${veilig(w.naam)}` : ''}`;
-  return `<article class="wed" data-refs="${w.refs}">
-    <div class="wed-datum"><b>${veilig(w.uur ?? '')}</b></div>
-    <div class="wed-lijf">
-      <div class="wed-ploegen"><b>${veilig(w.thuis ?? '')}</b> – ${veilig(w.uit ?? '')}</div>
-      <div class="wed-meta klein">
-        <span class="cat">${veilig(w.categorie ?? '')}</span> ${veilig(w.club ?? w.club_guid)}
-        — <a href="${wedstrijdblad(w.guid)}" target="_blank" rel="noopener">wedstrijdblad</a>
-      </div>
-      <div class="wed-refs">${refs}</div>
-    </div>
-  </article>`;
+  return gedeeldeKaart({
+    datum: w.datum,
+    uur: w.uur,
+    ploeg: w.thuis,
+    tegenstander: w.uit,
+    cat: w.categorie,
+    blad: wedstrijdblad(w.guid),
+    data: { refs: w.refs },
+    inhoud: `<div class="wed-meta">${veilig(w.club ?? w.club_guid)}</div><div class="wed-refs">${refs}</div>`,
+  });
+}
+
+function bronKop(w, alle) {
+  const bron = bronVanDag(alle.filter((x) => x.datum === w.datum));
+  return `<span class="regio-bron${bron === 'api' ? ' api' : ''}">${bron === 'lijst'
+    ? 'volgens de lijst van de bond'
+    : 'volgens de API — de lijst van de bond volgt woensdag'}</span>`;
 }
 
 export async function laadRegio() {
@@ -51,20 +56,6 @@ export async function laadRegio() {
     doel.innerHTML = `<div class="teller klaar"><b>0</b> <span>krap bij de ${clubTekst} de komende twee weekends.</span></div>`;
     return;
   }
-
-  const delen = [`<div class="teller open"><b>${wedstrijden.length}</b> <span>krap bij ${clubTekst}, de komende twee weekends.</span></div>`];
-  let vorige = null;
-  for (const w of wedstrijden) {
-    if (w.datum !== vorige) {
-      const d = dagVan(w.datum);
-      const bron = bronVanDag(wedstrijden.filter((x) => x.datum === w.datum));
-      delen.push(`<div class="dag-kop">${d.dag} ${d.nr} ${veilig(maandLabel(w.datum.slice(0, 7)).split(' ')[0])}
-        <span class="regio-bron${bron === 'api' ? ' api' : ''}">${bron === 'lijst'
-          ? 'volgens de lijst van de bond'
-          : 'volgens de API — de lijst van de bond volgt woensdag'}</span></div>`);
-      vorige = w.datum;
-    }
-    delen.push(kaart(w));
-  }
-  doel.innerHTML = delen.join('');
+  doel.innerHTML = `<div class="teller open"><b>${wedstrijden.length}</b> <span>krap bij ${clubTekst}, de komende twee weekends.</span></div>
+    ${gegroepeerd(wedstrijden, kaart, { extraKop: bronKop })}`;
 }

@@ -144,6 +144,28 @@ export async function officialsWedstrijden(ctx) {
   });
 }
 
+/**
+ * Hoeveel wedstrijden deze official nog moet beantwoorden vóór `grens`
+ * ('jjjj-mm-dd', exclusief): dezelfde voorwaarden als de lijst hierboven en
+ * als 'nog te beantwoorden' in Aanduidingen (sectieVoor) — niet aangeduid,
+ * geen forfait, nog geen antwoord. Voor Mijn agenda (T21), die er enkel een
+ * regel met een link naar Aanduidingen van maakt.
+ */
+export async function aantalTeBeantwoorden(db, seizoen, persoonId, vanafU14, grens) {
+  const r = await db
+    .prepare(
+      `SELECT COUNT(*) AS n
+         ${BASIS}
+         LEFT JOIN officials_beschikbaarheid b ON b.wedstrijd_id = w.id AND b.persoon_id = ?2
+         LEFT JOIN officials_aanduidingen a ON a.wedstrijd_id = w.id AND a.persoon_id = ?2 AND a.status = 'toegewezen'
+        WHERE ${IN_LIJST} AND w.datum >= ?3 AND w.datum < ?4 AND o.forfait IS NULL
+          AND b.status IS NULL AND a.persoon_id IS NULL ${vanafU14 ? '' : "AND c.groep = 'U10U12'"}`
+    )
+    .bind(seizoen, persoonId, vandaag(), grens)
+    .first();
+  return r?.n ?? 0;
+}
+
 /** Staat deze wedstrijd in de lijst van deze official? Zo niet: null. */
 async function wedstrijdVoor(db, seizoen, id, vanafU14) {
   return db

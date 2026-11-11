@@ -10,7 +10,8 @@
 
 import { api } from '../api.js';
 import { el, veilig } from '../hulp.js';
-import { dagVan, forfaitTekst } from '../officials-hulp.js';
+import { forfaitTekst } from '../officials-hulp.js';
+import { sectieKop, gegroepeerd } from '../kaart.js';
 
 const staat = { o: null, filter: null, alles: false, voorbij: false };
 
@@ -73,16 +74,11 @@ function teken() {
     ];
     for (const [titel, items] of groepen) {
       if (!items.length) continue;
-      delen.push(`<h3>${veilig(titel)} <span class="aantal">${items.length}</span></h3>`);
-      let vorige = null;
-      for (const w of items) {
-        if (w.datum !== vorige) {
-          const d = dagVan(w.datum);
-          delen.push(`<div class="dag-kop">${d.dag} ${d.nr}/${w.datum.slice(5, 7)}</div>`);
-        }
-        vorige = w.datum;
-        delen.push(kaart(w));
-      }
+      // Koppen en dagen zoals overal (T21, kaart.js); de kaart zelf blijft die
+      // van het cluboverzicht, zoals in YOAssist: daar staat per wedstrijd wie
+      // kan, wie niet en wie aangeduid is, en dat past niet in een gewone kaart.
+      delen.push(sectieKop(titel, items.length, '', titel === 'Aandacht nodig' ? 'aandacht' : ''));
+      delen.push(gegroepeerd(items, kaart));
     }
   }
   if (verderop) {

@@ -93,9 +93,11 @@ test('wat wijzigt of wist, toont eerst wat er zou gebeuren', () => {
 test('Regio: de bron van een dag, en ontsmet', () => {
   assert.equal(bronVanDag([{ bron: 'lijst' }, { bron: 'lijst' }]), 'lijst');
   assert.equal(bronVanDag([{ bron: 'lijst' }, { bron: 'api' }]), 'api', 'één wedstrijd uit de API maakt de dag onzeker');
-  for (const veld of ['w.thuis', 'w.uit', 'w.club', 'w.naam', 'w.categorie']) {
+  // Thuis, uit en categorie gaan door de gedeelde kaart, die zelf ontsmet.
+  for (const veld of ['w.club', 'w.naam']) {
     assert.ok(regio.includes(`veilig(${veld}`), veld);
   }
+  assert.match(regio, /ploeg: w\.thuis,\s*tegenstander: w\.uit,\s*cat: w\.categorie/);
   assert.match(regio, /wedguid=\$\{encodeURIComponent\(w?\.?guid\)\}|wedstrijdblad\(w\.guid\)/);
   const start = html.indexOf('id="tab-regio"');
   assert.match(html.slice(start, html.indexOf('>', start)), /hidden/);

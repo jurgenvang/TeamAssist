@@ -192,6 +192,9 @@ test('trainingenTonen toont de geplande trainingen voor wie het team mag bekijke
   const body = await res.json();
   assert.equal(res.status, 200);
   assert.ok(body.trainingen.length > 0);
+  // De kaart (T21) toont de ploeg en de plek.
+  assert.equal(body.trainingen[0].ploeg_naam, 'J16 B');
+  assert.equal(body.trainingen[0].locatie_tekst, 'Sporthal A');
 });
 
 test('trainingenTonen weigert wie geen recht heeft op de ploeg', async () => {

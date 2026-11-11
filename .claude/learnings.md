@@ -92,5 +92,11 @@ iets nieuws boven kwam; nooit inkorten zonder reden.
   hoort in `OFFICIALS_AUTOMATISCH` (`geplandetaken.js`): zolang YOAssist live
   is, doet dat het werk, en zou TeamAssist dubbel versturen of vals alarm
   geven.
+- **Een lijst met wedstrijden of trainingen gaat door `kaart.js`** (T21).
+  Een nieuw scherm dat ze toont, hoort ook in de lijst van
+  `kaart.test.mjs`; een `<table>` met wedstrijden is een stap terug.
+- **Een `button.mini` wint van `.ref-plaats button`**: dezelfde
+  specificiteit, en de latere regel wint. Het kruisje in de REF-balk werd een
+  wit vakje (0.43.0). In de browser kijken, niet enkel in de code.
 - **`bericht_modus` op *omleiden* met een leeg omleidadres** verstuurt niets,
   ook geen alarm. Bij het testen eerst een omleidadres invullen.

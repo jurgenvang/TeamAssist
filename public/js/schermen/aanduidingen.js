@@ -7,7 +7,8 @@
 
 import { api } from '../api.js';
 import { el, veilig } from '../hulp.js';
-import { dagVan, maandLabel, sectieVoor, forfaitTekst, grensMaand, internationaal } from '../officials-hulp.js';
+import { sectieVoor, forfaitTekst, grensMaand, internationaal } from '../officials-hulp.js';
+import { kaart as gedeeldeKaart, sectieKop, gegroepeerd } from '../kaart.js';
 
 const staat = {
   ik: null, // { id, naam, official }
@@ -26,6 +27,18 @@ export function zetOfficialsPersonen(persoon, isOfficial, kinderen) {
   staat.kinderen = kinderen ?? [];
   // Wie zelf geen official is, begint bij zijn eerste kind.
   staat.namens = isOfficial ? null : staat.kinderen[0]?.id ?? null;
+}
+
+/**
+ * Voor wie Aanduidingen opent: vanuit Mijn agenda ('nog te beantwoorden voor
+ * Max') meteen bij dat kind. null = mezelf. Enkel een keuze die er al is:
+ * dat het mag, beslist de backend toch.
+ */
+export function kiesOfficial(id) {
+  const kan = id ? staat.kinderen.some((k) => k.id === id) : staat.ik?.official;
+  if (!kan) return;
+  staat.namens = id;
+  staat.sectieVast = null;
 }
 
 /** Voor wie er nu gehandeld wordt, voor de andere schermen (vergoeding, voorkeuren). */
@@ -106,16 +119,7 @@ function teken() {
 
 function sectie(titel, uitleg, items, staart = '') {
   if (!items.length && !staart) return '';
-  const binnen = [];
-  let vorige = null;
-  for (const w of items) {
-    const maand = w.datum.slice(0, 7);
-    if (maand !== vorige) binnen.push(`<div class="dag-kop">${veilig(maandLabel(maand))}</div>`);
-    vorige = maand;
-    binnen.push(kaart(w));
-  }
-  return `<h3>${veilig(titel)} <span class="aantal">${items.length}</span></h3>
-    ${uitleg ? `<p class="klein">${veilig(uitleg)}</p>` : ''}${binnen.join('')}${staart}`;
+  return `${sectieKop(titel, items.length, uitleg)}${gegroepeerd(items, kaart, { per: 'maand' })}${staart}`;
 }
 
 function refsRegel(w) {
@@ -136,10 +140,10 @@ function refsRegel(w) {
     // Een nummer staat er enkel bij een collega met wie je samen fluit, en
     // enkel als die het deelt — dat beslist de backend.
     const contact = o.gsm
-      ? ` <a href="tel:${veilig(o.gsm)}" title="${veilig(o.gsm)} — bellen">bel</a>
-          <a href="https://wa.me/${internationaal(o.gsm)}" target="_blank" rel="noopener noreferrer" title="${veilig(o.gsm)} — WhatsApp">wa</a>`
+      ? `<span class="contact"><a href="tel:${veilig(o.gsm)}" title="${veilig(o.gsm)} — bellen">bel</a>
+          <a href="https://wa.me/${internationaal(o.gsm)}" target="_blank" rel="noopener noreferrer" title="${veilig(o.gsm)} — WhatsApp">wa</a></span>`
       : o.gsm_ontbreekt
-        ? ' <span class="klein">(nog geen gsm-nummer bekend)</span>'
+        ? '<span class="contact klein">nog geen gsm-nummer</span>'
         : '';
     delen.push(`<span class="ref-plaats gevuld${o.ik_zelf ? ' ik' : ''}"><span class="ref-nr">REF${i + 1}</span>${veilig(o.naam)}${contact}</span>`);
   }
@@ -147,35 +151,35 @@ function refsRegel(w) {
 }
 
 function kaart(w) {
-  const d = dagVan(w.datum);
   const status = w.beschikbaarheid ?? '';
-  const blad = `<a href="${veilig(w.wedstrijdblad)}" target="_blank" rel="noopener noreferrer">wedstrijdblad ↗</a>`;
   let acties;
   if (w.forfait && !w.toegewezen) {
     acties = `<p class="gaat-niet-door">Gaat niet door: ${veilig(forfaitTekst(w.forfait))}.</p>`;
   } else if (w.toegewezen) {
-    acties = `<div class="wed-acties"><span class="aangeduid-merk">Aangeduid</span>
+    // Zoals in YOAssist: het ligt vast, dus geen keuzeknoppen meer — enkel wat
+    // je vlak voor de wedstrijd nodig hebt.
+    acties = `<div class="vast"><span><span class="aangeduid-merk">Aangeduid</span></span>
       <span>Aanwezig op het terrein om ${veilig(w.opkomst ?? w.uur)}.</span>
-      <button type="button" class="stil" data-probleem="${w.id}">Probleem melden</button></div>`;
+      <span class="vast-knoppen"><button type="button" data-probleem="${w.id}">Probleem melden</button></span></div>`;
   } else {
     acties = `<div class="wed-acties">
       <button type="button" class="keuze" data-keuze="ja" data-wedstrijd="${w.id}" aria-pressed="${status === 'ja'}">Beschikbaar</button>
       <button type="button" class="keuze" data-keuze="nee" data-wedstrijd="${w.id}" aria-pressed="${status === 'nee'}">Niet beschikbaar</button></div>`;
   }
-  const plek = w.locatie
-    ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(w.locatie)}" target="_blank" rel="noopener noreferrer">${veilig(w.locatie)} ↗</a>`
-    : '<span>locatie onbekend</span>';
-  return `<article class="wed" data-status="${veilig(status)}" data-toegewezen="${w.toegewezen ? '1' : '0'}">
-    <div class="wed-datum"><span>${d.dag}</span><b>${d.nr}</b><span>${veilig(w.uur)}</span></div>
-    <div class="wed-lijf">
-      <div class="wed-ploegen"><b>${veilig(w.ploeg)}</b> – ${veilig(w.tegenstander ?? '?')}
-        ${w.uitslag ? `<span class="uitslag">${veilig(w.uitslag)}</span>` : ''}
-        ${w.forfait ? `<span class="forfait-label">${veilig(forfaitTekst(w.forfait))}</span>` : ''}</div>
-      <div class="wed-meta klein">${w.cat_label ? `<span class="cat">${veilig(w.cat_label)}</span>` : ''} ${plek} · ${blad}</div>
-      ${refsRegel(w)}
-      ${acties}
-    </div>
-  </article>`;
+  return gedeeldeKaart({
+    datum: w.datum,
+    uur: w.uur,
+    ploeg: w.ploeg,
+    tegenstander: w.tegenstander ?? '?',
+    cat: w.cat_label,
+    locatie: w.locatie,
+    blad: w.wedstrijdblad,
+    uitslag: w.uitslag,
+    forfait: w.forfait,
+    data: { status, toegewezen: w.toegewezen ? '1' : '0' },
+    inhoud: refsRegel(w),
+    acties,
+  });
 }
 
 async function kies(knop) {

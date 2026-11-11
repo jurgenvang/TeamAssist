@@ -60,6 +60,8 @@ test('een route die geen recht vraagt, doet dat bewust', () => {
     zonderRecht.sort(),
     [
       '/api/mij',
+      // Mijn agenda (T21): over jezelf en je kinderen, uit ouder_kind.
+      '/api/mij/agenda',
       '/api/mij/voorkeuren',
       // Over jezelf of een eigen kind; de route controleert ouder_kind zelf.
       '/api/meelezen',

@@ -7,13 +7,13 @@ import { el, toon, veilig } from './hulp.js';
 import { bouwNavigatie, menuTabbladen, verbergbareTabbladen } from './navigatie.js';
 import { openPaneel, sluitPaneel, koppelPanelen } from './paneel.js';
 import { laadPloegen, synchroniseerPloegen, synchroniseerLeden, downloadSjabloon, uploadSjabloon } from './schermen/ploegen.js';
-import { bewaarSelectie, publiceerSelectie } from './schermen/aanwezigheid-beheer.js';
+import { bewaarSelectie, publiceerSelectie, koppelAanwezigheidKnoppen } from './schermen/aanwezigheid-beheer.js';
 import { zoekPersonen } from './schermen/personen.js';
 import { koppelPersoonscherm } from './schermen/persoon.js';
 import { koppelMeelezen } from './schermen/meelezen.js';
 import { laadInstellingen, haalBrandingvoorstel, downloadBackup } from './schermen/instellingen.js';
 import { toonVoorkeuren, bewaarVoorkeuren, pasDonkereModusToe, toonTabbladkeuze } from './schermen/voorkeuren.js';
-import { laadMijnOpgaven } from './schermen/mijn-opgaven.js';
+import { laadAgenda, koppelAgenda } from './schermen/agenda.js';
 import { toonDiagnose } from './schermen/diagnose.js';
 import { pasHuisstijlToe } from './huisstijl.js';
 import {
@@ -89,11 +89,9 @@ function toonApp(gegevens) {
     })
     .join('');
 
-  // Enkel tonen voor wie iets kan opgeven: SPELER of OUVO. Voor ADMIN zonder
-  // eigen ploeg zou een lege sectie hier enkel verwarrend zijn.
-  if ('aanwezigheid.opgeven.eigen' in rechten || 'aanwezigheid.opgeven.kind' in rechten) {
-    laadMijnOpgaven();
-  }
+  // Mijn agenda (T21). Of ze er staat, zegt de backend: wie speelt noch
+  // fluit noch een taak heeft (bv. enkel ADMIN), krijgt geen lege lijst.
+  laadAgenda();
 
   const isOfficial = 'officials.opgeven' in rechten;
   const kinderen = gegevens.officials_kinderen ?? [];
@@ -445,6 +443,8 @@ el('brandingvoorstelknop').addEventListener('click', haalBrandingvoorstel);
 koppelPersoonscherm();
 koppelMeelezen();
 koppelAanduidingen();
+koppelAgenda();
+koppelAanwezigheidKnoppen();
 koppelCluboverzicht();
 koppelPanelen();
 koppelVergoedingen();

@@ -151,17 +151,16 @@
       <p class="adres" id="emailadres"></p>
       <p class="klein" id="seizoenregel"></p>
 
-      <div id="opgaveblok" hidden>
-        <h2>Mijn eerstvolgende trainingen</h2>
+      <!-- Mijn agenda (T21): trainingen, wedstrijden, fluiten en taken van het
+           gezin, per dag, op de gedeelde kaart. Verborgen voor wie speelt noch
+           fluit. -->
+      <div id="agendablok" hidden>
+        <h2>Mijn agenda</h2>
         <p class="klein">
           Geef aan of je komt. Dat kan tot de opgavetermijn van je ploeg verstrijkt; daarna
           vult enkel nog de begeleiding in.
         </p>
-        <table>
-          <thead><tr><th>Wanneer</th><th>Voor</th><th>Status</th><th></th></tr></thead>
-          <tbody id="opgavelijf"></tbody>
-        </table>
-        <p id="geenopgaven" class="melding" hidden>Er staat voorlopig niets gepland.</p>
+        <div id="agendalijst"></div>
       </div>
 
       <h2>Rollen</h2>
@@ -236,22 +235,17 @@
           <button type="button" id="wedstrijdensync">Ophalen bij de bond</button>
         </form>
         <div id="wedstrijdenplan" class="melding" hidden></div>
-        <table>
-          <thead><tr><th>Datum</th><th>Tegen</th><th>Locatie</th><th>Uitslag</th><th></th><th></th></tr></thead>
-          <tbody id="wedstrijdenlijf"></tbody>
-        </table>
+        <div id="wedstrijdenlijst"></div>
       </div>
 
       <div id="aanwezigheidtrainingen">
-        <h3>Trainingen</h3>
-        <table>
-          <thead><tr><th>Wanneer</th><th>Status</th><th></th></tr></thead>
-          <tbody id="aanwezigheidtrainingenlijf"></tbody>
-        </table>
+        <h2>Trainingen</h2>
+        <div id="aanwezigheidtrainingenlijst"></div>
       </div>
 
       <div id="aanwezigheidscherm" hidden>
-        <h3 id="aanwezigheidkop">Aanwezigheid</h3>
+        <h2 id="aanwezigheidkop">Aanwezigheid</h2>
+        <div id="aanwezigheidactiviteit"></div>
         <div id="aanwezigheidmelding" class="melding" hidden></div>
         <table>
           <thead><tr><th>Naam</th><th>Opgave</th><th>Vaststelling</th><th></th></tr></thead>

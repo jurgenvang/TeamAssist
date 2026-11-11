@@ -9,7 +9,7 @@ import { json, fout, leesJson } from '../../lib/http.js';
 import { logSchrijf } from '../../lib/logboek.js';
 import { verwittig } from '../../lib/verwittigen.js';
 
-const TAAKNAMEN = {
+export const TAAKNAMEN = {
   klok: 'Klok',
   '24seconden': '24 seconden',
   tablet: 'Tablet',

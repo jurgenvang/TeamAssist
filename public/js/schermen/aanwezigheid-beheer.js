@@ -4,43 +4,61 @@
 
 import { api } from '../api.js';
 import { el, toon, veilig } from '../hulp.js';
+import { kaart, gegroepeerd, wedstrijdblad } from '../kaart.js';
 
-let huidigTeamVoorAanwezigheid = null;
 let huidigeActiviteit = null; // { soort, id }
 
-const DAGNAMEN = ['', 'ma', 'di', 'wo', 'do', 'vr', 'za', 'zo'];
+// Wat de lijsten van de ploeg al ophaalden, zodat de aanwezigheid de
+// activiteit zelf kan tonen zonder een extra oproep.
+const gekend = { training: new Map(), wedstrijd: new Map() };
 
-function weekdagVan(datumTekst) {
-  const dag = new Date(`${datumTekst}T00:00:00Z`).getUTCDay();
-  return DAGNAMEN[dag === 0 ? 7 : dag];
+const STATUS = { afgelast: 'afgelast', verplaatst: 'verplaatst', zaal_niet_beschikbaar: 'zaal niet beschikbaar' };
+
+/** Een training of wedstrijd van de ploeg als gedeelde kaart (T21). */
+export function activiteitKaart(soort, a, { knop = true } = {}) {
+  const ploeg = a.naam_kort || a.ploeg_naam || '';
+  const status = a.status && a.status !== 'gepland' ? `<p class="gaat-niet-door">${veilig(STATUS[a.status] ?? a.status)}</p>` : '';
+  const bond = soort === 'wedstrijd' && a.bij_bond === 0 ? '<p class="gaat-niet-door">niet meer bij de bond</p>' : '';
+  return kaart({
+    soort,
+    datum: a.datum,
+    uur: a.begin,
+    ploeg: soort === 'training' ? `Training ${ploeg}`.trim() : ploeg,
+    tegenstander: soort === 'wedstrijd' ? a.tegenstander : null,
+    thuis: soort === 'wedstrijd' ? a.thuis === 1 : null,
+    locatie: soort === 'training' ? a.zaal ?? a.locatie_tekst : a.locatie_tekst,
+    blad: soort === 'wedstrijd' && a.wedstrijd_guid ? wedstrijdblad(a.wedstrijd_guid) : null,
+    uitslag: a.uitslag,
+    toestand: (a.status && a.status !== 'gepland') || a.bij_bond === 0 ? 'weg' : null,
+    inhoud: status + bond,
+    acties: knop
+      ? `<div class="vast"><span class="vast-knoppen"><button type="button" data-aanwezigheid="${soort}" data-id="${a.id}">Aanwezigheid${soort === 'wedstrijd' ? ' en selectie' : ''} →</button></span></div>`
+      : '',
+  });
+}
+
+/** Onthoudt de activiteiten van een lijst, voor de kop van de aanwezigheid. */
+export function onthoud(soort, lijst) {
+  for (const a of lijst) gekend[soort].set(a.id, a);
 }
 
 export async function laadTrainingenVoorAanwezigheid(teamGuid) {
-  huidigTeamVoorAanwezigheid = teamGuid;
   const uitkomst = await api(`/api/admin/trainingen?team=${encodeURIComponent(teamGuid)}`);
   if (uitkomst.status !== 200) return;
-
-  el('aanwezigheidtrainingenlijf').innerHTML = (uitkomst.body.trainingen ?? [])
-    .map(
-      (t) => `<tr>
-        <td>${weekdagVan(t.datum)} ${veilig(t.datum)} ${veilig(t.begin)}</td>
-        <td>${veilig(t.status)}</td>
-        <td><button type="button" class="alslink" data-training="${t.id}">Aanwezigheid</button></td>
-      </tr>`
-    )
-    .join('');
-
-  for (const knop of el('aanwezigheidtrainingenlijf').querySelectorAll('[data-training]')) {
-    knop.addEventListener('click', () => toonAanwezigheid('training', Number(knop.dataset.training)));
-  }
+  const lijst = uitkomst.body.trainingen ?? [];
+  onthoud('training', lijst);
+  el('aanwezigheidtrainingenlijst').innerHTML = lijst.length
+    ? gegroepeerd(lijst, (t) => activiteitKaart('training', t))
+    : '<p class="melding">Geen trainingen gepland.</p>';
 }
 
-/** Wordt aangeroepen zodra de wedstrijdenlijst van een ploeg getoond wordt. */
-export function koppelWedstrijdenAanAanwezigheid() {
-  for (const knop of el('wedstrijdenlijf').querySelectorAll('[data-wedstrijd-aanwezigheid]')) {
-    knop.addEventListener('click', () =>
-      toonAanwezigheid('wedstrijd', Number(knop.dataset.wedstrijdAanwezigheid))
-    );
+/** Eén klik-afhandeling voor de kaarten van wedstrijden en trainingen. */
+export function koppelAanwezigheidKnoppen() {
+  for (const id of ['wedstrijdenlijst', 'aanwezigheidtrainingenlijst']) {
+    el(id).addEventListener('click', (e) => {
+      const knop = e.target.closest('[data-aanwezigheid]');
+      if (knop) toonAanwezigheid(knop.dataset.aanwezigheid, Number(knop.dataset.id));
+    });
   }
 }
 
@@ -57,7 +75,11 @@ async function toonAanwezigheid(soort, activiteitId) {
   }
 
   const b = uitkomst.body;
+  // De activiteit zelf bovenaan (T21): anders zie je niet waarover deze lijst gaat.
   el('aanwezigheidkop').textContent = soort === 'training' ? 'Aanwezigheid — training' : 'Aanwezigheid — wedstrijd';
+  const activiteit = gekend[soort].get(activiteitId);
+  el('aanwezigheidactiviteit').innerHTML = activiteit ? activiteitKaart(soort, activiteit, { knop: false }) : '';
+  el('aanwezigheidscherm').scrollIntoView({ behavior: 'smooth', block: 'start' });
 
   el('aanwezigheidlijf').innerHTML = b.spelers
     .map((s) => {

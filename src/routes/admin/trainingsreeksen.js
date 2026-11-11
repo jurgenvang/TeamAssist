@@ -209,10 +209,14 @@ export async function trainingenTonen(ctx) {
 
   const rijen = await db
     .prepare(
-      `SELECT id, datum, begin, einde, status, locatie_tekst
-         FROM trainingen
-        WHERE team_guid = ? AND seizoen = ? AND datum >= date('now', '-7 days')
-        ORDER BY datum, begin
+      // De zaal en de ploeg erbij, voor de kaart (T21).
+      `SELECT tr.id, tr.datum, tr.begin, tr.einde, tr.status, tr.locatie_tekst, z.naam AS zaal,
+              t.naam AS ploeg_naam, t.naam_kort
+         FROM trainingen tr
+         LEFT JOIN zalen z ON z.id = tr.zaal_id
+         LEFT JOIN teams t ON t.guid = tr.team_guid AND t.seizoen = tr.seizoen
+        WHERE tr.team_guid = ? AND tr.seizoen = ? AND tr.datum >= date('now', '-7 days')
+        ORDER BY tr.datum, tr.begin
         LIMIT 30`
     )
     .bind(team, seizoen.code)

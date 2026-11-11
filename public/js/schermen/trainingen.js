@@ -2,6 +2,8 @@
 
 import { api, apiRuw } from '../api.js';
 import { el, toon, veilig } from '../hulp.js';
+import { sectieKop, gegroepeerd } from '../kaart.js';
+import { activiteitKaart, onthoud } from './aanwezigheid-beheer.js';
 
 const DAGNAMEN = ['', 'maandag', 'dinsdag', 'woensdag', 'donderdag', 'vrijdag', 'zaterdag', 'zondag'];
 
@@ -263,18 +265,19 @@ export async function toonWedstrijden(teamGuid) {
   const uitkomst = await api(`/api/admin/wedstrijden?team=${encodeURIComponent(teamGuid)}`);
   if (uitkomst.status !== 200) return;
 
-  el('wedstrijdenlijf').innerHTML = uitkomst.body.wedstrijden
-    .map(
-      (w) => `<tr>
-        <td>${veilig(w.datum)} ${veilig(w.begin)}</td>
-        <td>${w.thuis ? 'thuis' : 'uit'} — ${veilig(w.tegenstander ?? '')}</td>
-        <td>${veilig(w.locatie_tekst ?? '')}</td>
-        <td>${veilig(w.uitslag ?? '')}</td>
-        <td class="ploegen">${w.bij_bond ? '' : 'niet meer bij de bond'}</td>
-        <td><button type="button" class="alslink" data-wedstrijd-aanwezigheid="${w.id}">Aanwezigheid</button></td>
-      </tr>`
-    )
-    .join('');
+  // Zoals overal (T21): kaarten per dag. Wat nog komt eerst; wat gespeeld
+  // is daaronder, het laatst gespeelde bovenaan.
+  const lijst = uitkomst.body.wedstrijden ?? [];
+  onthoud('wedstrijd', lijst);
+  const vandaag = new Date().toISOString().slice(0, 10);
+  const komend = lijst.filter((w) => w.datum >= vandaag);
+  const gespeeld = lijst.filter((w) => w.datum < vandaag).reverse();
+  const teken = (w) => activiteitKaart('wedstrijd', w);
+  el('wedstrijdenlijst').innerHTML = [
+    sectieKop('Komend', komend.length),
+    komend.length ? gegroepeerd(komend, teken) : '<p class="melding">Geen wedstrijden meer gepland.</p>',
+    gespeeld.length ? `${sectieKop('Gespeeld', gespeeld.length)}${gegroepeerd(gespeeld, teken)}` : '',
+  ].join('');
 }
 
 function wedstrijdenSyncUrl(teamGuid, uitvoeren) {

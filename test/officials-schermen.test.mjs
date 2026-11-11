@@ -61,9 +61,12 @@ test('elke oproep van het official-scherm geeft namens mee', () => {
 });
 
 test('namen en teksten uit de databank worden ontsmet', () => {
-  for (const veld of ['w.ploeg', 'w.tegenstander', 'o.naam', 'w.locatie', 'k.naam']) {
+  // Ploeg, tegenstander en zaal gaan door de gedeelde kaart, die zelf
+  // ontsmet (kaart.test.mjs); wat het scherm zelf in HTML zet, ontsmet het.
+  for (const veld of ['o.naam', 'k.naam']) {
     assert.ok(scherm.includes(`veilig(${veld}`), veld);
   }
+  assert.match(scherm, /gedeeldeKaart\(\{[\s\S]*ploeg: w\.ploeg,[\s\S]*tegenstander: w\.tegenstander/);
   assert.ok(vergoeding.includes('veilig(wedstrijdTekst(w))'));
   assert.ok(voorkeuren.includes('veilig(url)'));
 });
