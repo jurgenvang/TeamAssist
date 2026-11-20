@@ -48,7 +48,7 @@ Bijgewerkt bij elke versie. Voor de volledige tekst: zoek de kop verderop
   (v1.17.1 staat sinds 10 november op `main`.)
 
 ### Klaar om te bouwen
-- **T7** — tabblad Mijn club.
+- **T7** — tabblad Mijn club: volledig uitgeklaard (20 november 2026).
 - **T12** — aanmelden als.
 
 ### Nog uit te klaren vóór er gebouwd kan worden
@@ -1173,7 +1173,7 @@ tegenover logo/titel/clubnaam/versie (intussen drie regels sinds 0.14.3, niet
 gecentreerd). Nu `align-items: center`.
 
 ### T7 — Tabblad "Mijn club": alle wedstrijden van de club op één plek
-**Nog uit te werken, bouwt voort op 0.9.0 en op T6.** Een tabblad dat, anders
+**Volledig uitgeklaard (20 november 2026) — klaar om te bouwen; zie onderaan dit punt.** Bouwt voort op 0.9.0 en op T6. Een tabblad dat, anders
 dan Ploegen, niet per team maar over alle gevolgde teams heen toont wat er
 speelt: wedstrijden mét uitslag, een link naar het wedstrijdblad, en een link
 naar de statistieken.
@@ -1245,6 +1245,49 @@ gewoon bouwwerk: het `wedstrijdtaken`-achtige datamodel voor de meldingsvlag
 zelf, de eigen 'meldenswaardig'-berekening naast `maakWedstrijdplan()` (niet
 erbovenop, zoals hierboven al uitgelegd), en de link naar de statistieken
 alsnog bevestigen vóór die gebouwd wordt.
+
+**Uitgeklaard met Jurgen (20 november 2026), acht vragen:**
+
+1. **Het venster: het vorige en het komende weekend.** Van de zaterdag van
+   het laatste weekend tot de zondag van het volgende; wat er tussenin valt
+   (ook in de week) staat erbij. Tijdens een weekend telt dat weekend als het
+   komende, en staat het weekend ervoor er ook nog in — zo staan de
+   uitslagen van gisteren er altijd. Voorbeeld: donderdag 20/11 en zaterdag
+   22/11 → za 15/11 tot zo 23/11; maandag 24/11 → za 22/11 tot zo 30/11.
+2. **Enkel gevolgde ploegen** (`teams.gevolgd` = 1), thuis en uit: wat
+   TeamAssist al ophaalt. Wil de club een ploeg erbij, dan vinkt een
+   beheerder ze aan bij Ploegen. Geen extra synchronisatie.
+3. **De standaard voor wie nog niets koos: mijn ploegen, anders alle.** Wie
+   aan een ploeg hangt (speler, ouder, coach, …), ziet die ploegen; wie aan
+   geen enkele hangt, ziet alle gevolgde ploegen, zodat het tabblad nooit
+   leeg is.
+4. **'Op de hoogte houden': gebundeld per ophaling.** Na elke synchronisatie
+   (vier keer per dag) krijgt een persoon één bericht met alles wat er voor
+   zijn gevolgde ploegen veranderde — datum, uur, zaal, of een nieuwe
+   uitslag — en enkel als er iets veranderde. Via `verwittig()`, dus volgens
+   `kanaal_voorkeur`. Te berekenen in de synchronisatie zelf, die oud en
+   nieuw al naast elkaar heeft, naast `maakWedstrijdplan()`.
+5. **'Op de hoogte houden' staat standaard uit**, voor iedereen: geen
+   ongevraagde berichten bij de invoering, en niets dubbel voor de
+   begeleiding, die al bericht krijgt bij een wijziging.
+6. **De statistieken: nu zonder.** Elke kaart krijgt het wedstrijdblad,
+   zoals overal. Stuurt Jurgen later een adres van een statistiekenpagina,
+   dan komt de link erbij als klein pakket.
+7. **Kiezen op beide plaatsen**, met dezelfde vinkjes: een knop *Ploegen
+   kiezen* bovenaan Mijn club, en een sectie *Mijn club* bij Mijn
+   voorkeuren. Per ploeg twee vinkjes: *tonen* en *op de hoogte houden*.
+8. **Het tabblad is er voor iedereen, meteen na Overzicht**, en staat
+   standaard aan; uit te zetten bij Mijn voorkeuren → Tabbladen, zoals de
+   andere.
+
+En zoals overal sinds T21: elke wedstrijd als de gedeelde kaart
+(`kaart.js`), per dag gegroepeerd, met thuis of uit, de zaal, de uitslag en
+het wedstrijdblad.
+
+**Schema (voorstel bij het bouwen):** een tabel `mijnclub_ploegen`
+(`persoon_id`, `team_guid`, `tonen`, `op_de_hoogte`), met een gewone
+`CREATE TABLE`; geen rij = de standaard van punt 3, en 'op de hoogte' uit.
+Geen ALTER of heropbouw van een bestaande tabel nodig.
 
 ### T8 — Het versienummer in de topbalk in plaats van enkel de footer — **afgewerkt in 0.14.3**
 Het versienummer stond enkel onderaan in de footer (`#versieregel`, gevuld
