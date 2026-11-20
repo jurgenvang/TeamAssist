@@ -46,11 +46,12 @@ Bijgewerkt bij elke versie. Voor de volledige tekst: zoek de kop verderop
   (v1.17.1 staat sinds 10 november op `main`.)
 
 ### Klaar om te bouwen
+- **T22** — de tabbalk als het blok van YOAssist, op één rij die schuift;
+  Overzicht altijd vooraan.
 - **T7** — tabblad Mijn club.
 - **T12** — aanmelden als.
 
 ### Nog uit te klaren vóór er gebouwd kan worden
-- **T22** — de tabbalk op een telefoon zoals in YOAssist (gezien bij T21).
 - **T2** — financiële module (FINADM). Hangt na I1 samen met de vergoedingen
   van de officials.
 - **T3** en **V29** — evaluatie van spelers en van officials.
@@ -1010,22 +1011,34 @@ en een training is niet van een wedstrijd te onderscheiden.
   gedeelde kaart.
 
 ### T22 — De tabbalk op een telefoon, zoals in YOAssist
-**Gevraagd door Jurgen (20 november 2026), nog uit te klaren.** Gezien bij
+**Gevraagd door Jurgen (20 november 2026), beslist dezelfde dag: klaar om te
+bouwen.** Gezien bij
 het naast elkaar leggen voor T21: op telefoonbreedte breekt de tabbalk van
 TeamAssist over drie regels af (Aanduidingen, Overzicht / Cluboverzicht,
 Regio, Ploegen / Personen), met een rode streep onder het gekozen tabblad.
 YOAssist heeft één grijs blok met de tabbladen naast elkaar, en het gekozen
 tabblad als wit vlak erin (*segmented control*).
 
-Te beslissen vóór het bouwen:
-- **Te veel tabbladen voor één rij.** YOAssist heeft er hoogstens drie;
-  iemand die ADMIN, coach en official is, heeft er in TeamAssist zes. Opties:
-  één rij die horizontaal schuift, of op een telefoon enkel de eerste drie
-  met de rest onder 'Meer'. Voorstel: schuiven, met het gekozen tabblad
-  altijd in beeld.
-- **De volgorde.** Vandaag volgt ze `TABBLADEN` in `navigatie.js`. Moet
-  *Overzicht* (met Mijn agenda) vooraan voor wie geen official is?
-- **Op een breed scherm** hetzelfde blok, of daar de huidige tabbalk?
+**Beslist (Jurgen, 20 november 2026):**
+- **Eén rij die schuift.** YOAssist heeft hoogstens drie tabbladen; iemand
+  die ADMIN, coach en official is, heeft er in TeamAssist zes. Het blok blijft
+  één rij en schuift horizontaal met de vinger; het gekozen tabblad schuift
+  vanzelf in beeld. Wie drie of minder tabbladen heeft, ziet geen verschil
+  met YOAssist. Overwogen en niet gekozen: drie tabbladen plus 'Meer', of
+  het blok over twee rijen.
+- **Overzicht altijd vooraan**, ook voor een official: iedereen begint bij
+  *Mijn agenda*, die al toont hoeveel er nog te beantwoorden is en naar
+  Aanduidingen linkt. Een bewuste afwijking van YOAssist, waar een official
+  bij Aanduidingen begint — bij de overstap (fase 5) in de uitnodiging
+  vermelden. De rest van de volgorde blijft: Aanduidingen, Cluboverzicht,
+  Regio, Ploegen, Personen. Geen eigen volgorde per persoon (dat zou een
+  schemawijziging vragen).
+- **Overal hetzelfde blok**, ook op een breed scherm: één uitzicht, zoals
+  YOAssist. Op een breed scherm passen zes tabbladen op één rij en schuift
+  er niets.
+
+Geen schemawijziging. Bij het bouwen: in de browser naast YOAssist leggen,
+op telefoon- en op laptopbreedte, ook in donkere modus.
 
 ### Z — Zaaluren laden via een CSV-bestand — **afgewerkt in 0.14.0**
 Geleverd zoals hier voorgesteld: vooraf ingevuld sjabloon, kolommen
