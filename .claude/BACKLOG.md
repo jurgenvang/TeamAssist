@@ -11,7 +11,7 @@ WIJZIGINGEN-bestanden blijven kloppen:
   punt *U* (Microsoft 365) heet hier **VU**, want TeamAssist heeft al een *U*
 - **T** + nummer, en de letters **A–AB** — TeamAssist
 
-Stand: YOAssist **v1.17.1**, TeamAssist **0.46.0** (op `main` sinds 20 november 2026)
+Stand: YOAssist **v1.17.1**, TeamAssist **0.46.1** (op `main` sinds 20 november 2026)
 
 ---
 
@@ -21,6 +21,10 @@ Bijgewerkt bij elke versie. Voor de volledige tekst: zoek de kop verderop
 (`### T7`, `### V43`, `## I1`, ...).
 
 ### Wacht op een actie van Jurgen
+- **0.46.1 (nazicht)** — het tabblad *Ploegen* laten nakijken door een coach
+  die geen beheerder is (tot nu toe was het voor hem leeg), en kijken of de
+  thuisploeg vooraan bij een uitwedstrijd goed leest. Geen migratie, staat
+  op `main`.
 - **0.46.0 (T7)** — Mijn club nakijken op de telefoon, en een ploeg op de
   hoogte houden om het bericht na een ophaling te zien. Migratie gedaan,
   staat op `main`.
@@ -60,6 +64,9 @@ Bijgewerkt bij elke versie. Voor de volledige tekst: zoek de kop verderop
 - **T5** en **V30** — een tweede omgeving / demo-omgeving.
 - **V43** — eigen VBL-aanduidingen: beslist (20 november 2026); eerst
   uitzoeken via de diagnoseroute op de Worker, dan bouwen; na I1.
+- **T23** — wat het nazicht van 0.46.0 opleverde en een beslissing vraagt:
+  een ploegscherm voor spelers en ouders, de ploeg van een coach in Mijn
+  agenda, en de tabel *Rechten* op het Overzicht.
 
 ---
 
@@ -381,6 +388,7 @@ YOAssist met `ruudcuyvers@…`, vermoedelijk het adres van zijn vader.
 | 0.23.0 | T14 afgewerkt: een volledige backup van de databank als JSON. Beter dan aanvankelijk voorgesteld — geen hardcoded tabellenlijst met een test die drift moet vangen (de YOAssist-aanpak), maar tabellen rechtstreeks uit `sqlite_master` gehaald, wat de hele bugklasse structureel onmogelijk maakt. De kerntest bewijst dat letterlijk: een tabel die pas ná het schrijven van de route wordt aangemaakt, zit er toch in. |
 | 0.24.0 | T16 en T17 afgewerkt. `verwittig()` heeft geen `kanaal`-parameter meer en leest voortaan `kanaal_voorkeur` — mail blijft de terugval zolang push niet bestaat, met een aparte logregel voor wie 'push' koos. Blokken bij Zaalbeheer staan nu gegroepeerd per weekdag als losse blokjes, met bewust neutrale kleuren in plaats van de accentkleur. |
 | 0.25.0 | T15 afgewerkt: opruiming van `logboek` (365 dagen), `taak_runs` (30 dagen), `berichten` (120 dagen), en het definitief verwijderen van een inactieve persoon na 180 dagen. Twee tabellen extra gevonden tijdens het bouwen (`accounts`, `ouder_kind`) die niet in het oorspronkelijke overzicht stonden. Enkel `aanwezigheden` wordt geanonimiseerd in plaats van verwijderd — de enige tabel waar dat structureel kon — wat een schema-heropbouw vroeg, grondig getoetst tegen een nagemaakte bestaande databank. |
+| 0.46.1 | Nazicht van 0.46.0, elk scherm in Chromium voor acht soorten gebruikers, op telefoon en laptop, licht en donker. **Ploegen was leeg voor een coach, coördinator of ploegverantwoordelijke die geen beheerder is** (de lijst kwam van een route met `systeem.beheren`): nieuwe route `GET /api/ploegen` met de ploegen die iemand begeleidt, zonder de knoppen die enkel een beheerder kan gebruiken; wie één ploeg heeft, ziet ze meteen open. Een speler of ouder krijgt het (voor hem lege) tabblad niet meer. **Bij een uitwedstrijd staat de thuisploeg vooraan**, zoals de uitslag zelf (thuis–uit): `38-61` las als een nederlaag terwijl de ploeg won. Het cluboverzicht toonde de ruwe uitslag (`45- 40`) en een browserblauwe link. Op een telefoon staken de taken, de aanwezigheid en de instellingen buiten beeld; keuzelijsten zien eruit als de velden ernaast; een lange naam duwt de clubnaam niet meer weg. Donkere modus: groen, rood en amber als tekst zijn leesbaar. Mijn club ververst na bewaren bij Mijn voorkeuren; Escape sluit het naammenu. Geen schemawijziging. 1040 tests. |
 | 0.46.0 | T7: het tabblad **Mijn club**, voor iedereen, meteen na Overzicht: de wedstrijden van de gevolgde ploegen van het vorige tot het komende weekend, als de gedeelde kaart per dag, met de uitslag en het wedstrijdblad. Standaard je eigen ploegen (ook die van je kinderen), of alle als je aan geen enkele hangt. *Ploegen kiezen* bovenaan en *Mijn club* bij Mijn voorkeuren, met per ploeg *tonen* en *op de hoogte houden*; wie een ploeg op de hoogte houdt, krijgt na elke ophaling één gebundeld bericht bij een gewijzigde datum, uur of zaal, of een nieuwe uitslag (standaard uit). Een uitslag staat voortaan zonder de opvulspaties van de bond op elke kaart (`62-58`), zonder de bewaarde gegevens te veranderen. Schema: tabel `mijnclub_ploegen` (CREATE, `migratie-0.46.0.sql`). Ook uitgeklaard: V43. 1036 tests. |
 | 0.45.0 | T22: de tabbalk is het blok van YOAssist — een grijs vlak met de tabbladen naast elkaar, het gekozen tabblad als wit vlak erin — op elk scherm. Altijd één rij: wie meer tabbladen heeft dan er passen, schuift met de vinger, het gekozen tabblad schuift vanzelf in beeld (ook als het vanuit Mijn agenda gekozen wordt), en een vervaagde rand toont dat er nog meer is. *Overzicht* staat altijd vooraan, ook voor een official — een bewuste afwijking van YOAssist. Tot nu toe brak de tabbalk op een telefoon over drie regels af. In Chromium bekeken op telefoon- en laptopbreedte, ook donker. Geen schemawijziging. 1023 tests. |
 | 0.44.0 | T18 en T19, de twee kleine gaten uit de code-audit. T18: bij Zaalbeheer zegt elk blokje of er een ploeg op traint — een vrij blok staat gestippeld in het geel met *vrij*, een bezet blok met de ploeg(en) erop. Bezet is een actieve reeks in dezelfde zaal en op dezelfde weekdag die het blok overlapt, niet enkel bij exact hetzelfde uur: binnen zijn blok mag een coach het uur verfijnen (U2), en tot nu toe telde `/api/admin/zalen/vrij` zo'n blok als vrij. Eén regel (`ploegenOpBlok`) voor de blokjes en die route. T19: `clublogo_bron` geschrapt — geschreven maar nergens gelezen. Ook: T22 (de tabbalk op een telefoon) in de backlog. Geen schemawijziging. 1021 tests. |
@@ -1538,6 +1546,29 @@ Nog te bepalen:
   dat vrij is een andere kleur of een label geven, in plaats van een tweede
   lijst ernaast. Dat zou minder scherm kosten, maar vraagt dat
   `zalenTonen()` de vrij/bezet-informatie meegeeft, wat ze vandaag niet doet.
+
+### T23 — Uit het nazicht van 0.46.0: drie punten die een beslissing vragen
+**Nog uit te klaren** (20 november 2026). Bij het nazicht (0.46.1) kwamen
+drie dingen boven die geen fout zijn maar een keuze:
+
+- **Een ploegscherm voor spelers en ouders.** De rechtenlaag geeft hen
+  `team.bekijken` en `team.spelers.namen` (punt F: van de ploeggenoten enkel
+  de namen), maar geen enkele route geeft hen iets van hun ploeg. Tot 0.46.0
+  kregen ze een leeg tabblad *Ploegen*; sinds 0.46.1 krijgen ze het niet
+  meer. Komt er een scherm met de wedstrijden en de namen van de
+  ploeggenoten, of volstaan Mijn agenda en Mijn club?
+- **Mijn agenda voor een coach.** Een coach die niet speelt of fluit, ziet
+  geen agenda (T21: de trainingen en wedstrijden van wie *speelt*). Horen de
+  trainingen en wedstrijden van de ploeg die hij begeleidt erbij, zonder
+  aanwezig/afwezig?
+- **De tabel *Rechten* op het Overzicht.** Iedereen ziet er de technische
+  namen van zijn rechten (`team.spelers.namen`, …), ook een speler van
+  dertien. Het scherm dateert van 0.1.0, toen het de rechtenlaag moest
+  tonen. Enkel nog voor een beheerder, of weg?
+
+Kleiner, zonder beslissing nodig, voor een volgend pakket: de datum in
+*Gemelde problemen* en bij de woensdaglijsten staat als `2026-11-21`; met
+zeven tabbladen past *Personen* op een laptop net niet meer in de rij.
 
 ### T19 — De instelling `clublogo_bron` wordt geschreven maar nergens gelezen — **geschrapt in 0.44.0**
 **Beslist (Jurgen, 10 november 2026): schrappen.** De instelling verdwijnt

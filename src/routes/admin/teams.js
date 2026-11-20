@@ -38,6 +38,30 @@ export async function teamsLijst(ctx) {
   return json({ seizoen: seizoen.code, teams: await bestaandeTeams(db, seizoen.code) });
 }
 
+/**
+ * GET /api/ploegen — de ploegen die iemand als begeleiding mag openen.
+ *
+ * Tot 0.46.0 haalde het tabblad Ploegen zijn lijst bij /api/admin/teams, en
+ * die vraagt systeem.beheren: een coach, coördinator of ploegverantwoordelijke
+ * die geen beheerder is, kreeg een leeg tabblad en kon nergens bij zijn
+ * spelers, wedstrijden of aanwezigheden. Geen route.recht: welke ploegen het
+ * zijn, volgt uit team.spelers.bekijken per ploeg. Filteren in JavaScript,
+ * niet met een lijst GUID's in de query (D1: honderd parameters).
+ *
+ * `mag` zegt wat het scherm mag aanbieden. Gemak, geen beveiliging: elke
+ * route erachter controleert haar recht zelf.
+ */
+export async function ploegenLijst(ctx) {
+  const { db, rechten, seizoen } = ctx;
+  const van = rechten.ploegenMet('team.spelers.bekijken');
+  const alle = await bestaandeTeams(db, seizoen.code);
+  return json({
+    seizoen: seizoen.code,
+    mag: { beheren: rechten.mag('systeem.beheren'), personen: rechten.mag('personen.beheren') },
+    teams: van === '*' ? alle : alle.filter((t) => van.includes(t.guid)),
+  });
+}
+
 export async function teamsSync(ctx) {
   const { db, persoon, request, seizoen } = ctx;
   const url = new URL(request.url);

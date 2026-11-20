@@ -16,7 +16,11 @@ test('de kaart: datumblok, ploegen, thuis of uit, zaal met kaartlink, wedstrijdb
     locatie: 'Sporthal Ter Bank', blad: wedstrijdblad('BVBL 1'), uitslag: '45-40', forfait: 'uit', toestand: 'ja',
   });
   assert.match(h, /<span class="dag">za<\/span><span class="nr">14<\/span><span class="uur">10:00<\/span>/);
-  assert.match(h, /<span class="ploeg">U12 A<\/span> <span class="tegen">– Tienen<\/span>/);
+  // Een uitwedstrijd: de thuisploeg vooraan, want de uitslag is thuis–uit.
+  assert.match(h, /<span class="tegen">Tienen –<\/span> <span class="ploeg">U12 A<\/span> <span class="uitslag">45-40/);
+  const thuis = kaart({ datum: '2026-11-14', ploeg: 'U12 A', tegenstander: 'Tienen', thuis: true, uitslag: '45-40' });
+  assert.match(thuis, /<span class="ploeg">U12 A<\/span> <span class="tegen">– Tienen<\/span> <span class="uitslag">45-40/);
+  assert.match(kaart({ datum: '2026-11-14', ploeg: 'Training U12 A' }), /<div class="wed-ploegen"><span class="ploeg">Training U12 A<\/span><\/div>/);
   assert.match(h, /<span class="thuisuit">uit<\/span>/);
   assert.ok(h.includes(`href="${kaartlink('Sporthal Ter Bank')}"`));
   assert.ok(h.includes('wedguid=BVBL%201'));
@@ -93,7 +97,28 @@ test('Mijn club: de kiezer op twee plaatsen is dezelfde functie, en elke oproep 
   const app = lees('../public/js/app.js');
   assert.match(bron, /export async function toonKiezer\(doelId/);
   assert.match(bron, /toonKiezer\('mijnclubkiezer'/, 'de knop in het tabblad');
-  assert.match(app, /toonKiezer\('voorkeurenmijnclub'\)/, 'en bij Mijn voorkeuren');
+  // Met laadMijnClub erbij: bewaren bij Mijn voorkeuren ververst ook het
+  // tabblad eronder (tot 0.46.0 bleef daar de oude keuze staan).
+  assert.match(app, /toonKiezer\('voorkeurenmijnclub', laadMijnClub\)/, 'en bij Mijn voorkeuren');
   assert.ok(!/fetch\(['"`]\/api\//.test(bron));
   assert.match(bron, /veilig\(p\.naam_kort \|\| p\.naam\)/);
+});
+
+test('nazicht 0.46.1: het cluboverzicht toont de uitslag netjes, en de stijl houdt een telefoon en de donkere modus leesbaar', () => {
+  const overzicht = lees('../public/js/schermen/cluboverzicht.js');
+  assert.match(overzicht, /veilig\(netteUitslag\(w\.uitslag\)\)/, "niet de ruwe '45- 40' van de bond");
+  const css = lees('../public/stijl.css');
+  // Een keuzelijst met een lange naam duwde de takentabel buiten beeld.
+  assert.match(css, /\n\s*select \{[^}]*max-width: 100%;/);
+  assert.match(css, /td select \{ width: 100%;/);
+  assert.match(css, /td input\[type=text\][^{]*\{ width: 100%;/);
+  // Groen, rood en amber als tekst: lichter in donkere modus.
+  for (const kleur of ['groen', 'rood', 'amber', 'blauw', 'paars']) {
+    assert.match(css, new RegExp(`\\[data-modus="donker"\\] \\{[^}]*--${kleur}-tekst: #`), kleur);
+    assert.match(css, new RegExp(`\\[data-modus="systeem"\\] \\{[^}]*--${kleur}-tekst: #`), kleur);
+  }
+  assert.ok(!/[^-\w]color: var\(--(groen|rood|amber-diep|blauw|paars)\)/.test(css), 'tekst in een signaalkleur gebruikt de -tekst-variabele');
+  assert.match(css, /\.ov-regel a \{ color: inherit; \}/, 'de link naar het wedstrijdblad is geen browserblauw');
+  // Escape sluit ook het naammenu.
+  assert.match(lees('../public/js/app.js'), /e\.key === 'Escape' && !el\('naammenu'\)\.hidden\) sluitNaammenu\(\)/);
 });

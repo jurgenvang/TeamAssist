@@ -47,9 +47,15 @@ test('een coach ziet geen beheer en geen personen', () => {
   assert.deepEqual(zichtbareTabbladen(rechten).map((t) => t.id), ['mij', 'mijnclub', 'ploegen']);
 });
 
-test('een speler ziet enkel het overzicht en zijn ploeg', () => {
+test('een speler ziet het overzicht en Mijn club, niet het scherm van de begeleiding', () => {
+  // Tot 0.46.0 kreeg een speler of ouder het tabblad Ploegen (team.bekijken),
+  // maar geen enkele route erachter gaf hem iets: het bleef leeg.
   const rechten = bouwRechten({ ploegenAlsSpeler: [J16] }).overzicht();
-  assert.deepEqual(zichtbareTabbladen(rechten).map((t) => t.id), ['mij', 'mijnclub', 'ploegen']);
+  assert.deepEqual(zichtbareTabbladen(rechten).map((t) => t.id), ['mij', 'mijnclub']);
+  const ouder = bouwRechten({ ploegenViaKind: [J16] }).overzicht();
+  assert.deepEqual(zichtbareTabbladen(ouder).map((t) => t.id), ['mij', 'mijnclub']);
+  const pv = bouwRechten({ rollen: [{ rol: 'PLOEGV', team_guid: J16 }] }).overzicht();
+  assert.deepEqual(zichtbareTabbladen(pv).map((t) => t.id), ['mij', 'mijnclub', 'ploegen']);
 });
 
 test('wie geen enkele rol heeft, houdt enkel het overzicht', () => {

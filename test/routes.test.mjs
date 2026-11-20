@@ -67,6 +67,8 @@ test('een route die geen recht vraagt, doet dat bewust', () => {
       '/api/mijnclub/ploegen',
       '/api/mijnclub/keuze',
       '/api/mij/voorkeuren',
+      // De ploegen die je begeleidt: de route filtert zelf op team.spelers.bekijken.
+      '/api/ploegen',
       // Over jezelf of een eigen kind; de route controleert ouder_kind zelf.
       '/api/meelezen',
       '/api/meelezen',

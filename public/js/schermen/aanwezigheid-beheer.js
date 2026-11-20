@@ -92,8 +92,8 @@ async function toonAanwezigheid(soort, activiteitId) {
         <td>${veilig(s.voornaam)} ${veilig(s.achternaam)}</td>
         <td class="ploegen">${opgave}</td>
         <td>
-          <select data-vaststelling="${veilig(s.id)}">
-            <option value="">—</option>
+          <select data-vaststelling="${veilig(s.id)}" aria-label="Vaststelling voor ${veilig(s.voornaam)} ${veilig(s.achternaam)}">
+            <option value="">vaststellen …</option>
             <option value="aanwezig" ${s.vaststelling_status === 'aanwezig' ? 'selected' : ''}>aanwezig</option>
             <option value="afwezig" ${s.vaststelling_status === 'afwezig' ? 'selected' : ''}>afwezig</option>
             <option value="te_laat" ${s.vaststelling_status === 'te_laat' ? 'selected' : ''}>te laat</option>

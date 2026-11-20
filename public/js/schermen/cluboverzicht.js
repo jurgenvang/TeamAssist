@@ -11,7 +11,7 @@
 import { api } from '../api.js';
 import { el, veilig } from '../hulp.js';
 import { forfaitTekst } from '../officials-hulp.js';
-import { sectieKop, gegroepeerd } from '../kaart.js';
+import { sectieKop, gegroepeerd, dagTitel, netteUitslag } from '../kaart.js';
 
 const staat = { o: null, filter: null, alles: false, voorbij: false };
 
@@ -86,7 +86,7 @@ function teken() {
   }
   delen.push(`<button type="button" class="stil" data-voorbij>${staat.voorbij ? 'Verberg voorbije wedstrijden' : 'Toon voorbije wedstrijden (om achteraf recht te zetten)'}</button>`);
   if (staat.voorbij) {
-    delen.push(`<p class="klein">Voorbije wedstrijden vanaf ${veilig(o.van)}. Wie je nu nog aanduidt of vrijgeeft, krijgt daar geen bericht van.</p>`);
+    delen.push(`<p class="klein">Voorbije wedstrijden vanaf ${veilig(dagTitel(o.van))}. Wie je nu nog aanduidt of vrijgeeft, krijgt daar geen bericht van.</p>`);
   }
   el('cluboverzichtlijst').innerHTML = delen.join('');
 }
@@ -155,7 +155,7 @@ function kaart(w) {
     <div class="ov-kop"><b>${veilig(w.uur)}</b> <span class="cat">${veilig(w.cat_label ?? w.cat_code ?? '??')}</span>
       <b>${veilig(w.ploeg)}</b> – ${veilig(w.tegenstander ?? '?')}
       ${w.forfait ? `<span class="forfait-label">${veilig(forfaitTekst(w.forfait))}</span>` : ''}
-      ${w.uitslag ? `<span class="uitslag">${veilig(w.uitslag)}</span>` : ''}</div>
+      ${netteUitslag(w.uitslag) ? `<span class="uitslag">${veilig(netteUitslag(w.uitslag))}</span>` : ''}</div>
     <div class="ov-regel klein">${veilig(w.locatie ?? 'locatie onbekend')} · <a href="${veilig(w.wedstrijdblad)}" target="_blank" rel="noopener noreferrer">wedstrijdblad ↗</a></div>
     ${vbl}
     ${lijstRegels}

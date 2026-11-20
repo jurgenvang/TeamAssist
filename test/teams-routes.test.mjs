@@ -7,7 +7,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { maakDb } from './d1.mjs';
 import { ROUTES } from '../src/index.js';
-import { teamsLijst, teamsSync, teamGevolgd } from '../src/routes/admin/teams.js';
+import { readFileSync } from 'node:fs';
+import { teamsLijst, ploegenLijst, teamsSync, teamGevolgd } from '../src/routes/admin/teams.js';
+import { rechtenVoor } from '../src/lib/rechten-db.js';
 
 const ORG = {
   naam: 'AB InBev Leuven Bears',
@@ -201,4 +203,58 @@ test('zonder de clubnaam-instelling zelf, gebeurt er geen crash, naam_kort valt 
   await sync(db, '?uitvoeren=1');
   const rij = db._sqlite.prepare(`SELECT naam, naam_kort FROM teams WHERE guid = 'BVBL1125G12  1'`).get();
   assert.equal(rij.naam_kort, 'U12 A');
+});
+
+// --- het tabblad Ploegen voor wie geen beheerder is (0.46.1) ---
+
+test('een coach krijgt zijn eigen ploeg in /api/ploegen, een speler of ouder geen enkele, een beheerder alle', async () => {
+  // Tot 0.46.0 vroeg het tabblad Ploegen zijn lijst aan /api/admin/teams
+  // (systeem.beheren): een coach die geen beheerder is, zag een leeg tabblad.
+  const db = zetKlaar();
+  db._sqlite.exec(`
+    INSERT INTO teams (guid, seizoen, naam, naam_kort, categorie, gevolgd) VALUES
+      ('BVBL1125J16  2', '2026-27', 'J16 B', 'U16 B', 'J16', 1),
+      ('BVBL1125G12  1', '2026-27', 'G12 A', 'U12 A', 'G12', 1);
+    INSERT INTO personen (id, voornaam, achternaam, email) VALUES
+      ('p-coach', 'Carl', 'Coach', 'c@b.c'), ('p-speler', 'Sam', 'Speler', 's@b.c'),
+      ('p-ouder', 'Olga', 'Ouder', 'o@b.c'), ('p-pv', 'Piet', 'Pv', 'p@b.c');
+    INSERT INTO rollen (persoon_id, rol, team_guid, seizoen) VALUES
+      ('p-admin', 'ADMIN', NULL, NULL),
+      ('p-coach', 'COACH', 'BVBL1125J16  2', '2026-27'),
+      ('p-pv', 'PLOEGV', 'BVBL1125G12  1', '2026-27');
+    INSERT INTO team_spelers (persoon_id, team_guid, seizoen) VALUES ('p-speler', 'BVBL1125J16  2', '2026-27');
+    INSERT INTO ouder_kind (ouder_id, kind_id) VALUES ('p-ouder', 'p-speler');
+  `);
+  const vraag = async (id) => {
+    const res = await ploegenLijst({ db, seizoen, rechten: await rechtenVoor(db, id, seizoen.code) });
+    assert.equal(res.status, 200);
+    return res.json();
+  };
+  const coach = await vraag('p-coach');
+  assert.deepEqual(coach.teams.map((t) => t.guid), ['BVBL1125J16  2']);
+  assert.deepEqual(coach.mag, { beheren: false, personen: false });
+  assert.deepEqual((await vraag('p-pv')).teams.map((t) => t.guid), ['BVBL1125G12  1']);
+  assert.deepEqual((await vraag('p-speler')).teams, [], 'een speler is geen begeleiding');
+  assert.deepEqual((await vraag('p-ouder')).teams, []);
+  const admin = await vraag('p-admin');
+  assert.equal(admin.teams.length, 2);
+  assert.deepEqual(admin.mag, { beheren: true, personen: true });
+});
+
+test('het tabblad Ploegen haalt zijn lijst bij /api/ploegen, en biedt een coach geen beheerknoppen aan', () => {
+  const lees = (pad) => readFileSync(new URL(pad, import.meta.url), 'utf8');
+  const route = ROUTES.find((r) => r.pad === '/api/ploegen');
+  assert.ok(route && !route.recht, 'geen route.recht: de route filtert zelf per ploeg');
+  const scherm = lees('../public/js/schermen/ploegen.js');
+  assert.match(scherm, /api\('\/api\/ploegen'\)/);
+  assert.ok(!scherm.includes("api('/api/admin/teams')"), 'die vraagt systeem.beheren');
+  const html = lees('../public/index.html');
+  const css = lees('../public/stijl.css');
+  assert.match(css, /#tab-ploegen\[data-beheer="0"\] \.enkel-beheer/);
+  assert.match(css, /#tab-ploegen\[data-personen="0"\] \.enkel-personen/);
+  // Wat systeem.beheren vraagt, draagt de klasse: volgen, reeksen aanmaken,
+  // ophalen bij de bond.
+  assert.match(html, /<form class="enkel-beheer">\s*<button type="button" id="wedstrijdensync">/);
+  assert.match(html, /<form class="enkel-beheer">\s*<select id="reeksweekdag">/);
+  assert.match(html, /<div class="enkel-personen">\s*<h3>Sjabloon/);
 });

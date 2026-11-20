@@ -66,8 +66,8 @@ test('een gewijzigd uur, een andere zaal en een uitslag: elk een regel; een ande
   assert.deepEqual(r.map((x) => x.tekst), [
     'U12 A thuis tegen Gent: nu za 21/11 om 11:00 (was za 21/11 om 10:00)',
     'U12 A uit tegen Lier: nu in Kessel-Lo (was Ter Bank)',
-    'U12 A thuis tegen Tienen (za 21/11): 45-40',
-    'U12 A thuis tegen Aarschot (za 14/11): 50-52',
+    'U12 A – Tienen (za 21/11): 45-40',
+    'U12 A – Aarschot (za 14/11): 50-52',
   ]);
 });
 
@@ -192,7 +192,7 @@ test('na een ophaling: één bericht voor wie de ploeg op de hoogte houdt, niets
   assert.equal(mails.length, 1);
   assert.deepEqual([mails[0].to].flat(), ['volger@x.be']);
   assert.match(mails[0].subject, /Mijn club — 1 wijziging/);
-  assert.match(mails[0].text ?? mails[0].html, /U16 B thuis tegen Gent .*: 62-58/);
+  assert.match(mails[0].text ?? mails[0].html, /U16 B – Gent .*: 62-58/);
   // Dezelfde uitslag in een andere vorm (zonder opvulspaties) is geen nieuwe uitslag.
   try {
     globalThis.fetch = met(rij('G', '62-58'));
@@ -222,4 +222,12 @@ test('migratie-0.46.0.sql: het schema van 0.45.0 plus de migratie is het schema 
   const db = new DatabaseSync(':memory:');
   db.exec(`${oud}\n${migratie}`);
   db.exec(migratie); // een tweede keer kan geen kwaad
+});
+
+test('de uitslag van een uitwedstrijd: de thuisploeg vooraan, zoals de uitslag zelf (thuis–uit)', () => {
+  // Tot 0.46.0: 'U14 A uit tegen Lier (za 14/11): 38-61' — wie maakte er 61?
+  const r = volgerRegels({ guid: 'T', naam_kort: 'U14 A' }, {
+    uitslag_bijgewerkt: [{ datum: '2026-11-14', thuis: false, tegenstander: 'Lier', uitslag: ' 38- 61' }],
+  });
+  assert.deepEqual(r.map((x) => x.tekst), ['Lier – U14 A (za 14/11): 38-61']);
 });

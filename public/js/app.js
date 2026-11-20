@@ -141,7 +141,8 @@ function laadScherm(tab, rechten) {
   }
   if (tab === 'ploegen') {
     laadPloegen();
-    laadZalen(); // vult de zaalkeuze voor het reeksformulier
+    // De zaalkeuze van het reeksformulier: enkel voor wie reeksen aanmaakt.
+    if (Object.hasOwn(rechten ?? {}, 'systeem.beheren')) laadZalen();
   }
   // Dagelijks beheer en Configuratie zijn er voor twee soorten beheerders:
   // elk deel laadt enkel voor wie het mag, anders volgt een 403.
@@ -341,6 +342,10 @@ el('naammenuknop').addEventListener('click', () => {
   menu.hidden = !open;
   el('naammenuknop').setAttribute('aria-expanded', String(open));
 });
+// Escape sluit het menu, zoals het een paneel sluit.
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !el('naammenu').hidden) sluitNaammenu();
+});
 
 // Ergens anders klikken sluit het menu — anders blijft het openstaan tot
 // iemand toevallig opnieuw op de knop klikt.
@@ -378,7 +383,7 @@ el('naammenu-voorkeuren').addEventListener('click', () => {
   if (huidigePersoon) toonVoorkeuren(huidigePersoon);
   toonOfficialsVoorkeuren(metOfficials);
   // Mijn club (T7): dezelfde keuze als de knop in het tabblad.
-  toonKiezer('voorkeurenmijnclub');
+  toonKiezer('voorkeurenmijnclub', laadMijnClub);
   if (navigatie) {
     toonTabbladkeuze(verbergbareTabbladen(navigatie.rechten, navigatie.extra), navigatie.extra.verborgen, (verborgen) => {
       navigatie.extra.verborgen = verborgen;

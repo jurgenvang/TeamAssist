@@ -46,6 +46,10 @@ iets nieuws boven kwam; nooit inkorten zonder reden.
   ze zo. Netjes maken bij het tonen (`netteUitslag`), niet bij het bewaren:
   een andere vorm in de databank zou bij de volgende ophaling elke gespeelde
   wedstrijd als 'nieuwe uitslag' melden aan wie een ploeg volgt (0.46.0).
+- **De uitslag van de bond is thuis–uit**, ook bij een uitwedstrijd van de
+  eigen ploeg. Staat de eigen ploeg vooraan, dan leest `38-61` als een
+  nederlaag terwijl ze won. De kaart zet daarom de thuisploeg vooraan
+  (0.46.1).
 - **De API is niet bereikbaar vanuit de sandbox**; de diagnoseroute in de
   Worker toont een echt antwoord.
 - **Een Worker mag per aanroep maar een beperkt aantal uitgaande oproepen
@@ -104,3 +108,17 @@ iets nieuws boven kwam; nooit inkorten zonder reden.
   wit vakje (0.43.0). In de browser kijken, niet enkel in de code.
 - **`bericht_modus` op *omleiden* met een leeg omleidadres** verstuurt niets,
   ook geen alarm. Bij het testen eerst een omleidadres invullen.
+- **Een scherm nakijken als wie het gebruikt, niet als beheerder.** Het
+  tabblad Ploegen was sinds 0.7 leeg voor een coach die geen ADMIN is: de
+  lijst kwam van een route met `systeem.beheren`, en elke controle in de
+  browser gebeurde als beheerder (0.46.1). Bij een nieuw scherm: ook openen
+  als de rol met de minste rechten die het mag zien, en kijken naar elk
+  antwoord met status 403.
+- **Een kleur die als vlak werkt, werkt niet vanzelf als tekst.** Het
+  donkere groen, rood en amber stonden in donkere modus als tekst op een
+  donker vlak. Tekst in een signaalkleur gebruikt `--groen-tekst`,
+  `--rood-tekst`, `--amber-tekst` (`stijl.css`), die in donkere modus
+  lichter zijn.
+- **Een keuzelijst is zo breed als haar langste keuze.** Een lange naam
+  duwde een tabel op een telefoon buiten beeld. Het nazicht-script meet dat:
+  elk element dat rechts buiten het scherm valt.

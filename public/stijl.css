@@ -115,7 +115,11 @@
 
   /* De naam is zelf de menuknop: je eigen naam is de plek waar mensen hun
      eigen dingen verwachten. Het pijltje zegt dat er iets openklapt. */
-  .topbalk-ik { position: relative; margin-left: auto; flex-shrink: 0; }
+  /* Een lange naam breekt zelf af; ze duwt de clubnaam niet meer in drie
+     regels (0.46.1). */
+  .topbalk-merk { flex-shrink: 0; }
+  .topbalk-ik { position: relative; margin-left: auto; min-width: 0; }
+  .topbalk-ik-knop > span { overflow-wrap: anywhere; }
   .topbalk-ik-knop {
     background: transparent;
     border: 0;
@@ -261,8 +265,7 @@
   /* T18: een vrij blok valt op — gestippeld, in de gele tint die overal
      'nog open' betekent — en een bezet blok zegt wie erop traint. */
   .blokjes li.vrij { background: var(--amber-zacht); border: 1px dashed var(--amber); }
-  .blok-vrij { font-weight: 700; text-transform: uppercase; font-size: .68rem; letter-spacing: .06em; color: var(--amber-diep); margin-left: .3rem; }
-  [data-modus="donker"] .blok-vrij { color: var(--inkt); }
+  .blok-vrij { font-weight: 700; text-transform: uppercase; font-size: .68rem; letter-spacing: .06em; color: var(--amber-tekst); margin-left: .3rem; }
   .blok-wie { color: var(--gedempt); margin-left: .3rem; }
 
   table { width: 100%; border-collapse: collapse; font-size: .92rem; }
@@ -270,7 +273,21 @@
   th { font-weight: 600; color: var(--gedempt); font-size: .82rem; }
   td.ploegen { color: var(--gedempt); }
 
-  form { display: flex; gap: .5rem; flex-wrap: wrap; margin: 1rem 0 0; }
+  /* Onderaan uitgelijnd: anders rekt een keuzelijst naast een veld met een
+     label erboven mee uit tot de volle hoogte van de rij. */
+  form { display: flex; gap: .5rem; flex-wrap: wrap; align-items: flex-end; margin: 1rem 0 0; }
+  /* Een keuzelijst ziet eruit als de velden ernaast, en is nooit breder dan
+     haar vak: een lange naam duwde de tabel op een telefoon buiten beeld. */
+  select {
+    font: inherit;
+    font-size: .92rem;
+    padding: .5rem .6rem;
+    border: 1px solid var(--lijn);
+    border-radius: var(--radius);
+    max-width: 100%;
+  }
+  td select { width: 100%; min-width: 6.5rem; }
+  td input[type=text], td input[type=email], td input[type=number] { width: 100%; min-width: 5rem; }
   input, select {
     background: var(--achtergrond);
     color: var(--inkt);
@@ -506,18 +523,25 @@ textarea {
   --blauw: #2b3f7a; --blauw-zacht: #e9edf7;
   --paars: #6b3fa0; --paars-zacht: #f1eaf8;
   --schaduw: 0 1px 2px rgba(18,22,28,.06), 0 4px 14px rgba(18,22,28,.05);
+  /* Dezelfde kleuren als tekst. Een eigen variabele: op een donkere
+     achtergrond is het donkere groen, rood of amber van hierboven niet te
+     lezen (0.46.1), terwijl het als vlak met witte tekst wel moet blijven. */
+  --groen-tekst: var(--groen); --rood-tekst: var(--rood); --amber-tekst: var(--amber-diep);
+  --blauw-tekst: var(--blauw); --paars-tekst: var(--paars);
 }
 [data-modus="donker"] { --kaart: #1f2226; --schaduw: none; --groen-zacht: #173327; --rood-zacht: #3a2020;
-  --amber-zacht: #3a2f17; --blauw-zacht: #1e2740; --paars-zacht: #2b2238; }
+  --amber-zacht: #3a2f17; --blauw-zacht: #1e2740; --paars-zacht: #2b2238;
+  --groen-tekst: #6fd3a6; --rood-tekst: #ff9a92; --amber-tekst: #f2c666; --blauw-tekst: #b3c2f2; --paars-tekst: #d2b8f0; }
 @media (prefers-color-scheme: dark) {
   [data-modus="systeem"] { --kaart: #1f2226; --schaduw: none; --groen-zacht: #173327; --rood-zacht: #3a2020;
-    --amber-zacht: #3a2f17; --blauw-zacht: #1e2740; --paars-zacht: #2b2238; }
+    --amber-zacht: #3a2f17; --blauw-zacht: #1e2740; --paars-zacht: #2b2238;
+    --groen-tekst: #6fd3a6; --rood-tekst: #ff9a92; --amber-tekst: #f2c666; --blauw-tekst: #b3c2f2; --paars-tekst: #d2b8f0; }
 }
 .teller { display: flex; align-items: baseline; gap: .5rem; padding: .7rem .9rem; margin: 0 0 1rem;
   border-radius: 12px; background: var(--kaart); border: 1px solid var(--lijn); box-shadow: var(--schaduw); }
 .teller b { font-size: 1.4rem; font-variant-numeric: tabular-nums; }
-.teller.open b { color: var(--amber-diep); }
-.teller.klaar b { color: var(--groen); }
+.teller.open b { color: var(--amber-tekst); }
+.teller.klaar b { color: var(--groen-tekst); }
 .teller a { color: inherit; }
 .aantal { font-size: .75rem; color: var(--gedempt); font-weight: normal; font-variant-numeric: tabular-nums; }
 .sectie-kop { display: flex; align-items: center; gap: .75rem; margin: 1.6rem 0 .5rem; padding-bottom: .4rem;
@@ -547,10 +571,10 @@ textarea {
    trainingen, wedstrijden, fluiten en taken door elkaar. */
 .soort-label, .voor-label { font-size: .66rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em;
   border-radius: 4px; padding: .08rem .35rem; }
-.soort-label[data-soort="training"] { background: var(--blauw-zacht); color: var(--blauw); }
-.soort-label[data-soort="wedstrijd"] { background: var(--amber-zacht); color: var(--amber-diep); }
-.soort-label[data-soort="fluiten"] { background: var(--groen-zacht); color: var(--groen); }
-.soort-label[data-soort="taak"] { background: var(--paars-zacht); color: var(--paars); }
+.soort-label[data-soort="training"] { background: var(--blauw-zacht); color: var(--blauw-tekst); }
+.soort-label[data-soort="wedstrijd"] { background: var(--amber-zacht); color: var(--amber-tekst); }
+.soort-label[data-soort="fluiten"] { background: var(--groen-zacht); color: var(--groen-tekst); }
+.soort-label[data-soort="taak"] { background: var(--paars-zacht); color: var(--paars-tekst); }
 [data-modus="donker"] .soort-label { color: var(--inkt); }
 @media (prefers-color-scheme: dark) { [data-modus="systeem"] .soort-label, [data-modus="systeem"] .botsing { color: var(--inkt); } }
 .voor-label { background: var(--vlak); color: var(--gedempt); border: 1px solid var(--lijn); }
@@ -558,7 +582,7 @@ textarea {
 .wed-ploegen .tegen { color: var(--gedempt); font-weight: 400; }
 .wed-ploegen .uitslag { margin-left: .4rem; font-weight: 700; font-variant-numeric: tabular-nums; }
 .forfait-label { display: inline-block; font-size: .66rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em;
-  color: var(--rood); background: var(--rood-zacht); border-radius: 4px; padding: .08rem .35rem; margin-left: .35rem; }
+  color: var(--rood-tekst); background: var(--rood-zacht); border-radius: 4px; padding: .08rem .35rem; margin-left: .35rem; }
 .wed-meta { display: flex; flex-wrap: wrap; align-items: baseline; gap: .2rem .45rem; font-size: .82rem; color: var(--gedempt); margin-top: .15rem; }
 .wed-meta a { color: inherit; }
 .wed-meta .blad { text-decoration: none; border-bottom: 1px solid var(--lijn); font-size: .78rem; }
@@ -567,8 +591,8 @@ textarea {
 /* Regio (0.41.0): de rand zegt hoe krap — geen scheidsrechter, of één. */
 .wed[data-refs="0"] { border-left-color: var(--rood); }
 .wed[data-refs="1"] { border-left-color: var(--amber); }
-.regio-bron { display: block; text-transform: none; letter-spacing: 0; font-weight: 400; font-size: .78rem; color: var(--groen); }
-.regio-bron.api { color: var(--amber-diep); }
+.regio-bron { display: block; text-transform: none; letter-spacing: 0; font-weight: 400; font-size: .78rem; color: var(--groen-tekst); }
+.regio-bron.api { color: var(--amber-tekst); }
 ul.lijst { list-style: none; padding: 0; margin: .5rem 0; }
 ul.lijst li { padding: .35rem 0; border-bottom: 1px solid var(--lijn); }
 ul.lijst li.fout b { color: var(--accent); }
@@ -596,8 +620,8 @@ ul.lijst li.fout b { color: var(--accent); }
 .wed-acties button { width: auto; margin: 0; }
 .keuze { flex: 1; padding: .5rem .4rem; border-radius: 8px; font-size: .88rem; font-weight: 600;
   border: 1.5px solid var(--lijn); background: var(--kaart); color: var(--inkt); }
-.keuze[data-keuze="ja"][aria-pressed="true"] { background: var(--groen-zacht); border-color: var(--groen); color: var(--groen); }
-.keuze[data-keuze="nee"][aria-pressed="true"] { background: var(--rood-zacht); border-color: var(--rood); color: var(--rood); }
+.keuze[data-keuze="ja"][aria-pressed="true"] { background: var(--groen-zacht); border-color: var(--groen); color: var(--groen-tekst); }
+.keuze[data-keuze="nee"][aria-pressed="true"] { background: var(--rood-zacht); border-color: var(--rood); color: var(--rood-tekst); }
 .keuze:disabled { opacity: .5; }
 .vast { display: flex; flex-direction: column; align-items: flex-start; gap: .4rem; margin-top: .5rem; font-size: .82rem; color: var(--gedempt); }
 .vast-knoppen { display: flex; flex-wrap: wrap; gap: .8rem; }
@@ -608,7 +632,7 @@ ul.lijst li.fout b { color: var(--accent); }
 .merk-afwezig { background: var(--rood); }
 .gaat-niet-door { color: var(--gedempt); margin: .4rem 0 0; font-size: .84rem; }
 .botsing { margin-top: .4rem; padding: .3rem .5rem; border-radius: 6px; background: var(--amber-zacht);
-  color: var(--amber-diep); font-size: .8rem; }
+  color: var(--amber-tekst); font-size: .8rem; }
 [data-modus="donker"] .botsing { color: var(--inkt); }
 .afwezig-vorm { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .5rem; width: 100%; }
 .afwezig-vorm select, .afwezig-vorm input { flex: 1; min-width: 8rem; }
@@ -626,9 +650,12 @@ ul.lijst li.fout b { color: var(--accent); }
 .tegel[aria-pressed="true"] { border-color: var(--inkt); }
 .ov { padding: .85rem .95rem; margin: 0 0 .6rem; background: var(--kaart); border: 1px solid var(--lijn);
   border-left: 4px solid var(--lijn); border-radius: 12px; box-shadow: var(--schaduw); }
-.ov .uitslag { margin-left: .4rem; font-weight: 700; }
-.ov.probleem .ov-kop > b:first-child { color: var(--rood); }
-.sectie-kop.aandacht h3 { color: var(--rood); }
+.ov .uitslag { margin-left: .4rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+/* Zonder dit is de link het standaardblauw van de browser: op de donkere
+   kaart niet te lezen, en anders dan op elke andere kaart. */
+.ov-regel a { color: inherit; }
+.ov.probleem .ov-kop > b:first-child { color: var(--rood-tekst); }
+.sectie-kop.aandacht h3 { color: var(--rood-tekst); }
 .sectie-kop.aandacht { border-bottom-color: var(--rood); }
 .ov.probleem { border-left-color: var(--rood); }
 .ov.compleet { border-left-color: var(--groen); }
@@ -652,3 +679,22 @@ button.mini { padding: .1rem .5rem; font-size: .8rem; width: auto; margin: 0; ba
 .sectie-kop button { margin: 0 0 0 auto; width: auto; padding: .3rem .7rem; font-size: .85rem; }
 table.kiezer td:nth-child(2), table.kiezer td:nth-child(3),
 table.kiezer th:nth-child(2), table.kiezer th:nth-child(3) { text-align: center; width: 6rem; }
+
+/* Ploegen (0.46.1): wat enkel een beheerder kan, staat er voor een coach
+   niet. De attributen zet ploegen.js uit wat /api/ploegen teruggeeft. */
+#tab-ploegen[data-beheer="0"] .enkel-beheer,
+#tab-ploegen[data-personen="0"] .enkel-personen { display: none; }
+#ploegenlijf tr.gekozen td { background: var(--vlak); }
+#ploegenlijf tr.gekozen button.alslink { font-weight: 700; }
+
+/* Een tabel met een naam, een keuzelijst en een knop per rij past niet naast
+   elkaar op een telefoon: de naam brak af in vier regels en de tabel stak
+   buiten beeld (0.46.1). Daar staat de naam op een eigen regel, met de rest
+   eronder. */
+@media (max-width: 520px) {
+  table.stapel thead { display: none; }
+  table.stapel tr { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem .6rem; padding: .6rem 0; border-bottom: 1px solid var(--lijn); }
+  table.stapel td { border: 0; padding: 0; }
+  table.stapel td:first-child { flex: 1 0 100%; font-weight: 600; }
+  table.stapel td select { width: auto; }
+}

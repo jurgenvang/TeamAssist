@@ -174,8 +174,7 @@
       <h2>Rollen</h2>
       <ul class="rollen" id="rollenlijst"></ul>
       <p id="geenrollen" class="melding" hidden>
-        Je bent aangemeld, maar er is je nog geen rol toegekend. Een beheerder moet dat doen
-        voor je iets te zien krijgt.
+        Je bent aangemeld, maar er is je nog geen rol toegekend. Een beheerder van de club doet dat; tot dan zie je enkel Mijn club.
       </p>
 
       <h2>Mijn ploegen</h2>
@@ -206,8 +205,9 @@
         <div id="ledenplan" class="melding" hidden></div>
       </div>
 
+      <p class="melding" id="ploegenleeg" hidden>Je begeleidt dit seizoen geen enkele ploeg.</p>
       <table>
-        <thead><tr><th>Volgen</th><th>Categorie</th><th>Ploeg</th><th></th></tr></thead>
+        <thead><tr><th class="enkel-beheer">Volgen</th><th>Categorie</th><th>Ploeg</th><th></th></tr></thead>
         <tbody id="ploegenlijf"></tbody>
       </table>
 
@@ -217,7 +217,7 @@
           <thead><tr><th>Uur</th><th>Locatie</th><th>Periode</th><th></th><th></th></tr></thead>
           <tbody id="reeksenlijf"></tbody>
         </table>
-        <form>
+        <form class="enkel-beheer">
           <select id="reeksweekdag">
             <option value="1">maandag</option><option value="2">dinsdag</option>
             <option value="3">woensdag</option><option value="4">donderdag</option>
@@ -229,7 +229,7 @@
           <select id="reekszaal"><option value="">— vrije locatie —</option></select>
           <input type="text" id="reekslocatie" placeholder="of een vrije locatie">
         </form>
-        <form>
+        <form class="enkel-beheer">
           <label>Van <input type="date" id="reeksvan"></label>
           <label>Tot <input type="date" id="reekstot"></label>
           <button type="button" id="reeksmaken">Reeks aanmaken</button>
@@ -239,7 +239,7 @@
 
       <div id="wedstrijdenscherm" hidden>
         <h2>Wedstrijden</h2>
-        <form>
+        <form class="enkel-beheer">
           <button type="button" id="wedstrijdensync">Ophalen bij de bond</button>
         </form>
         <div id="wedstrijdenplan" class="melding" hidden></div>
@@ -255,7 +255,7 @@
         <h2 id="aanwezigheidkop">Aanwezigheid</h2>
         <div id="aanwezigheidactiviteit"></div>
         <div id="aanwezigheidmelding" class="melding" hidden></div>
-        <table>
+        <table class="stapel">
           <thead><tr><th>Naam</th><th>Opgave</th><th>Vaststelling</th><th></th></tr></thead>
           <tbody id="aanwezigheidlijf"></tbody>
         </table>
@@ -291,6 +291,7 @@
           <tbody id="ledenlijf"></tbody>
         </table>
 
+        <div class="enkel-personen">
         <h3>Sjabloon: e-mail, telefoon en adres</h3>
         <p class="klein">
           Download het sjabloon voor deze ploeg — de gegevens die de bond al levert staan
@@ -304,6 +305,7 @@
           <button type="button" id="sjabloonupload">Inlezen</button>
         </form>
         <div id="sjabloonplan" class="melding" hidden></div>
+        </div>
       </div>
     </section>
 

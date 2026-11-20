@@ -20,7 +20,11 @@ export function toestandMijnClub(w) {
 function tekenWedstrijden(gegevens) {
   const doel = el('mijnclublijst');
   const getoond = gegevens.ploegen.filter((p) => p.tonen).length;
-  const kop = `<p class="klein">${veilig(dagTitel(gegevens.van))} tot ${veilig(dagTitel(gegevens.tot))} — ${getoond} van ${gegevens.ploegen.length} ploegen${gegevens.gekozen ? '' : ' (je eigen ploegen)'}.</p>`;
+  // Wie niets koos, ziet zijn eigen ploegen — of alle, als hij aan geen
+  // enkele hangt: dan klopt 'je eigen ploegen' niet.
+  const heeftEigen = gegevens.ploegen.some((p) => p.eigen);
+  const uitleg = gegevens.gekozen ? '' : heeftEigen ? ' (je eigen ploegen)' : ' (je hangt aan geen ploeg: je ziet ze allemaal)';
+  const kop = `<p class="klein">${veilig(dagTitel(gegevens.van))} tot ${veilig(dagTitel(gegevens.tot))} — ${getoond} van ${gegevens.ploegen.length} ploegen${uitleg}.</p>`;
   if (!gegevens.ploegen.length) {
     doel.innerHTML = '<p class="melding">De club volgt nog geen enkele ploeg in TeamAssist.</p>';
     return;

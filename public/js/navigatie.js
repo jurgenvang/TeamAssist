@@ -27,7 +27,10 @@ export const TABBLADEN = [
   // Regio (0.41.0): krappe wedstrijden bij clubs die de club volgt, zoals in
   // YOAssist. Standaard uit, zoals daar: wie de regio opvolgt, zet het zelf aan.
   { id: 'regio', naam: 'Regio', recht: 'officials.beheren', verbergbaar: true, standaardUit: true },
-  { id: 'ploegen', naam: 'Ploegen', recht: 'team.bekijken', verbergbaar: true },
+  // Het scherm van de begeleiding (spelers, wedstrijden, aanwezigheid). Een
+  // speler of ouder heeft team.bekijken, maar geen van de routes erachter
+  // geeft hem iets: tot 0.46.0 kreeg hij een leeg tabblad.
+  { id: 'ploegen', naam: 'Ploegen', recht: 'team.spelers.bekijken', verbergbaar: true },
   { id: 'personen', naam: 'Personen', recht: 'personen.beheren', verbergbaar: true },
   // De beheerschermen staan enkel onder Beheer in het naammenu, niet in de
   // tabbalk — zoals in YOAssist (I1). De tabbalk is voor het dagelijkse werk

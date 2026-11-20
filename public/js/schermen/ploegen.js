@@ -9,16 +9,25 @@ import { toonReeksen, toonWedstrijden } from './trainingen.js';
 import { laadTrainingenVoorAanwezigheid } from './aanwezigheid-beheer.js';
 
 export async function laadPloegen() {
-  const uitkomst = await api('/api/admin/teams');
+  // /api/ploegen, niet /api/admin/teams: die vraagt systeem.beheren, en dan
+  // bleef dit tabblad leeg voor een coach die geen beheerder is.
+  const uitkomst = await api('/api/ploegen');
   const ploegen = uitkomst.body?.teams ?? [];
-  const magBeheren = uitkomst.status === 200;
+  const mag = uitkomst.body?.mag ?? {};
+  const magBeheren = mag.beheren === true;
 
   el('ploegenbeheer').hidden = !magBeheren;
+  // Wat enkel een beheerder kan (volgen, reeksen aanmaken, ophalen bij de
+  // bond, het sjabloon), staat er voor een coach niet: de knop zou een 403
+  // geven. De klassen enkel-beheer en enkel-personen volgen deze twee.
+  el('tab-ploegen').dataset.beheer = magBeheren ? '1' : '0';
+  el('tab-ploegen').dataset.personen = mag.personen === true ? '1' : '0';
+  el('ploegenleeg').hidden = uitkomst.status !== 200 || ploegen.length > 0;
 
   el('ploegenlijf').innerHTML = ploegen
     .map(
       (p) => `<tr>
-        <td><input type="checkbox" data-guid="${veilig(p.guid)}" ${p.gevolgd ? 'checked' : ''}></td>
+        <td class="enkel-beheer"><input type="checkbox" data-guid="${veilig(p.guid)}" ${p.gevolgd ? 'checked' : ''}></td>
         <td>${veilig(p.categorie ?? '?')}</td>
         <td><button type="button" class="alslink" data-toon="${veilig(p.guid)}">${veilig(p.naam)}</button></td>
         <td class="ploegen">${p.bij_bond ? '' : 'niet meer bij de bond'}</td>
@@ -26,14 +35,22 @@ export async function laadPloegen() {
     )
     .join('');
 
+  const open = async (guid) => {
+    // Welke ploeg openstaat, is in de lijst te zien: daaronder staat alles van
+    // die ene ploeg.
+    for (const rij of el('ploegenlijf').querySelectorAll('tr')) {
+      rij.classList.toggle('gekozen', rij.querySelector('button[data-toon]')?.dataset.toon === guid);
+    }
+    toonLeden(guid);
+    toonReeksen(guid);
+    await toonWedstrijden(guid);
+    laadTrainingenVoorAanwezigheid(guid);
+  };
   for (const knop of el('ploegenlijf').querySelectorAll('button[data-toon]')) {
-    knop.addEventListener('click', async () => {
-      toonLeden(knop.dataset.toon);
-      toonReeksen(knop.dataset.toon);
-      await toonWedstrijden(knop.dataset.toon);
-      laadTrainingenVoorAanwezigheid(knop.dataset.toon);
-    });
+    knop.addEventListener('click', () => open(knop.dataset.toon));
   }
+  // Wie maar één ploeg begeleidt, hoeft ze niet eerst aan te tikken.
+  if (!magBeheren && ploegen.length === 1) await open(ploegen[0].guid);
 
   for (const vinkje of el('ploegenlijf').querySelectorAll('input[type=checkbox]')) {
     vinkje.addEventListener('change', async () => {
@@ -70,12 +87,16 @@ export async function toonLeden(guid) {
   }
 
   const b = uitkomst.body;
-  el('ledenkop').textContent = `${b.ploeg.naam} — ${b.spelers.length} spelers`;
+  el('ledenkop').textContent = `${b.ploeg.naam} — ${b.spelers.length === 1 ? '1 speler' : `${b.spelers.length} spelers`}`;
 
   // De naam van de bond ernaast, zodat een foute splitsing op de eerste spatie
   // meteen opvalt. Daar wordt ze rechtgezet, niet in de synchronisatie.
+  // Het persoonsscherm vraagt personen.beheren: voor een coach is de naam
+  // gewone tekst, geen knop die een 403 geeft.
+  const magPersonen = el('tab-ploegen').dataset.personen === '1';
+  const naam = (r) => `${veilig(r.voornaam)} ${veilig(r.achternaam)}`;
   const regel = (r, extra = '') => `<tr>
-      <td><button type="button" class="alslink" data-persoon="${veilig(r.id)}">${veilig(r.voornaam)} ${veilig(r.achternaam)}</button></td>
+      <td>${magPersonen ? `<button type="button" class="alslink" data-persoon="${veilig(r.id)}">${naam(r)}</button>` : naam(r)}</td>
       <td class="ploegen">${veilig(r.naam_vbl ?? '')}</td>
       <td>${veilig(r.geboortedatum ?? '')}</td>
       <td class="ploegen">${veilig(extra)}${r.bij_bond === 0 ? ' niet meer bij de bond' : ''}</td>

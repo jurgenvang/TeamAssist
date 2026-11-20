@@ -50,7 +50,7 @@ import { opgaveZetten, mijnOpgaven } from './routes/aanwezigheid-opgave.js';
 import { aanmeldlink } from './routes/aanmeldlink.js';
 import { sessieStarten, sessieVernieuwen, sessieStoppen } from './routes/sessie.js';
 import { vblDiagnose } from './routes/admin/vbl-diagnose.js';
-import { teamsLijst, teamsSync, teamGevolgd } from './routes/admin/teams.js';
+import { teamsLijst, ploegenLijst, teamsSync, teamGevolgd } from './routes/admin/teams.js';
 import { ledenSync } from './routes/admin/leden.js';
 import { teamLeden, personenZoeken } from './routes/admin/bekijken.js';
 import {
@@ -213,6 +213,9 @@ export const ROUTES = [
   // Ploegen beheren. De synchronisatie is standaard een droogloop; uitvoeren
   // vraagt ?uitvoeren=1.
   { methode: 'GET', pad: '/api/admin/teams', recht: 'systeem.beheren', doe: teamsLijst },
+  // Het tabblad Ploegen, ook voor een coach die geen beheerder is: geen
+  // route.recht, de route geeft enkel de ploegen die iemand begeleidt.
+  { methode: 'GET', pad: '/api/ploegen', doe: ploegenLijst },
   { methode: 'POST', pad: '/api/admin/teams/sync', recht: 'systeem.beheren', doe: teamsSync },
   { methode: 'POST', pad: '/api/admin/teams/gevolgd', recht: 'systeem.beheren', doe: teamGevolgd },
 

@@ -433,6 +433,19 @@ node tools/genereer-schemas.mjs
 Het tweede bouwt `schema-alles-in-een.sql` en `schema-kaal.sql` opnieuw op
 (sinds 0.28.0; daarvoor met de hand).
 
+Een scherm nakijken zoals een gebruiker het ziet (sinds 0.46.1):
+
+```
+node tools/nazicht.mjs carl 390 licht     # een coach die geen beheerder is, op telefoonbreedte
+node tools/nazicht.mjs petra 390 donker   # een ouder, donkere modus
+```
+
+Het script opent elk tabblad en elk paneel in Chromium, tegen de echte routes
+op een testdatabank met verzonnen gegevens. Het meldt JavaScript-fouten,
+antwoorden met status 400 of hoger en alles wat buiten het scherm valt, en
+bewaart schermafdrukken. Het vraagt Playwright en hoort niet bij `npm test`.
+De personen staan bovenaan in het script.
+
 Er staat een test op die faalt zodra de twee uit elkaar lopen. In YOAssist bleef
 de backuplijst jarenlang achter op het schema, telkens wanneer er een tabel
 bijkwam, precies omdat zo'n test er niet was.

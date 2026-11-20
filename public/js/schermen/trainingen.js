@@ -335,8 +335,8 @@ export async function toonReeksen(teamGuid) {
         <td>${DAGNAMEN[r.weekdag]} ${veilig(r.begin)}-${veilig(r.einde)}</td>
         <td>${veilig(r.zaal_naam ?? r.locatie_tekst ?? '')}</td>
         <td>${veilig(r.van)} — ${veilig(r.tot)}</td>
-        <td><button type="button" data-genereer="${r.id}">Trainingen genereren</button></td>
-        <td><button type="button" class="stil" data-stop="${r.id}">Stoppen</button></td>
+        <td class="enkel-beheer"><button type="button" data-genereer="${r.id}">Trainingen genereren</button></td>
+        <td class="enkel-beheer"><button type="button" class="stil" data-stop="${r.id}">Stoppen</button></td>
       </tr>`
     )
     .join('');

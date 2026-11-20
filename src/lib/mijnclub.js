@@ -68,6 +68,9 @@ const kortDatum = (iso) => {
   return `${DAGEN[d.getUTCDay()]} ${d.getUTCDate()}/${d.getUTCMonth() + 1}`;
 };
 const tegen = (w) => `${w.thuis ? 'thuis' : 'uit'} tegen ${w.tegenstander ?? '?'}`;
+// Bij een uitslag de thuisploeg vooraan, zoals de uitslag zelf (thuis–uit):
+// 'U14 A uit tegen Lier: 38-61' zegt niet wie er 61 maakte.
+const affiche = (naam, w) => (w.thuis ? `${naam} – ${w.tegenstander ?? '?'}` : `${w.tegenstander ?? '?'} – ${naam}`);
 
 /**
  * Wat er voor volgers te melden valt uit het plan van één ploeg
@@ -92,13 +95,13 @@ export function volgerRegels(ploeg, plan) {
       regels.push({ team_guid: ploeg.guid, tekst: `${naam} ${tegen(w)}: ${delen.join(', ')}` });
     }
     if (w.uitslag && netteUitslag(oud.uitslag) !== netteUitslag(w.uitslag)) {
-      regels.push({ team_guid: ploeg.guid, tekst: `${naam} ${tegen(w)} (${kortDatum(w.datum)}): ${netteUitslag(w.uitslag)}` });
+      regels.push({ team_guid: ploeg.guid, tekst: `${affiche(naam, w)} (${kortDatum(w.datum)}): ${netteUitslag(w.uitslag)}` });
     }
   }
   for (const w of plan.uitslag_bijgewerkt ?? []) {
     // Enkel een echt nieuwe uitslag, niet dezelfde in een andere vorm.
     if (w.uitslag && netteUitslag(w.was?.uitslag) !== netteUitslag(w.uitslag)) {
-      regels.push({ team_guid: ploeg.guid, tekst: `${naam} ${tegen(w)} (${kortDatum(w.datum)}): ${netteUitslag(w.uitslag)}` });
+      regels.push({ team_guid: ploeg.guid, tekst: `${affiche(naam, w)} (${kortDatum(w.datum)}): ${netteUitslag(w.uitslag)}` });
     }
   }
   return regels;

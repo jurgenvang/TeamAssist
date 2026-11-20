@@ -67,7 +67,13 @@ export function kaart(k) {
     k.voor ? `<span class="voor-label">voor ${veilig(k.voor)}</span>` : '',
   ].join('');
   const plaats = typeof k.thuis === 'boolean' ? `<span class="thuisuit">${k.thuis ? 'thuis' : 'uit'}</span>` : '';
-  const tegen = k.tegenstander ? ` <span class="tegen">– ${veilig(k.tegenstander)}</span>` : '';
+  // De thuisploeg staat vooraan, zoals bij de bond: de uitslag is altijd
+  // thuis–uit. Tot 0.46.0 stond de eigen ploeg ook bij een uitwedstrijd
+  // vooraan, en las '38-61' als een nederlaag terwijl de ploeg won.
+  const eigen = `<span class="ploeg">${veilig(k.ploeg ?? '')}</span>`;
+  let ploegen = eigen;
+  if (k.tegenstander && k.thuis === false) ploegen = `<span class="tegen">${veilig(k.tegenstander)} –</span> ${eigen}`;
+  else if (k.tegenstander) ploegen = `${eigen} <span class="tegen">– ${veilig(k.tegenstander)}</span>`;
   const meta = [
     k.cat ? `<span class="cat">${veilig(k.cat)}</span>` : '',
     plaats,
@@ -78,7 +84,7 @@ export function kaart(k) {
     <div class="wed-datum"><span class="dag">${d.dag}</span><span class="nr">${d.nr}</span>${k.uur ? `<span class="uur">${veilig(k.uur)}</span>` : ''}</div>
     <div class="wed-lijf">
       ${labels ? `<div class="wed-labels">${labels}</div>` : ''}
-      <div class="wed-ploegen"><span class="ploeg">${veilig(k.ploeg ?? '')}</span>${tegen}${uitslag ? ` <span class="uitslag">${veilig(uitslag)}</span>` : ''}${k.forfait ? `<span class="forfait-label">${veilig(forfaitTekst(k.forfait))}</span>` : ''}</div>
+      <div class="wed-ploegen">${ploegen}${uitslag ? ` <span class="uitslag">${veilig(uitslag)}</span>` : ''}${k.forfait ? `<span class="forfait-label">${veilig(forfaitTekst(k.forfait))}</span>` : ''}</div>
       ${meta ? `<div class="wed-meta">${meta}</div>` : ''}
       ${k.inhoud ?? ''}
       ${k.acties ?? ''}
