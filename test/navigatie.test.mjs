@@ -30,12 +30,15 @@ test('een beheerder ziet alle tabbladen, behalve dat van een official', () => {
   );
 });
 
-test('een official ziet Aanduidingen vooraan; een ouder van een official ook', () => {
+test('Overzicht staat altijd vooraan, ook voor een official (T22); een ouder van een official ziet Aanduidingen ook', () => {
   const yo = bouwRechten({ rollen: [{ rol: 'YO', team_guid: null }] }).overzicht();
-  assert.deepEqual(tabbalkTabbladen(yo).map((t) => t.id), ['aanduidingen', 'mij']);
+  assert.deepEqual(tabbalkTabbladen(yo).map((t) => t.id), ['mij', 'aanduidingen']);
   const ouder = bouwRechten().overzicht();
   assert.deepEqual(tabbalkTabbladen(ouder).map((t) => t.id), ['mij']);
-  assert.deepEqual(tabbalkTabbladen(ouder, { ouderVanOfficial: true }).map((t) => t.id), ['aanduidingen', 'mij']);
+  assert.deepEqual(tabbalkTabbladen(ouder, { ouderVanOfficial: true }).map((t) => t.id), ['mij', 'aanduidingen']);
+  // Iemand met alles: Overzicht eerst, de rest in de beslisde volgorde.
+  const alles = bouwRechten({ rollen: [{ rol: 'ADMIN', team_guid: null }, { rol: 'YOPLUS', team_guid: null }] }).overzicht();
+  assert.deepEqual(tabbalkTabbladen(alles, { verborgen: [] }).map((t) => t.id), ['mij', 'aanduidingen', 'cluboverzicht', 'regio', 'ploegen', 'personen']);
   assert.deepEqual(menuTabbladen(ouder, { ouderVanOfficial: true }), [], 'geen beheer voor een ouder');
 });
 
@@ -94,4 +97,25 @@ test('een coach heeft niets onder Beheer', () => {
 test('een beheerder die als coach kijkt, verliest ook Beheer in het menu', () => {
   const echt = bouwRechten({ rollen: [{ rol: 'ADMIN', team_guid: null }] });
   assert.deepEqual(menuTabbladen(beperkTot(echt, 'COACH', J16).overzicht()), []);
+});
+
+// --- T22: de tabbalk als het blok van YOAssist, op één rij die schuift -------------
+
+test('T22: de tabbalk is één rij die schuift, nooit over meerdere regels', () => {
+  const css = readFileSync(new URL('../public/stijl.css', import.meta.url), 'utf8');
+  const nav = css.slice(css.indexOf('\nnav {'), css.indexOf('}', css.indexOf('\nnav {')));
+  assert.match(nav, /overflow-x: auto/);
+  assert.ok(!/flex-wrap:\s*wrap/.test(nav), 'geen tweede regel');
+  assert.match(nav, /background: var\(--tabs-vlak\)/, 'het grijze blok van YOAssist');
+  const knop = css.slice(css.indexOf('\nnav button {'), css.indexOf('}', css.indexOf('\nnav button {')));
+  assert.match(knop, /white-space: nowrap/, 'een tabblad breekt niet af');
+  assert.match(knop, /flex: 1 0 auto/, 'weinig tabbladen vullen de breedte, veel tabbladen schuiven');
+  assert.match(css, /nav button\[aria-current='true'\] \{\s*background: var\(--kaart\)/, 'het gekozen tabblad als wit vlak');
+});
+
+test('T22: het gekozen tabblad schuift in beeld, en een rand vervaagt waar er nog meer is', () => {
+  const bron = readFileSync(new URL('../public/js/navigatie.js', import.meta.url), 'utf8');
+  assert.match(bron, /nav\.scrollTo\(\{ left:/);
+  assert.match(bron, /classList\.toggle\('meer-rechts'/);
+  assert.match(bron, /classList\.toggle\('meer-links'/);
 });

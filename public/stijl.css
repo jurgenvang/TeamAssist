@@ -364,23 +364,36 @@
   footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--lijn); color: var(--gedempt); font-size: .82rem; }
   [hidden] { display: none !important; }
 
-/* Navigatie */
-nav { display: flex; flex-wrap: wrap; gap: .25rem; margin: 1.25rem 0 1.75rem; }
+/* Navigatie (T22): het blok van YOAssist — een grijs vlak met de tabbladen
+   naast elkaar, het gekozen tabblad als wit vlak erin. Altijd één rij: zijn
+   er meer tabbladen dan er passen (iemand die ADMIN, coach en official is,
+   heeft er zes), dan schuift de rij met de vinger, en het gekozen tabblad
+   schuift vanzelf in beeld (navigatie.js). Wie er weinig heeft, ziet ze de
+   breedte vullen, zoals in YOAssist. Overal hetzelfde blok, ook breed. */
+:root { --tabs-vlak: #ebedf0; }
+[data-modus="donker"] { --tabs-vlak: #26292e; }
+@media (prefers-color-scheme: dark) { [data-modus="systeem"] { --tabs-vlak: #26292e; } }
+nav {
+  position: relative; /* offsetLeft van een knop telt dan vanaf de rij zelf */
+  display: flex; gap: .3rem; margin: 1rem 0 1.25rem; padding: .25rem;
+  background: var(--tabs-vlak); border-radius: 10px;
+  overflow-x: auto; scroll-snap-type: x proximity; scroll-padding-inline: .25rem; scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+nav::-webkit-scrollbar { display: none; }
+nav.meer-rechts { -webkit-mask-image: linear-gradient(to right, #000 85%, transparent); mask-image: linear-gradient(to right, #000 85%, transparent); }
+nav.meer-links { -webkit-mask-image: linear-gradient(to left, #000 85%, transparent); mask-image: linear-gradient(to left, #000 85%, transparent); }
+nav.meer-links.meer-rechts { -webkit-mask-image: linear-gradient(to right, transparent, #000 15%, #000 85%, transparent); mask-image: linear-gradient(to right, transparent, #000 15%, #000 85%, transparent); }
 nav button {
-  background: none;
-  border: 1px solid transparent;
-  border-bottom: 2px solid transparent;
-  color: var(--gedempt);
-  padding: .4rem .7rem;
-  border-radius: 0;
-  font: inherit;
-  cursor: pointer;
+  flex: 1 0 auto; margin: 0; width: auto; white-space: nowrap; scroll-snap-align: start;
+  padding: .45rem .75rem; border: 0; border-radius: 8px; background: transparent;
+  font: inherit; font-size: .87rem; font-weight: 600; color: var(--gedempt); cursor: pointer;
 }
 nav button[aria-current='true'] {
-  color: var(--inkt);
-  border-bottom-color: var(--accent);
-  font-weight: 600;
+  background: var(--kaart); color: var(--inkt); box-shadow: var(--schaduw);
 }
+[data-modus="donker"] nav button[aria-current='true'] { background: var(--achtergrond); }
+@media (prefers-color-scheme: dark) { [data-modus="systeem"] nav button[aria-current='true'] { background: var(--achtergrond); } }
 
 /* Balk die toont dat je met een andere rol kijkt. Permanent zichtbaar: zonder
    die stand vergeet je het en meld je een fout die er niet is. */

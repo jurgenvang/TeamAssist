@@ -10,11 +10,14 @@
 import { el } from './hulp.js';
 
 export const TABBLADEN = [
-  // Module Officials (0.38.0). Vooraan: voor een official is dit het werk van
-  // elke dag, zoals in YOAssist. Ook voor een ouder van een official, die zelf
+  // Overzicht altijd vooraan, ook voor een official (T22, Jurgen, 20 november
+  // 2026): iedereen begint bij Mijn agenda, die al toont hoeveel er nog te
+  // beantwoorden is en naar Aanduidingen linkt. Een bewuste afwijking van
+  // YOAssist, waar een official bij Aanduidingen begint.
+  { id: 'mij', naam: 'Overzicht', recht: null },
+  // Module Officials (0.38.0). Ook voor een ouder van een official, die zelf
   // geen recht heeft maar namens zijn kind invult (`ouder: true`).
   { id: 'aanduidingen', naam: 'Aanduidingen', recht: 'officials.opgeven', ouder: true, verbergbaar: true },
-  { id: 'mij', naam: 'Overzicht', recht: null },
   // Het cluboverzicht van de officials (0.39.0): in de tabbalk, zoals in
   // YOAssist — een YOADM werkt er dagelijks in.
   { id: 'cluboverzicht', naam: 'Cluboverzicht', recht: 'officials.beheren', verbergbaar: true },
@@ -92,6 +95,12 @@ export function bouwNavigatie(rechten, bijWissel, extra) {
     }
     for (const knop of nav.querySelectorAll('button[data-tab]')) {
       knop.setAttribute('aria-current', String(knop.dataset.tab === id));
+      // T22: op een telefoon schuift de rij; het gekozen tabblad moet in beeld
+      // staan, ook als het vanuit een ander scherm gekozen werd (Mijn agenda →
+      // Aanduidingen). Enkel de rij schuift, niet de pagina.
+      if (knop.dataset.tab === id && nav.scrollWidth > nav.clientWidth) {
+        nav.scrollTo({ left: Math.max(0, knop.offsetLeft - (nav.clientWidth - knop.offsetWidth) / 2), behavior: 'smooth' });
+      }
     }
     if (bijWissel) bijWissel(id);
   };
@@ -101,6 +110,19 @@ export function bouwNavigatie(rechten, bijWissel, extra) {
   }
 
   nav.hidden = tabs.length < 2;
+  // T22: een vervaging aan de kant waar nog tabbladen staan, zodat het zichtbaar
+  // is dat de rij schuift. Opnieuw nagekeken bij elk schuiven en bij een
+  // ander schermformaat (een telefoon die gedraaid wordt).
+  const randen = () => {
+    nav.classList.toggle('meer-rechts', nav.scrollLeft + nav.clientWidth < nav.scrollWidth - 2);
+    nav.classList.toggle('meer-links', nav.scrollLeft > 2);
+  };
+  if (!nav.dataset.randen) {
+    nav.dataset.randen = '1';
+    nav.addEventListener('scroll', randen, { passive: true });
+    window.addEventListener('resize', randen);
+  }
   if (tabs.length) kies(tabs[0].id);
+  randen();
   return kies;
 }

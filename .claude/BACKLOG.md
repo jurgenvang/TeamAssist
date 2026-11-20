@@ -11,7 +11,7 @@ WIJZIGINGEN-bestanden blijven kloppen:
   punt *U* (Microsoft 365) heet hier **VU**, want TeamAssist heeft al een *U*
 - **T** + nummer, en de letters **A–AB** — TeamAssist
 
-Stand: YOAssist **v1.17.1**, TeamAssist **0.44.0** (op `main` sinds 20 november 2026)
+Stand: YOAssist **v1.17.1**, TeamAssist **0.45.0** (op `main` sinds 20 november 2026)
 
 ---
 
@@ -26,6 +26,8 @@ Bijgewerkt bij elke versie. Voor de volledige tekst: zoek de kop verderop
   trainingen en aanwezigheid. Geen migratie, staat op `main`.
 - **0.44.0 (T18)** — bij Zaalbeheer nakijken of de vrije blokken kloppen
   met wat je weet van de zaaluren.
+- **0.45.0 (T22)** — de tabbalk op je telefoon: schuift ze vlot, en staat
+  het gekozen tabblad altijd in beeld?
 - **0.33.0** — een droogloop van de nieuwe officials-sync op de echte Worker
   (`POST /api/admin/officials/sync`, zonder `uitvoeren=1`): komt `gevonden`
   in de buurt van de 210 wedstrijden uit YOAssist?
@@ -46,8 +48,6 @@ Bijgewerkt bij elke versie. Voor de volledige tekst: zoek de kop verderop
   (v1.17.1 staat sinds 10 november op `main`.)
 
 ### Klaar om te bouwen
-- **T22** — de tabbalk als het blok van YOAssist, op één rij die schuift;
-  Overzicht altijd vooraan.
 - **T7** — tabblad Mijn club.
 - **T12** — aanmelden als.
 
@@ -378,6 +378,7 @@ YOAssist met `ruudcuyvers@…`, vermoedelijk het adres van zijn vader.
 | 0.23.0 | T14 afgewerkt: een volledige backup van de databank als JSON. Beter dan aanvankelijk voorgesteld — geen hardcoded tabellenlijst met een test die drift moet vangen (de YOAssist-aanpak), maar tabellen rechtstreeks uit `sqlite_master` gehaald, wat de hele bugklasse structureel onmogelijk maakt. De kerntest bewijst dat letterlijk: een tabel die pas ná het schrijven van de route wordt aangemaakt, zit er toch in. |
 | 0.24.0 | T16 en T17 afgewerkt. `verwittig()` heeft geen `kanaal`-parameter meer en leest voortaan `kanaal_voorkeur` — mail blijft de terugval zolang push niet bestaat, met een aparte logregel voor wie 'push' koos. Blokken bij Zaalbeheer staan nu gegroepeerd per weekdag als losse blokjes, met bewust neutrale kleuren in plaats van de accentkleur. |
 | 0.25.0 | T15 afgewerkt: opruiming van `logboek` (365 dagen), `taak_runs` (30 dagen), `berichten` (120 dagen), en het definitief verwijderen van een inactieve persoon na 180 dagen. Twee tabellen extra gevonden tijdens het bouwen (`accounts`, `ouder_kind`) die niet in het oorspronkelijke overzicht stonden. Enkel `aanwezigheden` wordt geanonimiseerd in plaats van verwijderd — de enige tabel waar dat structureel kon — wat een schema-heropbouw vroeg, grondig getoetst tegen een nagemaakte bestaande databank. |
+| 0.45.0 | T22: de tabbalk is het blok van YOAssist — een grijs vlak met de tabbladen naast elkaar, het gekozen tabblad als wit vlak erin — op elk scherm. Altijd één rij: wie meer tabbladen heeft dan er passen, schuift met de vinger, het gekozen tabblad schuift vanzelf in beeld (ook als het vanuit Mijn agenda gekozen wordt), en een vervaagde rand toont dat er nog meer is. *Overzicht* staat altijd vooraan, ook voor een official — een bewuste afwijking van YOAssist. Tot nu toe brak de tabbalk op een telefoon over drie regels af. In Chromium bekeken op telefoon- en laptopbreedte, ook donker. Geen schemawijziging. 1023 tests. |
 | 0.44.0 | T18 en T19, de twee kleine gaten uit de code-audit. T18: bij Zaalbeheer zegt elk blokje of er een ploeg op traint — een vrij blok staat gestippeld in het geel met *vrij*, een bezet blok met de ploeg(en) erop. Bezet is een actieve reeks in dezelfde zaal en op dezelfde weekdag die het blok overlapt, niet enkel bij exact hetzelfde uur: binnen zijn blok mag een coach het uur verfijnen (U2), en tot nu toe telde `/api/admin/zalen/vrij` zo'n blok als vrij. Eén regel (`ploegenOpBlok`) voor de blokjes en die route. T19: `clublogo_bron` geschrapt — geschreven maar nergens gelezen. Ook: T22 (de tabbalk op een telefoon) in de backlog. Geen schemawijziging. 1021 tests. |
 | 0.43.0 | T21: elke lijst met wedstrijden of trainingen zoals in YOAssist, met één gedeelde kaart (`public/js/kaart.js`): het datumblok, de ploegen met thuis of uit, de zaal met kaartlink, het wedstrijdblad, uitslag en forfait, en een rand die de toestand zegt (geel open, groen vast of aanwezig, rood niet). *Overzicht* krijgt **Mijn agenda**: trainingen, wedstrijden, fluiten (enkel wat aangeduid is) en taken van het hele gezin in één lijst per dag, met een label per type en 'voor …' bij elk item; aanwezig of afwezig opgeven (met reden), een probleem melden bij fluiten of een taak, en per official 'nog N te beantwoorden' met een link naar Aanduidingen. Een botsing tussen spelen en fluiten (of een taak) staat bij beide, zonder iets te weigeren. Nieuwe route `GET /api/mij/agenda`. Het scherm van de coach (Ploegen): wedstrijden (komend en gespeeld) en trainingen als kaarten, en de aanwezigheid toont de activiteit zelf. Aanduidingen, Cluboverzicht en Regio naar de kaart en de stijl van YOAssist (REF-balken gevuld, grote keuzeknoppen, sectiekoppen). Naast YOAssist gelegd in Chromium, op telefoonbreedte. Geen schemawijziging. 1019 tests. |
 | 0.42.0 | I1 fase 4e: tabbladen per stuk uitzetten, zoals `verborgen_tabs` in YOAssist. Iedereen kiest voor zichzelf bij Mijn voorkeuren → *Tabbladen* welke tabbladen in zijn tabbalk staan; de keuze toont enkel de tabbladen waar iemand recht op heeft, en de tabbalk verandert meteen. *Regio* staat standaard uit (enkel wie de officials beheert, ziet het en kan het aanzetten); *Overzicht* blijft altijd staan; de panelen onder Beheer zijn geen tabbladen. De migratie van YOAssist neemt een eigen keuze mee (Cluboverzicht, Aanduidingen, Regio) en laat wie de standaard had, de standaard volgen. Schema: kolom `personen.verborgen_tabs` (ALTER, `migratie-0.42.0.sql`). 1002 tests. |
@@ -1010,7 +1011,7 @@ en een training is niet van een wedstrijd te onderscheiden.
   intussen al de kaart van YOAssist; bij T21 gaat ook Regio naar de
   gedeelde kaart.
 
-### T22 — De tabbalk op een telefoon, zoals in YOAssist
+### T22 — De tabbalk op een telefoon, zoals in YOAssist — **gebouwd in 0.45.0**
 **Gevraagd door Jurgen (20 november 2026), beslist dezelfde dag: klaar om te
 bouwen.** Gezien bij
 het naast elkaar leggen voor T21: op telefoonbreedte breekt de tabbalk van
