@@ -32,28 +32,28 @@ test('een beheerder ziet alle tabbladen, behalve dat van een official', () => {
 
 test('Overzicht staat altijd vooraan, ook voor een official (T22); een ouder van een official ziet Aanduidingen ook', () => {
   const yo = bouwRechten({ rollen: [{ rol: 'YO', team_guid: null }] }).overzicht();
-  assert.deepEqual(tabbalkTabbladen(yo).map((t) => t.id), ['mij', 'aanduidingen']);
+  assert.deepEqual(tabbalkTabbladen(yo).map((t) => t.id), ['mij', 'mijnclub', 'aanduidingen']);
   const ouder = bouwRechten().overzicht();
-  assert.deepEqual(tabbalkTabbladen(ouder).map((t) => t.id), ['mij']);
-  assert.deepEqual(tabbalkTabbladen(ouder, { ouderVanOfficial: true }).map((t) => t.id), ['mij', 'aanduidingen']);
+  assert.deepEqual(tabbalkTabbladen(ouder).map((t) => t.id), ['mij', 'mijnclub']);
+  assert.deepEqual(tabbalkTabbladen(ouder, { ouderVanOfficial: true }).map((t) => t.id), ['mij', 'mijnclub', 'aanduidingen']);
   // Iemand met alles: Overzicht eerst, de rest in de beslisde volgorde.
   const alles = bouwRechten({ rollen: [{ rol: 'ADMIN', team_guid: null }, { rol: 'YOPLUS', team_guid: null }] }).overzicht();
-  assert.deepEqual(tabbalkTabbladen(alles, { verborgen: [] }).map((t) => t.id), ['mij', 'aanduidingen', 'cluboverzicht', 'regio', 'ploegen', 'personen']);
+  assert.deepEqual(tabbalkTabbladen(alles, { verborgen: [] }).map((t) => t.id), ['mij', 'mijnclub', 'aanduidingen', 'cluboverzicht', 'regio', 'ploegen', 'personen']);
   assert.deepEqual(menuTabbladen(ouder, { ouderVanOfficial: true }), [], 'geen beheer voor een ouder');
 });
 
 test('een coach ziet geen beheer en geen personen', () => {
   const rechten = bouwRechten({ rollen: [{ rol: 'COACH', team_guid: J16 }] }).overzicht();
-  assert.deepEqual(zichtbareTabbladen(rechten).map((t) => t.id), ['mij', 'ploegen']);
+  assert.deepEqual(zichtbareTabbladen(rechten).map((t) => t.id), ['mij', 'mijnclub', 'ploegen']);
 });
 
 test('een speler ziet enkel het overzicht en zijn ploeg', () => {
   const rechten = bouwRechten({ ploegenAlsSpeler: [J16] }).overzicht();
-  assert.deepEqual(zichtbareTabbladen(rechten).map((t) => t.id), ['mij', 'ploegen']);
+  assert.deepEqual(zichtbareTabbladen(rechten).map((t) => t.id), ['mij', 'mijnclub', 'ploegen']);
 });
 
 test('wie geen enkele rol heeft, houdt enkel het overzicht', () => {
-  assert.deepEqual(zichtbareTabbladen(bouwRechten().overzicht()).map((t) => t.id), ['mij']);
+  assert.deepEqual(zichtbareTabbladen(bouwRechten().overzicht()).map((t) => t.id), ['mij', 'mijnclub']);
 });
 
 test('een beheerder die als coach kijkt, verliest de beheertabbladen', () => {
@@ -61,7 +61,7 @@ test('een beheerder die als coach kijkt, verliest de beheertabbladen', () => {
   // backend zou toelaten.
   const echt = bouwRechten({ rollen: [{ rol: 'ADMIN', team_guid: null }] });
   const rechten = beperkTot(echt, 'COACH', J16).overzicht();
-  assert.deepEqual(zichtbareTabbladen(rechten).map((t) => t.id), ['mij', 'ploegen']);
+  assert.deepEqual(zichtbareTabbladen(rechten).map((t) => t.id), ['mij', 'mijnclub', 'ploegen']);
 });
 
 test('het overzicht heeft geen recht nodig', () => {
@@ -70,13 +70,13 @@ test('het overzicht heeft geen recht nodig', () => {
 
 test('de beheerschermen staan in het naammenu, niet in de tabbalk', () => {
   const rechten = bouwRechten({ rollen: [{ rol: 'ADMIN', team_guid: null }] }).overzicht();
-  assert.deepEqual(tabbalkTabbladen(rechten).map((t) => t.id), ['mij', 'cluboverzicht', 'regio', 'ploegen', 'personen']);
+  assert.deepEqual(tabbalkTabbladen(rechten).map((t) => t.id), ['mij', 'mijnclub', 'cluboverzicht', 'regio', 'ploegen', 'personen']);
   assert.deepEqual(menuTabbladen(rechten).map((t) => t.id), ['vergoedingen', 'dagelijksbeheer', 'configuratie', 'zaalbeheer']);
 });
 
 test('wie de officials beheert, ziet het Cluboverzicht in de tabbalk, en geen clubbeheer', () => {
   const yoadm = bouwRechten({ rollen: [{ rol: 'YOADM', team_guid: null }] }).overzicht();
-  assert.deepEqual(tabbalkTabbladen(yoadm).map((t) => t.id), ['mij', 'cluboverzicht', 'regio']);
+  assert.deepEqual(tabbalkTabbladen(yoadm).map((t) => t.id), ['mij', 'mijnclub', 'cluboverzicht', 'regio']);
   // Dagelijks beheer en Configuratie, maar enkel met de secties van de
   // officials (data-recht); Zaalbeheer niet (0.41.0).
   assert.deepEqual(menuTabbladen(yoadm).map((t) => t.id), ['vergoedingen', 'dagelijksbeheer', 'configuratie']);

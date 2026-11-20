@@ -48,8 +48,16 @@ export const wedstrijdblad = (guid) => `https://vblweb.wisseq.eu/Home/MatchDetai
  * @param {string} [k.acties]     HTML met de knoppen
  * @param {object} [k.data]       extra data-attributen op het artikel
  */
+/** '62- 58' → '62-58': de bond geeft opvulspaties door (zie mijnclub.js). */
+export function netteUitslag(ruw) {
+  const s = String(ruw ?? '').trim();
+  const m = /^(\d+)\s*-\s*(\d+)$/.exec(s);
+  return m ? `${Number(m[1])}-${Number(m[2])}` : s || null;
+}
+
 export function kaart(k) {
   const d = dagVan(k.datum);
+  const uitslag = netteUitslag(k.uitslag);
   const data = Object.entries({ soort: k.soort, toestand: k.toestand, ...(k.data ?? {}) })
     .filter(([, v]) => v !== undefined && v !== null && v !== '')
     .map(([s, v]) => ` data-${s}="${veilig(String(v))}"`)
@@ -70,7 +78,7 @@ export function kaart(k) {
     <div class="wed-datum"><span class="dag">${d.dag}</span><span class="nr">${d.nr}</span>${k.uur ? `<span class="uur">${veilig(k.uur)}</span>` : ''}</div>
     <div class="wed-lijf">
       ${labels ? `<div class="wed-labels">${labels}</div>` : ''}
-      <div class="wed-ploegen"><span class="ploeg">${veilig(k.ploeg ?? '')}</span>${tegen}${k.uitslag ? ` <span class="uitslag">${veilig(k.uitslag)}</span>` : ''}${k.forfait ? `<span class="forfait-label">${veilig(forfaitTekst(k.forfait))}</span>` : ''}</div>
+      <div class="wed-ploegen"><span class="ploeg">${veilig(k.ploeg ?? '')}</span>${tegen}${uitslag ? ` <span class="uitslag">${veilig(uitslag)}</span>` : ''}${k.forfait ? `<span class="forfait-label">${veilig(forfaitTekst(k.forfait))}</span>` : ''}</div>
       ${meta ? `<div class="wed-meta">${meta}</div>` : ''}
       ${k.inhoud ?? ''}
       ${k.acties ?? ''}

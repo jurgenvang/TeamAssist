@@ -44,9 +44,9 @@ test('backend en tabbalk kennen dezelfde tabbladen', () => {
 test('de tabbalk laat weg wat verborgen is, maar nooit Overzicht', () => {
   const admin = bouwRechten({ rollen: [{ rol: 'ADMIN', team_guid: null }] }).overzicht();
   const ids = (extra) => tabbalkTabbladen(admin, extra).map((t) => t.id);
-  assert.deepEqual(ids({ verborgen: ['regio'] }), ['mij', 'cluboverzicht', 'ploegen', 'personen']);
-  assert.deepEqual(ids({ verborgen: ['mij', 'ploegen', 'personen', 'cluboverzicht', 'regio'] }), ['mij']);
-  assert.deepEqual(verbergbareTabbladen(admin).map((t) => t.id), ['cluboverzicht', 'regio', 'ploegen', 'personen']);
+  assert.deepEqual(ids({ verborgen: ['regio'] }), ['mij', 'mijnclub', 'cluboverzicht', 'ploegen', 'personen']);
+  assert.deepEqual(ids({ verborgen: ['mij', 'mijnclub', 'ploegen', 'personen', 'cluboverzicht', 'regio'] }), ['mij']);
+  assert.deepEqual(verbergbareTabbladen(admin).map((t) => t.id), ['mijnclub', 'cluboverzicht', 'regio', 'ploegen', 'personen']);
   // Een coach kan Regio niet aanzetten: hij ziet het niet eens in de keuze.
   const coach = bouwRechten({ rollen: [{ rol: 'COACH', team_guid: 'BVBL1125J16  1' }] }).overzicht();
   assert.ok(!verbergbareTabbladen(coach).some((t) => t.id === 'regio'));

@@ -18,6 +18,7 @@ import { voerGeplandeTakenUit } from './lib/geplandetaken.js';
 import { logSchrijf } from './lib/logboek.js';
 import { mij } from './routes/mij.js';
 import { agenda } from './routes/agenda.js';
+import { mijnclubTonen, mijnclubPloegen, mijnclubKeuzeBewaren } from './routes/mijnclub.js';
 import { voorkeurenBewaren } from './routes/voorkeuren.js';
 import { meelezenTonen, meelezenZetten, meelezenAntwoord } from './routes/meelezen.js';
 import {
@@ -117,6 +118,10 @@ export const ROUTES = [
   { methode: 'GET', pad: '/api/mij', doe: mij },
   // Mijn agenda (T21): trainingen, wedstrijden, fluiten en taken van het gezin.
   { methode: 'GET', pad: '/api/mij/agenda', doe: agenda },
+  // Mijn club (T7): over jezelf; de route kijkt zelf welke ploegen je ziet.
+  { methode: 'GET', pad: '/api/mijnclub', doe: mijnclubTonen },
+  { methode: 'GET', pad: '/api/mijnclub/ploegen', doe: mijnclubPloegen },
+  { methode: 'POST', pad: '/api/mijnclub/keuze', doe: mijnclubKeuzeBewaren },
   { methode: 'POST', pad: '/api/mij/voorkeuren', doe: voorkeurenBewaren },
   // Berichten ook naar de ouders (0.32.0): over jezelf of een eigen kind;
   // dat het een eigen kind is, controleert de route tegen ouder_kind.

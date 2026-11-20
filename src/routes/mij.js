@@ -16,7 +16,7 @@ import { instellingLezen } from './admin/instellingen.js';
  * gebonden parameters per query toe, en een coordinator met vijftien ploegen
  * loopt daar anders tegenaan.
  */
-async function ploegenVan(db, persoonId, seizoen, alles) {
+export async function ploegenVan(db, persoonId, seizoen, alles) {
   if (alles) {
     const rijen = await db
       .prepare(

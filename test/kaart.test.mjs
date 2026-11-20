@@ -67,7 +67,7 @@ test('de toestand in Mijn agenda: geel open, groen aanwezig of vast, rood afwezi
 test('elke lijst met wedstrijden of trainingen gebruikt de gedeelde kaart, geen tabel meer', () => {
   // De regel van T21: overal zoals YOAssist. Een nieuw scherm dat wedstrijden
   // toont, hoort in deze lijst.
-  for (const bestand of ['aanduidingen.js', 'regio.js', 'agenda.js', 'aanwezigheid-beheer.js', 'trainingen.js', 'cluboverzicht.js']) {
+  for (const bestand of ['aanduidingen.js', 'regio.js', 'agenda.js', 'aanwezigheid-beheer.js', 'trainingen.js', 'cluboverzicht.js', 'mijnclub.js']) {
     const bron = lees(`../public/js/schermen/${bestand}`);
     assert.match(bron, /from '\.\.\/kaart\.js'/, bestand);
   }
@@ -86,4 +86,14 @@ test('Mijn agenda: opgeven met de persoon van de kaart, een probleem melden name
   assert.match(bron, /namens: it\.voor\.ik \? null : it\.voor\.id/);
   // Een taak meldt enkel wie ze zelf heeft (wedstrijdtaken.js weigert het anders).
   assert.match(bron, /return it\.voor\.ik\s*\?/);
+});
+
+test('Mijn club: de kiezer op twee plaatsen is dezelfde functie, en elke oproep loopt via api()', () => {
+  const bron = lees('../public/js/schermen/mijnclub.js');
+  const app = lees('../public/js/app.js');
+  assert.match(bron, /export async function toonKiezer\(doelId/);
+  assert.match(bron, /toonKiezer\('mijnclubkiezer'/, 'de knop in het tabblad');
+  assert.match(app, /toonKiezer\('voorkeurenmijnclub'\)/, 'en bij Mijn voorkeuren');
+  assert.ok(!/fetch\(['"`]\/api\//.test(bron));
+  assert.match(bron, /veilig\(p\.naam_kort \|\| p\.naam\)/);
 });

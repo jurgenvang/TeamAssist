@@ -62,6 +62,10 @@ test('een route die geen recht vraagt, doet dat bewust', () => {
       '/api/mij',
       // Mijn agenda (T21): over jezelf en je kinderen, uit ouder_kind.
       '/api/mij/agenda',
+      // Mijn club (T7): enkel je eigen keuze en de wedstrijden van gevolgde ploegen.
+      '/api/mijnclub',
+      '/api/mijnclub/ploegen',
+      '/api/mijnclub/keuze',
       '/api/mij/voorkeuren',
       // Over jezelf of een eigen kind; de route controleert ouder_kind zelf.
       '/api/meelezen',

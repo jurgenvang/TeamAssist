@@ -15,6 +15,9 @@ export const TABBLADEN = [
   // beantwoorden is en naar Aanduidingen linkt. Een bewuste afwijking van
   // YOAssist, waar een official bij Aanduidingen begint.
   { id: 'mij', naam: 'Overzicht', recht: null },
+  // Mijn club (T7, Jurgen, 20 november 2026): voor iedereen, meteen na
+  // Overzicht, standaard aan en zoals de andere uit te zetten.
+  { id: 'mijnclub', naam: 'Mijn club', recht: null, verbergbaar: true },
   // Module Officials (0.38.0). Ook voor een ouder van een official, die zelf
   // geen recht heeft maar namens zijn kind invult (`ouder: true`).
   { id: 'aanduidingen', naam: 'Aanduidingen', recht: 'officials.opgeven', ouder: true, verbergbaar: true },

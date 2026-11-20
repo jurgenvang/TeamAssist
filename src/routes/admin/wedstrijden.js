@@ -14,6 +14,7 @@ import { logSchrijf } from '../../lib/logboek.js';
 import { verwittig } from '../../lib/verwittigen.js';
 import { haalVbl, teamMatchesUrl, leesWedstrijden } from '../../lib/vbl.js';
 import { maakWedstrijdplan } from '../../lib/wedstrijdsync.js';
+import { volgerRegels, bundelPerPersoon } from '../../lib/mijnclub.js';
 import { takenVoorWedstrijd } from '../../lib/wedstrijdtaken.js';
 import { instellingLezen } from './instellingen.js';
 
@@ -60,13 +61,13 @@ async function meldWijziging(ctx, ploeg, seizoen, w) {
 async function gevolgdePloegen(db, seizoen, alleen) {
   if (alleen) {
     const rij = await db
-      .prepare(`SELECT guid, naam, categorie FROM teams WHERE guid = ? AND seizoen = ? AND gevolgd = 1`)
+      .prepare(`SELECT guid, naam, naam_kort, categorie FROM teams WHERE guid = ? AND seizoen = ? AND gevolgd = 1`)
       .bind(alleen, seizoen)
       .first();
     return rij ? [rij] : [];
   }
   const rijen = await db
-    .prepare(`SELECT guid, naam, categorie FROM teams WHERE seizoen = ? AND gevolgd = 1 AND bij_bond = 1 ORDER BY categorie`)
+    .prepare(`SELECT guid, naam, naam_kort, categorie FROM teams WHERE seizoen = ? AND gevolgd = 1 AND bij_bond = 1 ORDER BY categorie`)
     .bind(seizoen)
     .all();
   return rijen.results ?? [];
@@ -181,6 +182,44 @@ async function verwerkPloeg(ctx, ploeg, seizoen, uitvoeren, periodes) {
   return { ploeg: ploeg.guid, naam: ploeg.naam, ...plan };
 }
 
+/**
+ * Mijn club (T7): wie een ploeg 'op de hoogte houdt', krijgt na een ophaling
+ * één bericht met alles wat er voor zijn ploegen veranderde — een gewijzigde
+ * datum, uur of zaal, of een nieuwe uitslag. Enkel als er iets is. Een fout
+ * hier laat de synchronisatie zelf niet mislukken: die is dan al gebeurd.
+ */
+async function verwittigVolgers(ctx, ploegen, uitslagen) {
+  const { db } = ctx;
+  try {
+    const opGuid = new Map(ploegen.map((p) => [p.guid, p]));
+    const regels = uitslagen
+      .filter((u) => u.status !== 'fout' && opGuid.has(u.ploeg))
+      .flatMap((u) => volgerRegels(opGuid.get(u.ploeg), u));
+    if (!regels.length) return 0;
+    const volgers = await db
+      .prepare(
+        `SELECT m.persoon_id, m.team_guid FROM mijnclub_ploegen m
+           JOIN personen p ON p.id = m.persoon_id
+          WHERE m.op_de_hoogte = 1 AND p.actief = 1`
+      )
+      .all();
+    const perPersoon = bundelPerPersoon(regels, volgers.results ?? []);
+    for (const [persoonId, lijst] of perPersoon) {
+      await verwittig(ctx, {
+        persoon_id: persoonId,
+        soort: 'wedstrijd',
+        onderwerp: `Mijn club — ${lijst.length === 1 ? '1 wijziging' : `${lijst.length} wijzigingen`}`,
+        kort: lijst.length === 1 ? lijst[0] : `${lijst.length} wijzigingen bij de ploegen die je volgt`,
+        inhoud: `Bij de ploegen die je volgt in Mijn club:\n\n${lijst.map((r) => `• ${r}`).join('\n')}`,
+      });
+    }
+    return perPersoon.size;
+  } catch (e) {
+    await logSchrijf(db, { soort: 'fout', wat: 'Mijn club: volgers verwittigen mislukt', details: String(e.message), afgehandeld: 0 });
+    return 0;
+  }
+}
+
 export async function wedstrijdenSync(ctx) {
   const { db, persoon, request, seizoen } = ctx;
   const url = new URL(request.url);
@@ -212,6 +251,7 @@ export async function wedstrijdenSync(ctx) {
   };
 
   if (uitvoeren) {
+    await verwittigVolgers(ctx, ploegen, uitslagen);
     await logSchrijf(db, {
       soort: 'sync', wie: persoon.id, wat: 'wedstrijden gesynchroniseerd',
       details: `${ploegen.length} ploegen: ${totalen.nieuw} nieuw, ${totalen.gewijzigd} gewijzigd, ` +

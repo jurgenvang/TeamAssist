@@ -94,7 +94,7 @@ export function maakWedstrijdplan(gevonden, bestaand, periodes = STANDAARD_STILL
     if (oud.wijzigingshash === w.hash) {
       if ((oud.uitslag ?? null) !== (w.uitslag ?? null)) {
         // De uitslag verandert de hash niet, maar moet wel bijgewerkt worden.
-        uitslagBijgewerkt.push(w);
+        uitslagBijgewerkt.push({ ...w, was: oud });
       } else {
         ongewijzigd.push(w);
       }

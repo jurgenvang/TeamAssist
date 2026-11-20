@@ -42,6 +42,10 @@ iets nieuws boven kwam; nooit inkorten zonder reden.
   de bond geen Excel maar enkel een zin in de mail (V44, 28 oktober 2026).
   'Geen link' is dus niet altijd een fout; herken de lege lijst aan haar
   tekst, en laat al de rest luid falen.
+- **De uitslag komt met opvulspaties** (`' 62- 58'`) en TeamAssist bewaart
+  ze zo. Netjes maken bij het tonen (`netteUitslag`), niet bij het bewaren:
+  een andere vorm in de databank zou bij de volgende ophaling elke gespeelde
+  wedstrijd als 'nieuwe uitslag' melden aan wie een ploeg volgt (0.46.0).
 - **De API is niet bereikbaar vanuit de sandbox**; de diagnoseroute in de
   Worker toont een echt antwoord.
 - **Een Worker mag per aanroep maar een beperkt aantal uitgaande oproepen

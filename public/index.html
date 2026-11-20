@@ -146,6 +146,14 @@
       </details>
     </section>
 
+    <!-- Mijn club (T7): de wedstrijden van de gevolgde ploegen, vorig en komend weekend -->
+    <section id="tab-mijnclub" hidden>
+      <div class="sectie-kop"><h3>Mijn club</h3>
+        <button type="button" class="stil" id="mijnclubkies" aria-expanded="false">Ploegen kiezen</button></div>
+      <div id="mijnclubkiezer" hidden></div>
+      <div id="mijnclublijst"></div>
+    </section>
+
     <!-- Overzicht -->
     <section id="tab-mij" hidden>
       <p class="adres" id="emailadres"></p>
@@ -654,6 +662,10 @@
         <div id="tabbladenkeuze"></div>
         <div id="tabbladenmelding" class="melding" hidden></div>
       </div>
+
+      <!-- Mijn club (T7): dezelfde vinkjes als de knop in het tabblad -->
+      <h3>Mijn club</h3>
+      <div id="voorkeurenmijnclub"></div>
 
       <h3>Meldingen op dit toestel</h3>
       <p class="klein" id="meldingenstatus"></p>

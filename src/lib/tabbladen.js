@@ -9,7 +9,7 @@
 // Dezelfde lijst staat in public/js/navigatie.js (`verbergbaar`,
 // `standaardUit`); een test legt beide naast elkaar.
 
-export const VERBERGBAAR = ['aanduidingen', 'cluboverzicht', 'regio', 'ploegen', 'personen'];
+export const VERBERGBAAR = ['mijnclub', 'aanduidingen', 'cluboverzicht', 'regio', 'ploegen', 'personen'];
 
 // Regio staat standaard uit, zoals in YOAssist: het is enkel nuttig voor wie
 // de regio opvolgt, en wie dat doet, zet het zelf aan.

@@ -1,4 +1,4 @@
--- TeamAssist — controle op de databankstructuur (versie 0.45.0)
+-- TeamAssist — controle op de databankstructuur (versie 0.46.0)
 --
 -- Plak dit in de D1-console na het uitvoeren van een schemawijziging. Het wijzigt
 -- niets; het vergelijkt wat er staat met wat er hoort te staan.
@@ -17,6 +17,7 @@ WITH verwacht_object(soort, naam) AS (VALUES
   ('index', 'idx_aanwezigheden_uniek'),
   ('index', 'idx_berichten_persoon'),
   ('index', 'idx_logboek_tijdstip'),
+  ('index', 'idx_mijnclub_op_de_hoogte'),
   ('index', 'idx_officials_aanduidingen_persoon'),
   ('index', 'idx_officials_beschikbaarheid_wedstrijd'),
   ('index', 'idx_officials_problemen_open'),
@@ -53,6 +54,7 @@ WITH verwacht_object(soort, naam) AS (VALUES
   ('table', 'logboek'),
   ('table', 'mededeling_gezien'),
   ('table', 'mededelingen'),
+  ('table', 'mijnclub_ploegen'),
   ('table', 'officials_aanduidingen'),
   ('table', 'officials_beschikbaarheid'),
   ('table', 'officials_categorieen'),
@@ -148,6 +150,11 @@ verwacht_kolom(tabel, kolom) AS (VALUES
   ('mededelingen', 'gezet_door'),
   ('mededelingen', 'gezet_op'),
   ('mededelingen', 'actief'),
+  ('mijnclub_ploegen', 'persoon_id'),
+  ('mijnclub_ploegen', 'team_guid'),
+  ('mijnclub_ploegen', 'tonen'),
+  ('mijnclub_ploegen', 'op_de_hoogte'),
+  ('mijnclub_ploegen', 'gewijzigd'),
   ('officials_aanduidingen', 'wedstrijd_id'),
   ('officials_aanduidingen', 'persoon_id'),
   ('officials_aanduidingen', 'status'),
@@ -436,7 +443,7 @@ SELECT 0 AS volgorde,
             THEN 'ALLES OK'
             ELSE (SELECT count(*) FROM problemen) || ' PROBLEEM/PROBLEMEN'
        END AS soort,
-       'structuur versie 0.45.0' AS naam
+       'structuur versie 0.46.0' AS naam
 UNION ALL
 SELECT 1, soort, naam FROM problemen
 ORDER BY volgorde, soort, naam;

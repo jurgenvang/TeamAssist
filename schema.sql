@@ -923,6 +923,28 @@ CREATE TABLE officials_voorkeuren (
   FOREIGN KEY (persoon_id) REFERENCES personen (id)
 );
 
+-- Mijn club (T7, 0.46.0): per persoon en per gevolgde ploeg of hij die ploeg
+-- in Mijn club wil zien, en of hij op de hoogte gehouden wil worden.
+--   tonen         NULL = de standaard (mijn ploegen, of alle als ik aan geen
+--                 enkele ploeg hang); 1/0 = een gemaakte keuze. Een keuze
+--                 geldt voor alle ploegen samen (mijnclub.js).
+--   op_de_hoogte  standaard uit: na elke ophaling één bericht met wat er
+--                 veranderde (datum, uur, zaal, uitslag).
+-- Geen foreign key naar teams: de GUID van een ploeg blijft over de seizoenen
+-- dezelfde, en een keuze mag een nieuw seizoen overleven.
+CREATE TABLE mijnclub_ploegen (
+  persoon_id   TEXT NOT NULL,
+  team_guid    TEXT NOT NULL,
+  tonen        INTEGER CHECK (tonen IN (0, 1)),
+  op_de_hoogte INTEGER NOT NULL DEFAULT 0 CHECK (op_de_hoogte IN (0, 1)),
+  gewijzigd    TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (persoon_id, team_guid),
+  FOREIGN KEY (persoon_id) REFERENCES personen (id)
+);
+
+CREATE INDEX idx_mijnclub_op_de_hoogte ON mijnclub_ploegen (team_guid, op_de_hoogte);
+
+
 -- Regio: wedstrijden bij gevolgde, externe clubs met nul of één
 -- scheidsrechter van de bond. Een eigen, lichte synchronisatie.
 CREATE TABLE officials_volg_clubs (

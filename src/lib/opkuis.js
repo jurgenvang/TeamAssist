@@ -99,6 +99,7 @@ export async function verwijderInactievePersonenOp(db) {
     await db.prepare(`DELETE FROM officials_aanduidingen WHERE persoon_id = ?`).bind(id).run();
     await db.prepare(`DELETE FROM officials_problemen WHERE persoon_id = ?`).bind(id).run();
     await db.prepare(`DELETE FROM officials_voorkeuren WHERE persoon_id = ?`).bind(id).run();
+    await db.prepare(`DELETE FROM mijnclub_ploegen WHERE persoon_id = ?`).bind(id).run();
     await db.prepare(`UPDATE officials_aanduidingen SET toegewezen_door = NULL WHERE toegewezen_door = ?`).bind(id).run();
 
     await db.prepare(`UPDATE aanwezigheden SET persoon_id = NULL WHERE persoon_id = ?`).bind(id).run();

@@ -14,6 +14,7 @@ import { koppelMeelezen } from './schermen/meelezen.js';
 import { laadInstellingen, haalBrandingvoorstel, downloadBackup } from './schermen/instellingen.js';
 import { toonVoorkeuren, bewaarVoorkeuren, pasDonkereModusToe, toonTabbladkeuze } from './schermen/voorkeuren.js';
 import { laadAgenda, koppelAgenda } from './schermen/agenda.js';
+import { laadMijnClub, koppelMijnClub, toonKiezer } from './schermen/mijnclub.js';
 import { toonDiagnose } from './schermen/diagnose.js';
 import { pasHuisstijlToe } from './huisstijl.js';
 import {
@@ -123,6 +124,9 @@ function toonApp(gegevens) {
  * onder Beheer.
  */
 function laadScherm(tab, rechten) {
+  if (tab === 'mijnclub') {
+    laadMijnClub();
+  }
   if (tab === 'aanduidingen') {
     laadAanduidingen();
   }
@@ -373,6 +377,8 @@ el('naammenu-voorkeuren').addEventListener('click', () => {
   sluitNaammenu();
   if (huidigePersoon) toonVoorkeuren(huidigePersoon);
   toonOfficialsVoorkeuren(metOfficials);
+  // Mijn club (T7): dezelfde keuze als de knop in het tabblad.
+  toonKiezer('voorkeurenmijnclub');
   if (navigatie) {
     toonTabbladkeuze(verbergbareTabbladen(navigatie.rechten, navigatie.extra), navigatie.extra.verborgen, (verborgen) => {
       navigatie.extra.verborgen = verborgen;
@@ -444,6 +450,7 @@ koppelPersoonscherm();
 koppelMeelezen();
 koppelAanduidingen();
 koppelAgenda();
+koppelMijnClub();
 koppelAanwezigheidKnoppen();
 koppelCluboverzicht();
 koppelPanelen();

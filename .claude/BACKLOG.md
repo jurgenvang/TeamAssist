@@ -11,7 +11,7 @@ WIJZIGINGEN-bestanden blijven kloppen:
   punt *U* (Microsoft 365) heet hier **VU**, want TeamAssist heeft al een *U*
 - **T** + nummer, en de letters **A–AB** — TeamAssist
 
-Stand: YOAssist **v1.17.1**, TeamAssist **0.45.0** (op `main` sinds 20 november 2026)
+Stand: YOAssist **v1.17.1**, TeamAssist **0.46.0** (op de werkbranch; `main` staat op 0.45.0 tot de migratie gedaan is)
 
 ---
 
@@ -21,6 +21,9 @@ Bijgewerkt bij elke versie. Voor de volledige tekst: zoek de kop verderop
 (`### T7`, `### V43`, `## I1`, ...).
 
 ### Wacht op een actie van Jurgen
+- **0.46.0 (T7)** — `migratie-0.46.0.sql` in de D1-console uitvoeren (één
+  nieuwe tabel), daarna `schema-controle.sql`, en zeggen dat het gedaan is:
+  pas dan gaat 0.46.0 naar `main`.
 - **0.43.0 (T21)** — nakijken op de telefoon: *Overzicht → Mijn agenda*,
   Aanduidingen, Cluboverzicht, Regio en bij Ploegen de wedstrijden,
   trainingen en aanwezigheid. Geen migratie, staat op `main`.
@@ -48,7 +51,6 @@ Bijgewerkt bij elke versie. Voor de volledige tekst: zoek de kop verderop
   (v1.17.1 staat sinds 10 november op `main`.)
 
 ### Klaar om te bouwen
-- **T7** — tabblad Mijn club: volledig uitgeklaard (20 november 2026).
 - **T12** — aanmelden als.
 
 ### Nog uit te klaren vóór er gebouwd kan worden
@@ -56,7 +58,8 @@ Bijgewerkt bij elke versie. Voor de volledige tekst: zoek de kop verderop
   van de officials.
 - **T3** en **V29** — evaluatie van spelers en van officials.
 - **T5** en **V30** — een tweede omgeving / demo-omgeving.
-- **V43** — eigen VBL-aanduidingen: eerst uitzoeken, dan bouwen; na I1.
+- **V43** — eigen VBL-aanduidingen: beslist (20 november 2026); eerst
+  uitzoeken via de diagnoseroute op de Worker, dan bouwen; na I1.
 
 ---
 
@@ -378,6 +381,7 @@ YOAssist met `ruudcuyvers@…`, vermoedelijk het adres van zijn vader.
 | 0.23.0 | T14 afgewerkt: een volledige backup van de databank als JSON. Beter dan aanvankelijk voorgesteld — geen hardcoded tabellenlijst met een test die drift moet vangen (de YOAssist-aanpak), maar tabellen rechtstreeks uit `sqlite_master` gehaald, wat de hele bugklasse structureel onmogelijk maakt. De kerntest bewijst dat letterlijk: een tabel die pas ná het schrijven van de route wordt aangemaakt, zit er toch in. |
 | 0.24.0 | T16 en T17 afgewerkt. `verwittig()` heeft geen `kanaal`-parameter meer en leest voortaan `kanaal_voorkeur` — mail blijft de terugval zolang push niet bestaat, met een aparte logregel voor wie 'push' koos. Blokken bij Zaalbeheer staan nu gegroepeerd per weekdag als losse blokjes, met bewust neutrale kleuren in plaats van de accentkleur. |
 | 0.25.0 | T15 afgewerkt: opruiming van `logboek` (365 dagen), `taak_runs` (30 dagen), `berichten` (120 dagen), en het definitief verwijderen van een inactieve persoon na 180 dagen. Twee tabellen extra gevonden tijdens het bouwen (`accounts`, `ouder_kind`) die niet in het oorspronkelijke overzicht stonden. Enkel `aanwezigheden` wordt geanonimiseerd in plaats van verwijderd — de enige tabel waar dat structureel kon — wat een schema-heropbouw vroeg, grondig getoetst tegen een nagemaakte bestaande databank. |
+| 0.46.0 | T7: het tabblad **Mijn club**, voor iedereen, meteen na Overzicht: de wedstrijden van de gevolgde ploegen van het vorige tot het komende weekend, als de gedeelde kaart per dag, met de uitslag en het wedstrijdblad. Standaard je eigen ploegen (ook die van je kinderen), of alle als je aan geen enkele hangt. *Ploegen kiezen* bovenaan en *Mijn club* bij Mijn voorkeuren, met per ploeg *tonen* en *op de hoogte houden*; wie een ploeg op de hoogte houdt, krijgt na elke ophaling één gebundeld bericht bij een gewijzigde datum, uur of zaal, of een nieuwe uitslag (standaard uit). Een uitslag staat voortaan zonder de opvulspaties van de bond op elke kaart (`62-58`), zonder de bewaarde gegevens te veranderen. Schema: tabel `mijnclub_ploegen` (CREATE, `migratie-0.46.0.sql`). Ook uitgeklaard: V43. 1036 tests. |
 | 0.45.0 | T22: de tabbalk is het blok van YOAssist — een grijs vlak met de tabbladen naast elkaar, het gekozen tabblad als wit vlak erin — op elk scherm. Altijd één rij: wie meer tabbladen heeft dan er passen, schuift met de vinger, het gekozen tabblad schuift vanzelf in beeld (ook als het vanuit Mijn agenda gekozen wordt), en een vervaagde rand toont dat er nog meer is. *Overzicht* staat altijd vooraan, ook voor een official — een bewuste afwijking van YOAssist. Tot nu toe brak de tabbalk op een telefoon over drie regels af. In Chromium bekeken op telefoon- en laptopbreedte, ook donker. Geen schemawijziging. 1023 tests. |
 | 0.44.0 | T18 en T19, de twee kleine gaten uit de code-audit. T18: bij Zaalbeheer zegt elk blokje of er een ploeg op traint — een vrij blok staat gestippeld in het geel met *vrij*, een bezet blok met de ploeg(en) erop. Bezet is een actieve reeks in dezelfde zaal en op dezelfde weekdag die het blok overlapt, niet enkel bij exact hetzelfde uur: binnen zijn blok mag een coach het uur verfijnen (U2), en tot nu toe telde `/api/admin/zalen/vrij` zo'n blok als vrij. Eén regel (`ploegenOpBlok`) voor de blokjes en die route. T19: `clublogo_bron` geschrapt — geschreven maar nergens gelezen. Ook: T22 (de tabbalk op een telefoon) in de backlog. Geen schemawijziging. 1021 tests. |
 | 0.43.0 | T21: elke lijst met wedstrijden of trainingen zoals in YOAssist, met één gedeelde kaart (`public/js/kaart.js`): het datumblok, de ploegen met thuis of uit, de zaal met kaartlink, het wedstrijdblad, uitslag en forfait, en een rand die de toestand zegt (geel open, groen vast of aanwezig, rood niet). *Overzicht* krijgt **Mijn agenda**: trainingen, wedstrijden, fluiten (enkel wat aangeduid is) en taken van het hele gezin in één lijst per dag, met een label per type en 'voor …' bij elk item; aanwezig of afwezig opgeven (met reden), een probleem melden bij fluiten of een taak, en per official 'nog N te beantwoorden' met een link naar Aanduidingen. Een botsing tussen spelen en fluiten (of een taak) staat bij beide, zonder iets te weigeren. Nieuwe route `GET /api/mij/agenda`. Het scherm van de coach (Ploegen): wedstrijden (komend en gespeeld) en trainingen als kaarten, en de aanwezigheid toont de activiteit zelf. Aanduidingen, Cluboverzicht en Regio naar de kaart en de stijl van YOAssist (REF-balken gevuld, grote keuzeknoppen, sectiekoppen). Naast YOAssist gelegd in Chromium, op telefoonbreedte. Geen schemawijziging. 1019 tests. |
@@ -1172,8 +1176,8 @@ punt. `align-items: flex-start` liet naam/rollen (twee regels) bovenaan hangen
 tegenover logo/titel/clubnaam/versie (intussen drie regels sinds 0.14.3, niet
 gecentreerd). Nu `align-items: center`.
 
-### T7 — Tabblad "Mijn club": alle wedstrijden van de club op één plek
-**Volledig uitgeklaard (20 november 2026) — klaar om te bouwen; zie onderaan dit punt.** Bouwt voort op 0.9.0 en op T6. Een tabblad dat, anders
+### T7 — Tabblad "Mijn club": alle wedstrijden van de club op één plek — **gebouwd in 0.46.0**
+**Volledig uitgeklaard (20 november 2026); zie onderaan dit punt.** Bouwt voort op 0.9.0 en op T6. Een tabblad dat, anders
 dan Ploegen, niet per team maar over alle gevolgde teams heen toont wat er
 speelt: wedstrijden mét uitslag, een link naar het wedstrijdblad, en een link
 naar de statistieken.
@@ -1252,8 +1256,10 @@ alsnog bevestigen vóór die gebouwd wordt.
    het laatste weekend tot de zondag van het volgende; wat er tussenin valt
    (ook in de week) staat erbij. Tijdens een weekend telt dat weekend als het
    komende, en staat het weekend ervoor er ook nog in — zo staan de
-   uitslagen van gisteren er altijd. Voorbeeld: donderdag 20/11 en zaterdag
-   22/11 → za 15/11 tot zo 23/11; maandag 24/11 → za 22/11 tot zo 30/11.
+   uitslagen van gisteren er altijd. Voorbeeld: vrijdag 20/11 en zaterdag
+   21/11 → za 14/11 tot zo 22/11; maandag 23/11 → za 21/11 tot zo 29/11.
+   (Bij het uitklaren stonden er voorbeelddata met verkeerde weekdagen in de
+   vraag; de regel zelf is wat Jurgen koos.)
 2. **Enkel gevolgde ploegen** (`teams.gevolgd` = 1), thuis en uit: wat
    TeamAssist al ophaalt. Wil de club een ploeg erbij, dan vinkt een
    beheerder ze aan bij Ploegen. Geen extra synchronisatie.
@@ -1737,12 +1743,21 @@ gewone naam) en `vbl_aanduidingen INTEGER NOT NULL DEFAULT 1` — met
 `vbl_clubs` voor de clublijst en de rotatie) met een gewone `CREATE TABLE`.
 Geen DROP nodig. Beide nieuwe tabellen ook in de backup (`TABELLEN`).
 
-Nog te bepalen:
-- Zien beheerders de VBL-aanduidingen van een official ook (cluboverzicht,
-  bij het aanduiden), of enkel de official zelf? Voorstel: beheerders zien
-  ze bij het aanduiden als reden voor een botsing, niet als aparte lijst.
-- Hoe snel na een aanduiding door de bond moet ze in YOAssist staan? Bepaalt
-  de rotatie (één keer per dag lijkt genoeg).
+**Beslist (Jurgen, 20 november 2026):**
+- **Beheerders zien ze enkel als botsing.** Bij het aanduiden in het
+  Cluboverzicht een waarschuwing als de official op hetzelfde moment door de
+  bond is aangeduid (zelfde regel als elke botsing, `botst()`), met *toch
+  aanduiden*. Geen aparte lijst per official.
+- **Eens per dag.** Elke club komt minstens één keer per dag aan bod,
+  gespreid over de nacht in de bestaande uurplanner, binnen de grens van 50
+  oproepen per aanroep. De bond duidt meestal dagen op voorhand aan.
+
+Na I1 geldt het schema in TeamAssist-termen: de zoeknaam is
+`personen.naam_vbl` (geen `users.vbl_naam`), de schakelaar een kolom bij
+`officials_voorkeuren`, de tabel `officials_vbl_aanduidingen`. Blijft over:
+het uitzoekwerk hierboven (de lijst van alle clubs, de vorm van een naam in
+`wedOff`), en dat kan enkel via de diagnoseroute op de echte Worker — de API
+is vanuit de ontwikkelomgeving niet bereikbaar.
 
 ### V29 — Evaluatiemodule
 **Nog uit te werken, zeer open.** Een manier om Youth Officials te evalueren
