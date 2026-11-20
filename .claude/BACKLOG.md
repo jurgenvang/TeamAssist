@@ -55,6 +55,10 @@ Bijgewerkt bij elke versie. Voor de volledige tekst: zoek de kop verderop
   (v1.17.1 staat sinds 10 november op `main`.)
 
 ### Klaar om te bouwen
+- **T23** — uit het nazicht: de ploeggenoten voor spelers en ouders, de
+  ploeg van de begeleiding in Mijn agenda (een sectie per functie), en de
+  tabel *Rechten* enkel nog voor een beheerder. Uitgeklaard op 20 november
+  2026; geen schemawijziging.
 - **T12** — aanmelden als.
 
 ### Nog uit te klaren vóór er gebouwd kan worden
@@ -64,9 +68,6 @@ Bijgewerkt bij elke versie. Voor de volledige tekst: zoek de kop verderop
 - **T5** en **V30** — een tweede omgeving / demo-omgeving.
 - **V43** — eigen VBL-aanduidingen: beslist (20 november 2026); eerst
   uitzoeken via de diagnoseroute op de Worker, dan bouwen; na I1.
-- **T23** — wat het nazicht van 0.46.0 opleverde en een beslissing vraagt:
-  een ploegscherm voor spelers en ouders, de ploeg van een coach in Mijn
-  agenda, en de tabel *Rechten* op het Overzicht.
 
 ---
 
@@ -1547,28 +1548,65 @@ Nog te bepalen:
   lijst ernaast. Dat zou minder scherm kosten, maar vraagt dat
   `zalenTonen()` de vrij/bezet-informatie meegeeft, wat ze vandaag niet doet.
 
-### T23 — Uit het nazicht van 0.46.0: drie punten die een beslissing vragen
-**Nog uit te klaren** (20 november 2026). Bij het nazicht (0.46.1) kwamen
-drie dingen boven die geen fout zijn maar een keuze:
+### T23 — Uit het nazicht van 0.46.0: ploeggenoten, de agenda van de begeleiding, de rechtentabel
+**Uitgeklaard met Jurgen (20 november 2026): klaar om te bouwen.** Bij het
+nazicht (0.46.1) kwamen drie dingen boven die geen fout waren maar een
+keuze. Geen schemawijziging: alles is lezen wat er al staat.
 
-- **Een ploegscherm voor spelers en ouders.** De rechtenlaag geeft hen
-  `team.bekijken` en `team.spelers.namen` (punt F: van de ploeggenoten enkel
-  de namen), maar geen enkele route geeft hen iets van hun ploeg. Tot 0.46.0
-  kregen ze een leeg tabblad *Ploegen*; sinds 0.46.1 krijgen ze het niet
-  meer. Komt er een scherm met de wedstrijden en de namen van de
-  ploeggenoten, of volstaan Mijn agenda en Mijn club?
-- **Mijn agenda voor een coach.** Een coach die niet speelt of fluit, ziet
-  geen agenda (T21: de trainingen en wedstrijden van wie *speelt*). Horen de
-  trainingen en wedstrijden van de ploeg die hij begeleidt erbij, zonder
-  aanwezig/afwezig?
-- **De tabel *Rechten* op het Overzicht.** Iedereen ziet er de technische
+**1. Spelers en ouders zien de ploeggenoten, op het Overzicht.**
+- Bij *Mijn ploegen* klapt een ploeg open met de namen van de spelers en de
+  begeleiding (coach, coördinator, ploegverantwoordelijke).
+- Enkel namen (punt F): geen geboortedatum, geen contactgegevens, geen
+  aanwezigheden. Gsm-nummers delen met de ploeg (ook punt F) hoort hier niet
+  bij; dat is een eigen punt.
+- Geen nieuw tabblad: de wedstrijden en trainingen staan al in Mijn agenda
+  en Mijn club. Overwogen en niet gekozen: een volledig tabblad *Mijn
+  ploeg*, of niets.
+- Backend: een route die voor een ploeg de namen geeft aan wie
+  `team.spelers.namen` heeft voor die ploeg. Dat recht bestaat sinds 0.1.0
+  en werd nog nergens gebruikt.
+
+**2. De begeleiding ziet haar ploeg in Mijn agenda, in een sectie per
+functie.**
+- Bovenaan blijft de eigen agenda zoals nu: spelen, fluiten en taken van
+  het gezin, per dag.
+- Daaronder een sectie per functie, in deze volgorde: *Als coach*, *Als
+  coördinator*, *Als ploegverantwoordelijke*. Elke sectie heeft haar eigen
+  lijst per dag, met de trainingen en wedstrijden van de ploeg(en) waar
+  iemand die functie heeft. Wie een functie niet heeft, ziet die sectie
+  niet.
+- De kaart is de gedeelde kaart (T21), met de ploeg erop en een link naar
+  de aanwezigheid bij Ploegen. Geen aanwezig/afwezig-knoppen: een coach
+  geeft zijn eigen aanwezigheid niet op. Overwogen en niet gekozen: wel
+  opgeven (vraagt een schemawijziging), of enkel het tabblad Ploegen.
+- De functie volgt uit een rol op een ploeg (COACH, COORD, PLOEGV). Een
+  beheerder die geen coach is, krijgt geen sectie met alle ploegen van de
+  club: hij ziet ze bij Ploegen.
+- Hetzelfde venster als de eigen agenda: deze en volgende maand, met 'toon
+  ook wat later komt'.
+- Wie enkel begeleidt (niet speelt of fluit), ziet dus voortaan wel een
+  agenda.
+- Ook overwogen voor het groeperen: de functies bovenaan en de eigen agenda
+  eronder, of één lijst per dag gesorteerd op functie.
+
+**3. De tabel *Rechten* enkel nog voor een beheerder, dichtgeklapt.**
+- Wie `systeem.beheren` heeft, ziet onderaan het Overzicht een dichtgeklapte
+  sectie *Rechten*: nuttig bij *Kijken als …* en bij de vraag waarom iemand
+  iets niet ziet.
+- Alle anderen zien de tabel niet meer. Ze toonde iedereen de technische
   namen van zijn rechten (`team.spelers.namen`, …), ook een speler van
-  dertien. Het scherm dateert van 0.1.0, toen het de rechtenlaag moest
-  tonen. Enkel nog voor een beheerder, of weg?
+  dertien; ze dateert van 0.1.0.
+- Bij *Kijken als …* telt het echte recht van de beheerder, zodat de tabel
+  net dan zichtbaar blijft.
 
-Kleiner, zonder beslissing nodig, voor een volgend pakket: de datum in
-*Gemelde problemen* en bij de woensdaglijsten staat als `2026-11-21`; met
-zeven tabbladen past *Personen* op een laptop net niet meer in de rij.
+**Mee in hetzelfde pakket, zonder beslissing nodig:**
+- de datum in *Gemelde problemen* en bij de woensdaglijsten als 'za 21
+  november' in plaats van `2026-11-21`;
+- met zeven tabbladen past *Personen* op een laptop net niet meer in de rij:
+  kijken of de tabbalk daar iets compacter kan.
+
+Bij het bouwen: nakijken met `tools/nazicht.mjs` als ouder (petra), als
+coach zonder beheerrechten (carl) en als beheerder, op telefoonbreedte.
 
 ### T19 — De instelling `clublogo_bron` wordt geschreven maar nergens gelezen — **geschrapt in 0.44.0**
 **Beslist (Jurgen, 10 november 2026): schrappen.** De instelling verdwijnt
