@@ -6,6 +6,7 @@
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { maakDb } from './d1.mjs';
 import { ROUTES } from '../src/index.js';
 import { brandingVoorstel, brandingTonen } from '../src/routes/admin/branding.js';
@@ -140,13 +141,15 @@ test('/api/branding toont een geldige clubkleur wel', async () => {
   assert.equal(body.kleur_accent, '#0d1a2b');
 });
 
-test('de instellingenlijst bevat de drie huisstijlvelden', async () => {
+test('de instellingenlijst bevat de huisstijlvelden, en niet meer clublogo_bron', async () => {
   const db = zetKlaar();
   const res = await instellingenTonen({ db });
   const body = await res.json();
   assert.ok('clubkleur_accent' in body.instellingen);
   assert.ok('clublogo_url' in body.instellingen);
-  assert.ok('clublogo_bron' in body.instellingen);
+  // T19: geschreven maar nergens gelezen, dus geschrapt — ook in het scherm.
+  assert.ok(!('clublogo_bron' in body.instellingen));
+  assert.ok(!readFileSync(new URL('../public/js/schermen/instellingen.js', import.meta.url), 'utf8').includes('clublogo_bron'));
 });
 
 test('de instellingenlijst bevat nu ook clubkleur_topbalk', async () => {

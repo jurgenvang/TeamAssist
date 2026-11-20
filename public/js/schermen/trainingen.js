@@ -35,8 +35,11 @@ function blokkenPerDag(blokken) {
           <ul class="blokjes">
             ${dagBlokken
               .map(
-                (b) => `<li>
+                // Een blok waar geen ploeg op traint, valt op (T18): een eigen
+                // kleur en het woord 'vrij'. Bij een bezet blok staat wie erop zit.
+                (b) => `<li class="${b.bezet ? 'bezet' : 'vrij'}" title="${b.bezet ? veilig(b.ploegen.join(' · ')) : 'Geen ploeg traint in dit blok'}">
                   ${veilig(b.begin)}-${veilig(b.einde)}
+                  ${b.bezet ? `<span class="blok-wie">${veilig(b.ploegen.join(' · '))}</span>` : '<span class="blok-vrij">vrij</span>'}
                   <button type="button" class="alslink" data-blok-verwijderen="${b.id}">×</button>
                 </li>`
               )

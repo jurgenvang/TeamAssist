@@ -123,7 +123,6 @@ export async function haalBrandingvoorstel() {
   logoKnop.textContent = 'Dit logo gebruiken';
   logoKnop.addEventListener('click', async () => {
     await api('/api/admin/instellingen', 'POST', { sleutel: 'clublogo_url', waarde: b.logo_url });
-    await api('/api/admin/instellingen', 'POST', { sleutel: 'clublogo_bron', waarde: 'vbl' });
     await laadInstellingen();
     await pasHuisstijlToe();
     toon('instellingmelding', 'Logo overgenomen.');

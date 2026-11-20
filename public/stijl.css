@@ -258,6 +258,12 @@
     white-space: nowrap;
   }
   .blokjes li button { margin-left: .3rem; }
+  /* T18: een vrij blok valt op — gestippeld, in de gele tint die overal
+     'nog open' betekent — en een bezet blok zegt wie erop traint. */
+  .blokjes li.vrij { background: var(--amber-zacht); border: 1px dashed var(--amber); }
+  .blok-vrij { font-weight: 700; text-transform: uppercase; font-size: .68rem; letter-spacing: .06em; color: var(--amber-diep); margin-left: .3rem; }
+  [data-modus="donker"] .blok-vrij { color: var(--inkt); }
+  .blok-wie { color: var(--gedempt); margin-left: .3rem; }
 
   table { width: 100%; border-collapse: collapse; font-size: .92rem; }
   th, td { text-align: left; padding: .45rem .5rem; border-bottom: 1px solid var(--lijn); }

@@ -30,10 +30,10 @@ export const INSTELBAAR = {
   clubkleur_accent: { soort: 'kleur', kleurcontrole: 'accent' },
   clubkleur_topbalk: { soort: 'kleur', kleurcontrole: 'achtergrond' },
   clublogo_url: { soort: 'tekst' },
-  // 'vbl' betekent dat het logo automatisch is afgeleid uit het club-GUID; een
-  // eigen upload elders (of geen logo) zet dit op 'eigen'. Enkel om in het
-  // scherm te tonen waar een waarde vandaan komt, geen gedragswijziging.
-  clublogo_bron: { soort: 'keuze', keuzes: ['vbl', 'eigen'] },
+  // clublogo_bron (vbl/eigen) is geschrapt (T19, 0.44.0): ze werd geschreven
+  // maar nergens gelezen, en een veld zonder effect verwart. Het logo komt van
+  // de bond; komt er ooit een eigen upload, dan komt de keuze terug met die
+  // functie. Een rij die al in `instellingen` staat, doet geen kwaad.
   // De automatische taken van de officials: woensdagregel, terugval en
   // avondcontrole (0.34.0), herinneringen en het weekoverzicht (0.35.0),
   // forfaits vrijgeven en de berichten aan PV's en coaches (0.37.0). Uit tot de overstap van YOAssist (I1, fase 5):

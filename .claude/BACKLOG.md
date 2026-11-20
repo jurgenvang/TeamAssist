@@ -11,7 +11,7 @@ WIJZIGINGEN-bestanden blijven kloppen:
   punt *U* (Microsoft 365) heet hier **VU**, want TeamAssist heeft al een *U*
 - **T** + nummer, en de letters **A–AB** — TeamAssist
 
-Stand: YOAssist **v1.17.1**, TeamAssist **0.43.0** (op `main` sinds 11 november 2026)
+Stand: YOAssist **v1.17.1**, TeamAssist **0.44.0** (op `main` sinds 20 november 2026)
 
 ---
 
@@ -24,6 +24,8 @@ Bijgewerkt bij elke versie. Voor de volledige tekst: zoek de kop verderop
 - **0.43.0 (T21)** — nakijken op de telefoon: *Overzicht → Mijn agenda*,
   Aanduidingen, Cluboverzicht, Regio en bij Ploegen de wedstrijden,
   trainingen en aanwezigheid. Geen migratie, staat op `main`.
+- **0.44.0 (T18)** — bij Zaalbeheer nakijken of de vrije blokken kloppen
+  met wat je weet van de zaaluren.
 - **0.33.0** — een droogloop van de nieuwe officials-sync op de echte Worker
   (`POST /api/admin/officials/sync`, zonder `uitvoeren=1`): komt `gevonden`
   in de buurt van de 210 wedstrijden uit YOAssist?
@@ -46,10 +48,9 @@ Bijgewerkt bij elke versie. Voor de volledige tekst: zoek de kop verderop
 ### Klaar om te bouwen
 - **T7** — tabblad Mijn club.
 - **T12** — aanmelden als.
-- **T18, T19** — twee kleine gaten uit de code-audit, beslist: vrije
-  zaaluren in de blokjes zelf tonen (T18), `clublogo_bron` schrappen (T19).
 
 ### Nog uit te klaren vóór er gebouwd kan worden
+- **T22** — de tabbalk op een telefoon zoals in YOAssist (gezien bij T21).
 - **T2** — financiële module (FINADM). Hangt na I1 samen met de vergoedingen
   van de officials.
 - **T3** en **V29** — evaluatie van spelers en van officials.
@@ -376,6 +377,7 @@ YOAssist met `ruudcuyvers@…`, vermoedelijk het adres van zijn vader.
 | 0.23.0 | T14 afgewerkt: een volledige backup van de databank als JSON. Beter dan aanvankelijk voorgesteld — geen hardcoded tabellenlijst met een test die drift moet vangen (de YOAssist-aanpak), maar tabellen rechtstreeks uit `sqlite_master` gehaald, wat de hele bugklasse structureel onmogelijk maakt. De kerntest bewijst dat letterlijk: een tabel die pas ná het schrijven van de route wordt aangemaakt, zit er toch in. |
 | 0.24.0 | T16 en T17 afgewerkt. `verwittig()` heeft geen `kanaal`-parameter meer en leest voortaan `kanaal_voorkeur` — mail blijft de terugval zolang push niet bestaat, met een aparte logregel voor wie 'push' koos. Blokken bij Zaalbeheer staan nu gegroepeerd per weekdag als losse blokjes, met bewust neutrale kleuren in plaats van de accentkleur. |
 | 0.25.0 | T15 afgewerkt: opruiming van `logboek` (365 dagen), `taak_runs` (30 dagen), `berichten` (120 dagen), en het definitief verwijderen van een inactieve persoon na 180 dagen. Twee tabellen extra gevonden tijdens het bouwen (`accounts`, `ouder_kind`) die niet in het oorspronkelijke overzicht stonden. Enkel `aanwezigheden` wordt geanonimiseerd in plaats van verwijderd — de enige tabel waar dat structureel kon — wat een schema-heropbouw vroeg, grondig getoetst tegen een nagemaakte bestaande databank. |
+| 0.44.0 | T18 en T19, de twee kleine gaten uit de code-audit. T18: bij Zaalbeheer zegt elk blokje of er een ploeg op traint — een vrij blok staat gestippeld in het geel met *vrij*, een bezet blok met de ploeg(en) erop. Bezet is een actieve reeks in dezelfde zaal en op dezelfde weekdag die het blok overlapt, niet enkel bij exact hetzelfde uur: binnen zijn blok mag een coach het uur verfijnen (U2), en tot nu toe telde `/api/admin/zalen/vrij` zo'n blok als vrij. Eén regel (`ploegenOpBlok`) voor de blokjes en die route. T19: `clublogo_bron` geschrapt — geschreven maar nergens gelezen. Ook: T22 (de tabbalk op een telefoon) in de backlog. Geen schemawijziging. 1021 tests. |
 | 0.43.0 | T21: elke lijst met wedstrijden of trainingen zoals in YOAssist, met één gedeelde kaart (`public/js/kaart.js`): het datumblok, de ploegen met thuis of uit, de zaal met kaartlink, het wedstrijdblad, uitslag en forfait, en een rand die de toestand zegt (geel open, groen vast of aanwezig, rood niet). *Overzicht* krijgt **Mijn agenda**: trainingen, wedstrijden, fluiten (enkel wat aangeduid is) en taken van het hele gezin in één lijst per dag, met een label per type en 'voor …' bij elk item; aanwezig of afwezig opgeven (met reden), een probleem melden bij fluiten of een taak, en per official 'nog N te beantwoorden' met een link naar Aanduidingen. Een botsing tussen spelen en fluiten (of een taak) staat bij beide, zonder iets te weigeren. Nieuwe route `GET /api/mij/agenda`. Het scherm van de coach (Ploegen): wedstrijden (komend en gespeeld) en trainingen als kaarten, en de aanwezigheid toont de activiteit zelf. Aanduidingen, Cluboverzicht en Regio naar de kaart en de stijl van YOAssist (REF-balken gevuld, grote keuzeknoppen, sectiekoppen). Naast YOAssist gelegd in Chromium, op telefoonbreedte. Geen schemawijziging. 1019 tests. |
 | 0.42.0 | I1 fase 4e: tabbladen per stuk uitzetten, zoals `verborgen_tabs` in YOAssist. Iedereen kiest voor zichzelf bij Mijn voorkeuren → *Tabbladen* welke tabbladen in zijn tabbalk staan; de keuze toont enkel de tabbladen waar iemand recht op heeft, en de tabbalk verandert meteen. *Regio* staat standaard uit (enkel wie de officials beheert, ziet het en kan het aanzetten); *Overzicht* blijft altijd staan; de panelen onder Beheer zijn geen tabbladen. De migratie van YOAssist neemt een eigen keuze mee (Cluboverzicht, Aanduidingen, Regio) en laat wie de standaard had, de standaard volgen. Schema: kolom `personen.verborgen_tabs` (ALTER, `migratie-0.42.0.sql`). 1002 tests. |
 | 0.41.0 | I1 fase 4d: Regio en de beheerdelen van de officials, zoals in YOAssist. Tabblad *Regio* voor wie de officials beheert: per dag de krappe wedstrijden bij de gevolgde clubs (de rand rood bij geen scheidsrechter, oranje bij één, met zijn naam), met de bron van de dag (*volgens de lijst van de bond* of *volgens de API — de lijst volgt woensdag*) en een link naar het wedstrijdblad. *Dagelijks beheer* en *Configuratie* zijn er nu ook voor een YOADM, die er enkel de secties van de officials ziet (`data-recht` per sectie): de woensdaglijsten van de laatste weken met hun status, de synchronisatie (eerst wat er zou veranderen), de gevolgde clubs (toevoegen, verwijderen, nu synchroniseren, de lijst leegmaken na een telling), en de instellingen *Forfait* en *Extern lezen* via een eigen route (`/api/admin/officials/instellingen`, enkel die twee sleutels). In Chromium bekeken tegen de echte handlers, als YOADM en als ADMIN. Geen schemawijziging. 995 tests. |
@@ -1007,6 +1009,24 @@ en een training is niet van een wedstrijd te onderscheiden.
   intussen al de kaart van YOAssist; bij T21 gaat ook Regio naar de
   gedeelde kaart.
 
+### T22 — De tabbalk op een telefoon, zoals in YOAssist
+**Gevraagd door Jurgen (20 november 2026), nog uit te klaren.** Gezien bij
+het naast elkaar leggen voor T21: op telefoonbreedte breekt de tabbalk van
+TeamAssist over drie regels af (Aanduidingen, Overzicht / Cluboverzicht,
+Regio, Ploegen / Personen), met een rode streep onder het gekozen tabblad.
+YOAssist heeft één grijs blok met de tabbladen naast elkaar, en het gekozen
+tabblad als wit vlak erin (*segmented control*).
+
+Te beslissen vóór het bouwen:
+- **Te veel tabbladen voor één rij.** YOAssist heeft er hoogstens drie;
+  iemand die ADMIN, coach en official is, heeft er in TeamAssist zes. Opties:
+  één rij die horizontaal schuift, of op een telefoon enkel de eerste drie
+  met de rest onder 'Meer'. Voorstel: schuiven, met het gekozen tabblad
+  altijd in beeld.
+- **De volgorde.** Vandaag volgt ze `TABBLADEN` in `navigatie.js`. Moet
+  *Overzicht* (met Mijn agenda) vooraan voor wie geen official is?
+- **Op een breed scherm** hetzelfde blok, of daar de huidige tabbalk?
+
 ### Z — Zaaluren laden via een CSV-bestand — **afgewerkt in 0.14.0**
 Geleverd zoals hier voorgesteld: vooraf ingevuld sjabloon, kolommen
 zaal/weekdag/begin/einde, altijd een droogloop, een onbekende zaalnaam wordt
@@ -1427,7 +1447,7 @@ als label boven de groep, niet herhaald per blokje). Hergebruikt bewust géén
 accentkleur zoals `.rollen li` — dit is roosterinformatie, geen rolbadge — en
 gebruikt daarom `--vlak`/`--lijn`, die al zonder extra werk donker-veilig zijn.
 
-### T18 — `GET /api/admin/zalen/vrij` heeft geen enkel scherm
+### T18 — `GET /api/admin/zalen/vrij` heeft geen enkel scherm — **gebouwd in 0.44.0**
 **Beslist (Jurgen, 10 november 2026): in de blokjes zelf.** Een blok
 waar geen ploeg op traint, krijgt een eigen kleur en het woord *vrij*, in
 de bestaande weergave per weekdag (T17). Geen tweede lijst ernaast.
@@ -1456,7 +1476,7 @@ Nog te bepalen:
   lijst ernaast. Dat zou minder scherm kosten, maar vraagt dat
   `zalenTonen()` de vrij/bezet-informatie meegeeft, wat ze vandaag niet doet.
 
-### T19 — De instelling `clublogo_bron` wordt geschreven maar nergens gelezen
+### T19 — De instelling `clublogo_bron` wordt geschreven maar nergens gelezen — **geschrapt in 0.44.0**
 **Beslist (Jurgen, 10 november 2026): schrappen.** De instelling verdwijnt
 uit `INSTELBAAR` en uit het scherm; het logo komt van de bond, en een
 beheerder neemt het voorstel over zoals nu. Komt er ooit een eigen

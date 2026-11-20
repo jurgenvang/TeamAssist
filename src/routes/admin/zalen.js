@@ -11,6 +11,33 @@ function nieuwId() {
   return `z-${crypto.randomUUID()}`;
 }
 
+/**
+ * Welke ploegen een blok gebruiken (T18): een actieve reeks in dezelfde zaal,
+ * op dezelfde weekdag, die het blok overlapt. Niet enkel bij hetzelfde uur:
+ * binnen zijn blok mag een coach het uur verfijnen (U2) — een training van
+ * 18u30 tot 19u45 in een blok van 18 tot 20 uur gebruikt dat blok.
+ * Eén plaats voor de regel, zodat de blokjes bij Zaalbeheer en
+ * /api/admin/zalen/vrij hetzelfde zeggen.
+ */
+export function ploegenOpBlok(blok, reeksen) {
+  return reeksen
+    .filter((r) => r.zaal_id === blok.zaal_id && r.weekdag === blok.weekdag && r.begin < blok.einde && r.einde > blok.begin)
+    .map((r) => r.ploeg);
+}
+
+async function actieveReeksen(db, seizoen, zaalId = null) {
+  const r = await db
+    .prepare(
+      `SELECT r.zaal_id, r.weekdag, r.begin, r.einde, coalesce(t.naam_kort, t.naam, r.team_guid) AS ploeg
+         FROM trainingsreeksen r
+         LEFT JOIN teams t ON t.guid = r.team_guid AND t.seizoen = r.seizoen
+        WHERE r.seizoen = ?1 AND r.actief = 1 AND r.zaal_id IS NOT NULL ${zaalId ? 'AND r.zaal_id = ?2' : ''}`
+    )
+    .bind(...(zaalId ? [seizoen, zaalId] : [seizoen]))
+    .all();
+  return r.results ?? [];
+}
+
 export async function zalenTonen(ctx) {
   const { db, seizoen } = ctx;
   const zalen = await db
@@ -24,10 +51,14 @@ export async function zalenTonen(ctx) {
     .prepare(`SELECT * FROM zaal_sluitingen WHERE tot >= date('now') ORDER BY van`)
     .all();
 
+  // Per blok wie erop traint (T18): zo toont Zaalbeheer welke uren nog vrij
+  // zijn in de blokjes zelf, zonder tweede lijst ernaast.
+  const reeksen = await actieveReeksen(db, seizoen.code);
   const perZaal = new Map();
   for (const b of blokken.results ?? []) {
     if (!perZaal.has(b.zaal_id)) perZaal.set(b.zaal_id, []);
-    perZaal.get(b.zaal_id).push(b);
+    const ploegen = ploegenOpBlok(b, reeksen);
+    perZaal.get(b.zaal_id).push({ ...b, bezet: ploegen.length > 0, ploegen });
   }
 
   return json({
@@ -106,16 +137,8 @@ export async function vrijeBlokken(ctx) {
     .bind(zaalId, seizoen.code)
     .all();
 
-  const reeksen = await db
-    .prepare(
-      `SELECT weekdag, begin, einde FROM trainingsreeksen
-        WHERE zaal_id = ? AND seizoen = ? AND actief = 1`
-    )
-    .bind(zaalId, seizoen.code)
-    .all();
-
-  const bezet = new Set((reeksen.results ?? []).map((r) => `${r.weekdag}-${r.begin}-${r.einde}`));
-  const vrij = (blokken.results ?? []).filter((b) => !bezet.has(`${b.weekdag}-${b.begin}-${b.einde}`));
+  const reeksen = await actieveReeksen(db, seizoen.code, zaalId);
+  const vrij = (blokken.results ?? []).filter((b) => ploegenOpBlok(b, reeksen).length === 0);
 
   return json({ vrij });
 }

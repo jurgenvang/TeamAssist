@@ -1,6 +1,7 @@
 // Zalen en hun blokken.
 
 import test from 'node:test';
+import { readFileSync } from 'node:fs';
 import assert from 'node:assert/strict';
 import { maakDb } from './d1.mjs';
 import { ROUTES } from '../src/index.js';
@@ -152,4 +153,46 @@ test('een onbestaande zaal geeft 404 bij het zetten van open_op_feestdagen', asy
   const db = zetKlaar();
   const res = await zetOpenOpFeestdagen({ db, persoon, request: verzoek('/x', { zaal_id: 'niet-bestaand', open: true }) });
   assert.equal(res.status, 404);
+});
+
+// --- T18: vrije zaaluren in de blokjes zelf ---------------------------------------
+
+test('T18: elk blok zegt of het bezet is en door wie, ook bij een verfijnd uur', async () => {
+  const db = zetKlaar();
+  const zaal = await (await zaalAanmaken({ db, persoon, request: verzoek('/x', { naam: 'A' }) })).json();
+  const ander = await (await zaalAanmaken({ db, persoon, request: verzoek('/x', { naam: 'B' }) })).json();
+  for (const [weekdag, begin, einde] of [[2, '18:00', '20:00'], [3, '18:00', '20:00'], [4, '18:00', '20:00'], [5, '18:00', '20:00']]) {
+    await blokAanmaken({ db, persoon, seizoen, request: verzoek('/x', { zaal_id: zaal.id, weekdag, begin, einde }) });
+  }
+  db._sqlite.exec(`
+    INSERT INTO teams (guid, seizoen, naam, naam_kort) VALUES ('T1', '2026-27', 'Bears G12 A', 'U12 A'), ('T2', '2026-27', 'Bears G14 A', 'U14 A');
+    INSERT INTO trainingsreeksen (team_guid, seizoen, weekdag, begin, einde, zaal_id, van, tot, actief) VALUES
+      -- dinsdag: binnen het blok verfijnd (U2) — het blok is bezet
+      ('T1', '2026-27', 2, '18:30', '19:45', '${zaal.id}', '2026-09-01', '2027-06-30', 1),
+      ('T2', '2026-27', 2, '19:00', '20:00', '${zaal.id}', '2026-09-01', '2027-06-30', 1),
+      -- woensdag: een andere zaal — telt niet
+      ('T1', '2026-27', 3, '18:00', '20:00', '${ander.id}', '2026-09-01', '2027-06-30', 1),
+      -- donderdag: een gestopte reeks — telt niet
+      ('T1', '2026-27', 4, '18:00', '20:00', '${zaal.id}', '2026-09-01', '2027-06-30', 0),
+      -- vrijdag: net erna (20:00–21:00) — raakt het blok niet
+      ('T1', '2026-27', 5, '20:00', '21:00', '${zaal.id}', '2026-09-01', '2027-06-30', 1);
+  `);
+  const zalen = (await (await zalenTonen({ db, seizoen })).json()).zalen;
+  const blokken = zalen.find((z) => z.id === zaal.id).blokken;
+  assert.deepEqual(blokken.map((b) => [b.weekdag, b.bezet, b.ploegen]), [
+    [2, true, ['U12 A', 'U14 A']],
+    [3, false, []],
+    [4, false, []],
+    [5, false, []],
+  ]);
+  // De route van vroeger zegt hetzelfde: één regel, op één plaats.
+  const vrij = (await (await vrijeBlokken({ db, seizoen, request: new Request(`https://x/api/admin/zalen/vrij?zaal=${zaal.id}`) })).json()).vrij;
+  assert.deepEqual(vrij.map((b) => b.weekdag), [3, 4, 5]);
+});
+
+test('T18: Zaalbeheer toont een vrij blok met het woord vrij, een bezet blok met wie erop zit', () => {
+  const bron = readFileSync(new URL('../public/js/schermen/trainingen.js', import.meta.url), 'utf8');
+  assert.match(bron, /class="\$\{b\.bezet \? 'bezet' : 'vrij'\}"/);
+  assert.match(bron, /<span class="blok-vrij">vrij<\/span>/);
+  assert.match(bron, /veilig\(b\.ploegen\.join\(' · '\)\)/);
 });
